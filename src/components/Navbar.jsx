@@ -34,7 +34,7 @@ function Navbar({ onLogout, setView }) {
   return (
     <nav className="bg-blue-900 text-white px-6 py-4 shadow-md flex items-center justify-between relative">
       <h1 className="text-xl font-bold text-yellow-400 flex items-center gap-2">
-        💸 Presupuesto
+        💸 Flujo Personal
       </h1>
 
       <ul className="hidden md:flex gap-6 items-center relative">
@@ -46,7 +46,7 @@ function Navbar({ onLogout, setView }) {
             }}
             className="hover:text-yellow-300 font-semibold"
           >
-            Dashboard
+            DASHBOARD
           </button>
         </li>
 

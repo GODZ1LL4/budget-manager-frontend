@@ -38,7 +38,7 @@ function Transactions({ token }) {
         axios.get(`${api}/transactions`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get(`${api}/items`, {
+        axios.get(`${api}/items-with-price`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -58,12 +58,38 @@ function Transactions({ token }) {
 
   useEffect(() => {
     if (isShoppingList && items.length > 0) {
-      const total = articleLines.reduce((sum, line) => {
+      console.log("🔄 Recalculando total de compra...");
+
+      const total = articleLines.reduce((sum, line, index) => {
         const item = items.find((i) => i.id === line.item_id);
-        const price = item?.latest_price || 0;
+        if (!item) {
+          console.warn(`❌ Línea ${index + 1}: artículo no encontrado`, line);
+          return sum;
+        }
+
+        const price = item.latest_price || 0;
         const qty = parseFloat(line.quantity) || 1;
-        return sum + price * qty;
+        const isExempt = item.is_exempt;
+        const taxRate = parseFloat(item.tax_rate || 0);
+
+        const subtotal = price * qty;
+        const taxAmount = isExempt ? 0 : subtotal * (taxRate / 100);
+        const lineTotal = subtotal + taxAmount;
+
+        console.log(`🧾 Línea ${index + 1}:`);
+        console.log(`  Artículo: ${item.name}`);
+        console.log(`  Precio: ${price}`);
+        console.log(`  Cantidad: ${qty}`);
+        console.log(`  Subtotal: ${subtotal}`);
+        console.log(
+          `  ITBIS: ${isExempt ? "exento" : `${taxRate}% → ${taxAmount}`}`
+        );
+        console.log(`  Total línea: ${lineTotal}`);
+
+        return sum + lineTotal;
       }, 0);
+
+      console.log(`✅ Total final con impuestos: ${total.toFixed(2)}`);
       setAmount(total.toFixed(2));
     }
   }, [articleLines, isShoppingList, items]);
@@ -267,36 +293,62 @@ function Transactions({ token }) {
             <h4 className="font-semibold text-gray-700 mb-1 mt-2">
               Artículos comprados
             </h4>
-            {articleLines.map((line, idx) => (
-              <div key={idx} className="grid grid-cols-4 gap-2 mb-2">
-                <select
-                  value={line.item_id}
-                  onChange={(e) => updateLine(idx, "item_id", e.target.value)}
-                  className="border p-2 col-span-2"
+            {articleLines.map((line, idx) => {
+              const item = items.find((i) => i.id === line.item_id);
+              const price = item?.latest_price || 0;
+              const taxRate = item?.is_exempt
+                ? 0
+                : parseFloat(item?.tax_rate || 0);
+              const taxLabel = item?.is_exempt ? "Exento" : `${taxRate}%`;
+
+              return (
+                <div
+                  key={idx}
+                  className="grid grid-cols-6 gap-2 mb-2 items-center"
                 >
-                  <option value="">Selecciona artículo</option>
-                  {items.map((it) => (
-                    <option key={it.id} value={it.id}>
-                      {it.name}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="number"
-                  placeholder="Cantidad"
-                  className="border p-2"
-                  value={line.quantity}
-                  onChange={(e) => updateLine(idx, "quantity", e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeLine(idx)}
-                  className="text-red-600 text-xs col-span-4 text-left"
-                >
-                  Quitar
-                </button>
-              </div>
-            ))}
+                  <select
+                    value={line.item_id}
+                    onChange={(e) => updateLine(idx, "item_id", e.target.value)}
+                    className="border p-2 col-span-2"
+                  >
+                    <option value="">Selecciona artículo</option>
+                    {items.map((it) => (
+                      <option key={it.id} value={it.id}>
+                        {it.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    type="number"
+                    placeholder="Cantidad"
+                    className="border p-2 col-span-1"
+                    value={line.quantity}
+                    onChange={(e) =>
+                      updateLine(idx, "quantity", e.target.value)
+                    }
+                  />
+
+                  <div className="text-xs text-gray-600 col-span-2">
+                    <p>
+                      Precio: <strong>{price.toFixed(2)} DOP</strong>
+                    </p>
+                    <p>
+                      ITBIS: <strong>{taxLabel}</strong>
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => removeLine(idx)}
+                    className="text-red-600 text-xs"
+                  >
+                    Quitar
+                  </button>
+                </div>
+              );
+            })}
+
             <button
               type="button"
               onClick={addLine}

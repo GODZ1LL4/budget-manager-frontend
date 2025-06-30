@@ -29,13 +29,35 @@ function Login({ onLogin }) {
       toast.success("Inicio de sesión exitoso");
       onLogin(); // 🔄 Solo cambia la vista (ya no necesitas pasar el token)
     } else {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      });
+      
       if (error) {
         toast.error("Registro fallido: " + error.message);
-      } else {
-        toast.success("Registro exitoso. Revisa tu correo si está habilitado.");
-        setIsLogin(true);
+        return;
       }
+      
+      const userId = data?.user?.id;
+      if (userId) {
+        const { error: dbError } = await supabase.from("users").insert({
+          id: userId,
+          email,
+        });
+      
+        if (dbError) {
+          toast.error("No se pudo crear el usuario en la base de datos");
+          console.error(dbError);
+          return;
+        }
+      
+        toast.success("Registro exitoso");
+        setIsLogin(true);
+      } else {
+        toast.error("No se pudo obtener el ID del usuario");
+      }
+      
     }
   };
 

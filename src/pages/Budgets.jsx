@@ -93,7 +93,7 @@ function Budgets({ token }) {
 
   return (
     <div className="bg-white rounded shadow p-6">
-      <h2 className="text-2xl font-bold mb-2 text-[#1e40af]">Presupuestos</h2>
+      <h2 className="text-2xl font-bold mb-2 text-[#1e40af]">Flujos Personales</h2>
       <p className="text-sm text-gray-500 mb-4">
         Establece un límite de gasto por categoría cada mes. El sistema te
         mostrará cuánto has utilizado.
@@ -159,7 +159,7 @@ function Budgets({ token }) {
             type="submit"
             className="bg-[#1e40af] text-white font-semibold px-4 py-2 rounded hover:brightness-90 transition w-full md:w-auto"
           >
-            Agregar presupuesto
+            Agregar Flujo
           </button>
         </div>
       </form>
