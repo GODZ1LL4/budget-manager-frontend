@@ -6,6 +6,7 @@ function Categories({ token }) {
   const [type, setType] = useState("expense");
   const [categories, setCategories] = useState([]);
   const [editId, setEditId] = useState(null);
+  const [stabilityType, setStabilityType] = useState("variable");
 
   const api = import.meta.env.VITE_API_URL;
 
@@ -25,7 +26,7 @@ function Categories({ token }) {
     try {
       await axios.post(
         `${api}/categories`,
-        { name, type },
+        { name, type, stability_type: stabilityType },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -41,13 +42,14 @@ function Categories({ token }) {
     setEditId(cat.id);
     setName(cat.name);
     setType(cat.type);
+    setStabilityType(cat.stability_type || "variable");
   };
 
   const handleUpdate = async (id) => {
     try {
       await axios.put(
         `${api}/categories/${id}`,
-        { name, type },
+        { name, type, stability_type: stabilityType },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -98,6 +100,16 @@ function Categories({ token }) {
           <option value="expense">Gasto</option>
           <option value="income">Ingreso</option>
         </select>
+        <select
+          value={stabilityType}
+          onChange={(e) => setStabilityType(e.target.value)}
+          className="border border-gray-300 p-2 rounded"
+        >
+          <option value="fixed">Fijo</option>
+          <option value="variable">Variable</option>
+          <option value="occasional">Ocasional</option>
+        </select>
+
         <button
           type="submit"
           className="bg-[#e32119] text-white px-4 py-2 rounded hover:bg-red-700 transition"
@@ -111,6 +123,7 @@ function Categories({ token }) {
           <tr>
             <th className="p-2 border border-gray-300">Nombre</th>
             <th className="p-2 border border-gray-300">Tipo</th>
+            <th className="p-2 border border-gray-300">Estabilidad</th>
             <th className="p-2 border border-gray-300 text-center">Acciones</th>
           </tr>
         </thead>
@@ -136,6 +149,17 @@ function Categories({ token }) {
                       <option value="income">Ingreso</option>
                     </select>
                   </td>
+                  <td className="p-2 border border-gray-300">
+                    <select
+                      value={stabilityType}
+                      onChange={(e) => setStabilityType(e.target.value)}
+                      className="border border-gray-300 p-1 w-full rounded"
+                    >
+                      <option value="fixed">Fijo</option>
+                      <option value="variable">Variable</option>
+                      <option value="occasional">Ocasional</option>
+                    </select>
+                  </td>
                   <td className="p-2 border border-gray-300 text-center space-x-2">
                     <button
                       onClick={() => handleUpdate(cat.id)}
@@ -157,6 +181,10 @@ function Categories({ token }) {
                   <td className="p-2 border border-gray-300 italic text-gray-600">
                     {cat.type}
                   </td>
+                  <td className="p-2 border border-gray-300 italic text-gray-600">
+                    {cat.stability_type || "variable"}
+                  </td>
+
                   <td className="p-2 border border-gray-300 text-center space-x-2">
                     <button
                       onClick={() => startEdit(cat)}

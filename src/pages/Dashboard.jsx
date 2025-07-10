@@ -2,25 +2,18 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import CollapseSection from "../components/CollapseSection";
-import BarChartDistribucion from "../components/BarChartDistribucion";
 import ItemPriceTrendChart from "../components/ItemPriceTrendChart";
 import CategorySpendingBarChart from "../components/CategorySpendingBarChart";
 import CategoryMonthlyTrendChart from "../components/CategoryMonthlyTrendChart";
-import TotalExpensePieChart from "../components/TotalExpensePieChart";
-import TransactionCountByCategoryChart from "../components/TransactionCountByCategoryChart";
-import IncomeExpenseProjectionChart from "../components/IncomeExpenseProjectionChart";
+
 import CategoryTrendSelectorChart from "../components/CategoryTrendSelectorChart";
 import BudgetVsActualChart from "../components/BudgetVsActualChart";
 import AccountBalancesChart from "../components/AccountBalancesChart";
 import MonthlyBalanceTrendChart from "../components/MonthlyBalanceTrendChart";
-import SavingsProjectionChart from "../components/SavingsProjectionChart";
-import SpendingVsBudgetChart from "../components/SpendingVsBudgetChart";
+
 import OverBudgetChart from "../components/OverBudgetChart";
 import SavingTrendChart from "../components/SavingTrendChart";
-import SavingProjectionChart from "../components/SavingProjectionChart";
-import TransactionTypePieChart from "../components/TransactionTypePieChart";
-import AnnualExpenseByCategoryChart from "../components/AnnualExpenseByCategoryChart";
-import MonthlyIncomeChart from "../components/MonthlyIncomeChart";
+
 import MonthlyIncomeVsExpenseChart from "../components/MonthlyIncomeVsExpenseChart";
 import CategoryVariationChart from "../components/CategoryVariationChart";
 import TransactionsCalendar from "../components/TransactionsCalendar";
@@ -28,6 +21,18 @@ import { toast } from "react-toastify";
 import BudgetVsActualHistoryChart from "../components/BudgetVsActualHistoryChart";
 import BudgetVsActualYearlyChart from "../components/BudgetVsActualYearlyChart";
 import BudgetVsActualSummaryChart from "../components/BudgetVsActualSummaryChart";
+import RealisticProjectionChart from "../components/RealisticProjectionChart";
+import ExpenseByStabilityChart from "../components/ExpenseByStabilityChart";
+import TopVariableCategoriesChart from "../components/TopVariableCategoriesChart";
+import GoalsProgressChart from "../components/GoalsProgressChart";
+import SavingRealVsProjectedChart from "../components/SavingRealVsProjectedChart";
+import FinancialScenarioChart from "../components/FinancialScenarioChart";
+import ProjectedExpenseByCategoryChart from "../components/ProjectedExpenseByCategoryChart";
+import ProjectedIncomeByCategoryChart from "../components/ProjectedIncomeByCategoryChart";
+import StabilityBalanceChart from "../components/StabilityBalanceChart";
+import TopItemsByQuantityChart from "../components/TopItemsByQuantityChart";
+import TopItemsByValueChart from "../components/TopItemsByValueChart";
+import ItemTrendChart from "../components/ItemTrendChart";
 
 function Dashboard({ token }) {
   const [data, setData] = useState(null);
@@ -129,43 +134,83 @@ function Dashboard({ token }) {
       <h2 className="text-2xl font-bold text-gray-800">Dashboard Financiero</h2>
 
       <div className="grid md:grid-cols-4 gap-4">
+        {/* === Grupo 1 === */}
+        <MetricCard
+          title="Ingreso fijo promedio"
+          value={data.fixedIncomeAverage}
+          isCurrency
+          color="green"
+        />
         <MetricCard
           title="Ingresos"
           value={data.totalIncome}
-          color="green"
           isCurrency
+          color="green"
         />
         <MetricCard
           title="Gastos"
           value={data.totalExpense}
-          color="red"
           isCurrency
+          color="red"
         />
-        <MetricCard title="Balance" value={data.balance} isCurrency />
         <MetricCard
-          title="Ahorro (%)"
-          value={data.savingRate}
-          suffix="%"
-          color={data.savingRate >= 0 ? "green" : "red"}
+          title="Balance"
+          value={data.balance}
+          isCurrency
+          color={data.balance >= 0 ? "green" : "red"}
         />
 
-        <MetricCard
-          title="Gasto diario promedio"
-          value={data.averageDailyExpense}
-          isCurrency
-        />
+        {/* === Grupo 2 === */}
         <MetricCard
           title="Gasto mensual promedio"
           value={data.averageMonthlyExpense}
           isCurrency
+          color="red"
         />
+        <MetricCard
+          title="Presupuesto del mes"
+          value={data.totalMonthlyBudget}
+          isCurrency
+          color="gray"
+        />
+        
+        <MetricCard
+          title="Gastos presupuestados"
+          value={data.budgetedExpenseTotal}
+          isCurrency
+          color="red"
+        />
+        <MetricCard
+          title="Balance de presupuesto"
+          value={data.budgetBalance}
+          isCurrency
+          color={data.budgetBalance >= 0 ? "green" : "red"}
+        />
+
+        {/* === Grupo 3 === */}
+        <MetricCard
+          title="Gasto diario promedio"
+          value={data.averageDailyExpense}
+          isCurrency
+          color="red"
+        />
+        <MetricCard
+          title="Mayor gasto por categoría"
+          value={data.topCategoryThisMonth?.amount || 0}
+          isCurrency
+          color="red"
+          subtitle={data.topCategoryName || ""}
+        />
+        
         <MetricCard
           title="Transacciones totales"
           value={data.totalTransactions}
+          color="gray"
         />
         <MetricCard
           title="Transacciones por día"
           value={data.averageTransactionsPerDay}
+          color="gray"
         />
       </div>
 
@@ -269,10 +314,6 @@ function Dashboard({ token }) {
         </p>
       </CollapseSection>
 
-      <CollapseSection title="Distribución de ingresos y gastos">
-        <BarChartDistribucion token={token} />
-      </CollapseSection>
-
       <CollapseSection title="Tendencia de precios por artículo">
         <ItemPriceTrendChart token={token} />
       </CollapseSection>
@@ -283,15 +324,7 @@ function Dashboard({ token }) {
       <CollapseSection title="Evolución mensual por categoría">
         <CategoryMonthlyTrendChart token={token} />
       </CollapseSection>
-      <CollapseSection title="Distribución total histórica de gastos">
-        <TotalExpensePieChart token={token} />
-      </CollapseSection>
-      <CollapseSection title="Frecuencia de transacciones por categoría">
-        <TransactionCountByCategoryChart token={token} />
-      </CollapseSection>
-      <CollapseSection title="Proyección de ingresos y gastos">
-        <IncomeExpenseProjectionChart token={token} />
-      </CollapseSection>
+
       <CollapseSection title="Evolución de categorías seleccionadas">
         <CategoryTrendSelectorChart token={token} />
       </CollapseSection>
@@ -304,30 +337,14 @@ function Dashboard({ token }) {
       <CollapseSection title="Evolución del balance mensual">
         <MonthlyBalanceTrendChart token={token} />
       </CollapseSection>
-      <CollapseSection title="Proyección de ahorro futuro">
-        <SavingsProjectionChart token={token} />
-      </CollapseSection>
-      <CollapseSection title="Gasto acumulado vs presupuesto por categoría">
-        <SpendingVsBudgetChart token={token} />
-      </CollapseSection>
+
       <CollapseSection title="Top categorías con gasto excesivo">
         <OverBudgetChart token={token} />
       </CollapseSection>
       <CollapseSection title="Evolución del ahorro mensual">
         <SavingTrendChart token={token} />
       </CollapseSection>
-      <CollapseSection title="Proyección de ahorro futuro">
-        <SavingProjectionChart token={token} />
-      </CollapseSection>
-      <CollapseSection title="Distribución de transacciones por tipo">
-        <TransactionTypePieChart token={token} />
-      </CollapseSection>
-      <CollapseSection title="Gasto anual por categoría">
-        <AnnualExpenseByCategoryChart token={token} />
-      </CollapseSection>
-      <CollapseSection title="Ingresos mensuales del año">
-        <MonthlyIncomeChart token={token} />
-      </CollapseSection>
+
       <CollapseSection title="Promedio mensual: Ingreso vs Gasto">
         <MonthlyIncomeVsExpenseChart token={token} />
       </CollapseSection>
@@ -343,6 +360,44 @@ function Dashboard({ token }) {
       <CollapseSection title="Resumen Anual: Presupuesto vs Gasto Total">
         <BudgetVsActualSummaryChart token={token} />
       </CollapseSection>
+      <CollapseSection title="Proyección realista (solo categorías fijas y variables)">
+        <RealisticProjectionChart token={token} />
+      </CollapseSection>
+      <CollapseSection title="Gastos por tipo de estabilidad">
+        <ExpenseByStabilityChart token={token} />
+      </CollapseSection>
+      <CollapseSection title="Top categorías variables con más gasto">
+        <TopVariableCategoriesChart token={token} />
+      </CollapseSection>
+      <CollapseSection title="Progreso de metas de ahorro">
+        <GoalsProgressChart token={token} />
+      </CollapseSection>
+      <CollapseSection title="Comparativa: Ahorro Real vs Proyectado">
+        <SavingRealVsProjectedChart token={token} />
+      </CollapseSection>
+      <CollapseSection title="Proyección por Escenario (Ahorro, Gasto, Ingreso)">
+        <FinancialScenarioChart token={token} />
+      </CollapseSection>
+      <CollapseSection title="Proyección de Gastos por Categoría y Estabilidad">
+        <ProjectedExpenseByCategoryChart token={token} />
+      </CollapseSection>
+      <CollapseSection title="Proyección de Ingresos por Categoría y Estabilidad">
+        <ProjectedIncomeByCategoryChart token={token} />
+      </CollapseSection>
+      <CollapseSection title="Balance Promedio por Tipo de Estabilidad">
+        <StabilityBalanceChart token={token} />
+      </CollapseSection>
+      <CollapseSection title="Top 10 artículos más consumidos (anual)">
+        <TopItemsByQuantityChart token={token} />
+      </CollapseSection>
+
+      <CollapseSection title="Top 10 artículos por gasto mensual">
+        <TopItemsByValueChart token={token} />
+      </CollapseSection>
+
+      <CollapseSection title="Tendencia mensual por artículo">
+        <ItemTrendChart token={token} />
+      </CollapseSection>
     </div>
   );
 }
@@ -353,6 +408,7 @@ function MetricCard({
   suffix = "",
   color = "gray",
   isCurrency = false,
+  subtitle = "",
 }) {
   const colorMap = {
     gray: "text-gray-800",
@@ -360,18 +416,25 @@ function MetricCard({
     red: "text-red-600",
   };
 
+  const safeValue = isNaN(value) ? 0 : value;
+
   const displayValue = isCurrency
     ? new Intl.NumberFormat("es-DO", {
         style: "currency",
         currency: "DOP",
         minimumFractionDigits: 2,
-      }).format(value)
-    : `${value.toFixed(2)}${suffix}`;
+      }).format(safeValue)
+    : `${safeValue.toFixed(2)}${suffix}`;
 
   return (
     <div className="p-4 bg-white rounded shadow">
       <p className="text-sm text-gray-500">{title}</p>
       <p className={`text-lg font-bold ${colorMap[color]}`}>{displayValue}</p>
+      {subtitle && (
+        <p className="text-xs text-gray-500 mt-1 whitespace-nowrap truncate">
+          {subtitle}
+        </p>
+      )}
     </div>
   );
 }

@@ -20,6 +20,7 @@ function Transactions({ token }) {
   const [articleLines, setArticleLines] = useState([
     { item_id: "", quantity: 1 },
   ]);
+  const [discount, setDiscount] = useState(0);
 
   const [recurrence, setRecurrence] = useState("");
   const [recurrenceEndDate, setRecurrenceEndDate] = useState("");
@@ -60,7 +61,7 @@ function Transactions({ token }) {
     if (isShoppingList && items.length > 0) {
       console.log("🔄 Recalculando total de compra...");
 
-      const total = articleLines.reduce((sum, line, index) => {
+      let total = articleLines.reduce((sum, line, index) => {
         const item = items.find((i) => i.id === line.item_id);
         if (!item) {
           console.warn(`❌ Línea ${index + 1}: artículo no encontrado`, line);
@@ -89,10 +90,15 @@ function Transactions({ token }) {
         return sum + lineTotal;
       }, 0);
 
+      if (discount > 0) {
+        console.log('💸 Descuento aplicado:', discount);
+        total = total * (1 - discount / 100);
+      }
+
       console.log(`✅ Total final con impuestos: ${total.toFixed(2)}`);
       setAmount(total.toFixed(2));
     }
-  }, [articleLines, isShoppingList, items]);
+  }, [articleLines, isShoppingList, items, discount]);
 
   const addLine = () => {
     setArticleLines([...articleLines, { item_id: "", quantity: 1 }]);
@@ -128,6 +134,7 @@ function Transactions({ token }) {
           recurrence: recurrence || null,
           recurrence_end_date: recurrenceEndDate || null,
           items: isShoppingList ? articleLines : [],
+          discount: isShoppingList ? discount : 0,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -293,6 +300,20 @@ function Transactions({ token }) {
             <h4 className="font-semibold text-gray-700 mb-1 mt-2">
               Artículos comprados
             </h4>
+            <div className="flex flex-col sm:col-span-1 mb-3">
+              <label className="text-sm font-medium mb-1">Descuento (%)</label>
+              <input
+                type="number"
+                value={discount}
+                min="0"
+                max="100"
+                step="0.01"
+                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+                className="border border-gray-300 px-2 py-1 rounded w-24 text-sm"
+                placeholder="Ej. 5"
+              />
+            </div>
+
             {articleLines.map((line, idx) => {
               const item = items.find((i) => i.id === line.item_id);
               const price = item?.latest_price || 0;

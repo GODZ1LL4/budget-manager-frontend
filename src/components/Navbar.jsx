@@ -5,19 +5,20 @@ function Navbar({ onLogout, setView }) {
 
   const sections = [
     {
+      title: "Definiciones",
+      links: [
+        { name: "Artículos", view: "items" },
+        { name: "Categorías", view: "categories" },
+      ],
+    },
+    {
       title: "Gestión Financiera",
       links: [
         { name: "Metas de ahorro", view: "goals" },
         { name: "Presupuestos", view: "budgets" },
       ],
     },
-    {
-      title: "Maestros",
-      links: [
-        { name: "Artículos", view: "items" },
-        { name: "Categorías", view: "categories" },
-      ],
-    },
+
     {
       title: "Operaciones",
       links: [
