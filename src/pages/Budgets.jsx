@@ -93,13 +93,18 @@ function Budgets({ token }) {
 
   return (
     <div className="bg-white rounded shadow p-6">
-      <h2 className="text-2xl font-bold mb-2 text-[#1e40af]">Flujos Personales</h2>
+      <h2 className="text-2xl font-bold mb-2 text-[#1e40af]">
+        Flujos Personales
+      </h2>
       <p className="text-sm text-gray-500 mb-4">
         Establece un límite de gasto por categoría cada mes. El sistema te
         mostrará cuánto has utilizado.
       </p>
 
-      <form onSubmit={handleCreate} className="grid gap-4 mb-6 md:grid-cols-3">
+      <form
+        onSubmit={handleCreate}
+        className="grid gap-4 mb-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3"
+      >
         <div className="flex flex-col">
           <label className="text-sm font-medium mb-1">Categoría</label>
           <select
@@ -154,10 +159,10 @@ function Budgets({ token }) {
           />
         </div>
 
-        <div className="md:col-span-3">
+        <div className="col-span-full">
           <button
             type="submit"
-            className="bg-[#1e40af] text-white font-semibold px-4 py-2 rounded hover:brightness-90 transition w-full md:w-auto"
+            className="w-full md:w-auto bg-[#1e40af] text-white font-semibold px-4 py-2 rounded hover:brightness-90 transition"
           >
             Agregar Flujo
           </button>
@@ -165,9 +170,9 @@ function Budgets({ token }) {
       </form>
 
       {/* 🔍 Filtro por mes o año */}
-      <div className="flex items-center gap-4 mb-4">
-        <div>
-          <label className="text-sm mr-2">Ver por:</label>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:items-end mb-4">
+        <div className="flex flex-col">
+          <label className="text-sm font-medium mb-1">Ver por:</label>
           <select
             value={filterType}
             onChange={(e) => {
@@ -176,7 +181,10 @@ function Budgets({ token }) {
               const now = new Date();
               setFilterValue(
                 type === "month"
-                  ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+                  ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+                      2,
+                      "0"
+                    )}`
                   : `${now.getFullYear()}`
               );
             }}
@@ -187,24 +195,29 @@ function Budgets({ token }) {
           </select>
         </div>
 
-        {filterType === "month" ? (
-          <input
-            type="month"
-            value={filterValue}
-            onChange={(e) => setFilterValue(e.target.value)}
-            className="border border-gray-300 p-2 rounded"
-          />
-        ) : (
-          <input
-            type="number"
-            min="2000"
-            max="2100"
-            value={filterValue}
-            onChange={(e) => setFilterValue(e.target.value)}
-            className="border border-gray-300 p-2 rounded w-24"
-            placeholder="Año"
-          />
-        )}
+        <div className="flex flex-col md:col-span-2">
+          <label className="text-sm font-medium mb-1">
+            {filterType === "month" ? "Seleccionar mes" : "Seleccionar año"}
+          </label>
+          {filterType === "month" ? (
+            <input
+              type="month"
+              value={filterValue}
+              onChange={(e) => setFilterValue(e.target.value)}
+              className="border border-gray-300 p-2 rounded"
+            />
+          ) : (
+            <input
+              type="number"
+              min="2000"
+              max="2100"
+              value={filterValue}
+              onChange={(e) => setFilterValue(e.target.value)}
+              className="border border-gray-300 p-2 rounded"
+              placeholder="Año"
+            />
+          )}
+        </div>
       </div>
 
       <h3 className="text-lg font-semibold mb-3 text-gray-800">Resumen</h3>

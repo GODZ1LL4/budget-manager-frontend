@@ -80,22 +80,25 @@ function Categories({ token }) {
   }, [token]);
 
   return (
-    <div
-      className="p-6 bg-white rounded shadow-md text-gray-800
-"
-    >
-      <h2 className="text-2xl font-bold text-[#e32119] mb-4">Categorías</h2>
-      <form onSubmit={handleCreate} className="flex flex-wrap gap-2 mb-6">
+    <div className="p-4 md:p-6 bg-white rounded shadow-md text-gray-800">
+      <h2 className="text-xl md:text-2xl font-bold text-[#e32119] mb-4">
+        Categorías
+      </h2>
+
+      <form
+        onSubmit={handleCreate}
+        className="flex flex-col sm:flex-row flex-wrap gap-2 mb-6"
+      >
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nombre"
-          className="border border-gray-300 p-2 rounded flex-1"
+          className="border border-gray-300 p-2 rounded flex-1 min-w-[120px]"
         />
         <select
           value={type}
           onChange={(e) => setType(e.target.value)}
-          className="border border-gray-300 p-2 rounded"
+          className="border border-gray-300 p-2 rounded min-w-[120px]"
         >
           <option value="expense">Gasto</option>
           <option value="income">Ingreso</option>
@@ -103,108 +106,110 @@ function Categories({ token }) {
         <select
           value={stabilityType}
           onChange={(e) => setStabilityType(e.target.value)}
-          className="border border-gray-300 p-2 rounded"
+          className="border border-gray-300 p-2 rounded min-w-[120px]"
         >
           <option value="fixed">Fijo</option>
           <option value="variable">Variable</option>
           <option value="occasional">Ocasional</option>
         </select>
-
         <button
           type="submit"
-          className="bg-[#e32119] text-white px-4 py-2 rounded hover:bg-red-700 transition"
+          className="bg-[#e32119] text-white px-4 py-2 rounded hover:bg-red-700 transition min-w-[100px]"
         >
           Agregar
         </button>
       </form>
 
-      <table className="w-full border border-gray-300 border-collapse text-sm">
-        <thead className="bg-gray-100 text-left text-gray-700">
-          <tr>
-            <th className="p-2 border border-gray-300">Nombre</th>
-            <th className="p-2 border border-gray-300">Tipo</th>
-            <th className="p-2 border border-gray-300">Estabilidad</th>
-            <th className="p-2 border border-gray-300 text-center">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {categories.map((cat) => (
-            <tr key={cat.id} className="hover:bg-gray-50">
-              {editId === cat.id ? (
-                <>
-                  <td className="p-2 border border-gray-300">
-                    <input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="border border-gray-300 p-1 w-full rounded"
-                    />
-                  </td>
-                  <td className="p-2 border border-gray-300">
-                    <select
-                      value={type}
-                      onChange={(e) => setType(e.target.value)}
-                      className="border border-gray-300 p-1 w-full rounded"
-                    >
-                      <option value="expense">Gasto</option>
-                      <option value="income">Ingreso</option>
-                    </select>
-                  </td>
-                  <td className="p-2 border border-gray-300">
-                    <select
-                      value={stabilityType}
-                      onChange={(e) => setStabilityType(e.target.value)}
-                      className="border border-gray-300 p-1 w-full rounded"
-                    >
-                      <option value="fixed">Fijo</option>
-                      <option value="variable">Variable</option>
-                      <option value="occasional">Ocasional</option>
-                    </select>
-                  </td>
-                  <td className="p-2 border border-gray-300 text-center space-x-2">
-                    <button
-                      onClick={() => handleUpdate(cat.id)}
-                      className="bg-yellow-400 text-black px-2 py-1 rounded text-xs"
-                    >
-                      Guardar
-                    </button>
-                    <button
-                      onClick={() => setEditId(null)}
-                      className="text-gray-500 text-xs"
-                    >
-                      Cancelar
-                    </button>
-                  </td>
-                </>
-              ) : (
-                <>
-                  <td className="p-2 border border-gray-300">{cat.name}</td>
-                  <td className="p-2 border border-gray-300 italic text-gray-600">
-                    {cat.type}
-                  </td>
-                  <td className="p-2 border border-gray-300 italic text-gray-600">
-                    {cat.stability_type || "variable"}
-                  </td>
-
-                  <td className="p-2 border border-gray-300 text-center space-x-2">
-                    <button
-                      onClick={() => startEdit(cat)}
-                      className="text-blue-600 text-xs hover:underline"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(cat.id)}
-                      className="text-red-600 text-xs hover:underline"
-                    >
-                      Eliminar
-                    </button>
-                  </td>
-                </>
-              )}
+      {/* Agregamos scroll horizontal */}
+      <div className="overflow-x-auto">
+        <table className="min-w-full border border-gray-300 border-collapse text-sm">
+          <thead className="bg-gray-100 text-left text-gray-700">
+            <tr>
+              <th className="p-2 border">Nombre</th>
+              <th className="p-2 border">Tipo</th>
+              <th className="p-2 border">Estabilidad</th>
+              <th className="p-2 border text-center">Acciones</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {categories.map((cat) => (
+              <tr key={cat.id} className="hover:bg-gray-50">
+                {editId === cat.id ? (
+                  <>
+                    <td className="p-2 border border-gray-300">
+                      <input
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="border border-gray-300 p-1 w-full rounded"
+                      />
+                    </td>
+                    <td className="p-2 border border-gray-300">
+                      <select
+                        value={type}
+                        onChange={(e) => setType(e.target.value)}
+                        className="border border-gray-300 p-1 w-full rounded"
+                      >
+                        <option value="expense">Gasto</option>
+                        <option value="income">Ingreso</option>
+                      </select>
+                    </td>
+                    <td className="p-2 border border-gray-300">
+                      <select
+                        value={stabilityType}
+                        onChange={(e) => setStabilityType(e.target.value)}
+                        className="border border-gray-300 p-1 w-full rounded"
+                      >
+                        <option value="fixed">Fijo</option>
+                        <option value="variable">Variable</option>
+                        <option value="occasional">Ocasional</option>
+                      </select>
+                    </td>
+                    <td className="p-2 border border-gray-300 text-center space-x-2">
+                      <button
+                        onClick={() => handleUpdate(cat.id)}
+                        className="bg-yellow-400 text-black px-2 py-1 rounded text-xs"
+                      >
+                        Guardar
+                      </button>
+                      <button
+                        onClick={() => setEditId(null)}
+                        className="text-gray-500 text-xs"
+                      >
+                        Cancelar
+                      </button>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td className="p-2 border border-gray-300">{cat.name}</td>
+                    <td className="p-2 border border-gray-300 italic text-gray-600">
+                      {cat.type}
+                    </td>
+                    <td className="p-2 border border-gray-300 italic text-gray-600">
+                      {cat.stability_type || "variable"}
+                    </td>
+
+                    <td className="p-2 border border-gray-300 text-center space-x-2">
+                      <button
+                        onClick={() => startEdit(cat)}
+                        className="text-blue-600 text-xs hover:underline"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(cat.id)}
+                        className="text-red-600 text-xs hover:underline"
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  </>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

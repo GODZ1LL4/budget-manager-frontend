@@ -91,7 +91,7 @@ function Transactions({ token }) {
       }, 0);
 
       if (discount > 0) {
-        console.log('💸 Descuento aplicado:', discount);
+        console.log("💸 Descuento aplicado:", discount);
         total = total * (1 - discount / 100);
       }
 
@@ -172,7 +172,10 @@ function Transactions({ token }) {
         asociar artículos.
       </p>
 
-      <form onSubmit={handleSubmit} className="grid md:grid-cols-3 gap-4 mb-6">
+      <form
+        onSubmit={handleSubmit}
+        className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
+      >
         <div className="col-span-full">
           <label className="inline-flex items-center gap-2 text-sm text-gray-700">
             <input
@@ -300,8 +303,10 @@ function Transactions({ token }) {
             <h4 className="font-semibold text-gray-700 mb-1 mt-2">
               Artículos comprados
             </h4>
-            <div className="flex flex-col sm:col-span-1 mb-3">
-              <label className="text-sm font-medium mb-1">Descuento (%)</label>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+              <label className="text-sm font-medium mb-1 sm:mb-0">
+                Descuento (%)
+              </label>
               <input
                 type="number"
                 value={discount}
@@ -309,7 +314,7 @@ function Transactions({ token }) {
                 max="100"
                 step="0.01"
                 onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                className="border border-gray-300 px-2 py-1 rounded w-24 text-sm"
+                className="border border-gray-300 px-2 py-1 rounded text-sm w-full sm:w-24"
                 placeholder="Ej. 5"
               />
             </div>
@@ -325,58 +330,66 @@ function Transactions({ token }) {
               return (
                 <div
                   key={idx}
-                  className="grid grid-cols-6 gap-2 mb-2 items-center"
+                  className="space-y-2 mb-4 border-b border-gray-200 pb-4"
                 >
-                  <select
-                    value={line.item_id}
-                    onChange={(e) => updateLine(idx, "item_id", e.target.value)}
-                    className="border p-2 col-span-2"
-                  >
-                    <option value="">Selecciona artículo</option>
-                    {items.map((it) => (
-                      <option key={it.id} value={it.id}>
-                        {it.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="grid grid-cols-1 sm:grid-cols-6 gap-2">
+                    <select
+                      value={line.item_id}
+                      onChange={(e) =>
+                        updateLine(idx, "item_id", e.target.value)
+                      }
+                      className="border p-2 sm:col-span-2 w-full rounded"
+                    >
+                      <option value="">Selecciona artículo</option>
+                      {items.map((it) => (
+                        <option key={it.id} value={it.id}>
+                          {it.name}
+                        </option>
+                      ))}
+                    </select>
 
-                  <input
-                    type="number"
-                    placeholder="Cantidad"
-                    className="border p-2 col-span-1"
-                    value={line.quantity}
-                    onChange={(e) =>
-                      updateLine(idx, "quantity", e.target.value)
-                    }
-                  />
+                    <input
+                      type="number"
+                      placeholder="Cantidad"
+                      className="border p-2 sm:col-span-1 w-full rounded"
+                      value={line.quantity}
+                      onChange={(e) =>
+                        updateLine(idx, "quantity", e.target.value)
+                      }
+                    />
 
-                  <div className="text-xs text-gray-600 col-span-2">
-                    <p>
-                      Precio: <strong>{price.toFixed(2)} DOP</strong>
-                    </p>
-                    <p>
-                      ITBIS: <strong>{taxLabel}</strong>
-                    </p>
+                    <div className="text-sm text-gray-600 sm:col-span-2">
+                      <p>
+                        Precio: <strong>{price.toFixed(2)} DOP</strong>
+                      </p>
+                      <p>
+                        ITBIS: <strong>{taxLabel}</strong>
+                      </p>
+                    </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => removeLine(idx)}
-                    className="text-red-600 text-xs"
-                  >
-                    Quitar
-                  </button>
+                  <div className="flex justify-start">
+                    <button
+                      type="button"
+                      onClick={() => removeLine(idx)}
+                      className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:brightness-110 transition w-full sm:w-auto"
+                    >
+                      Quitar artículo
+                    </button>
+                  </div>
                 </div>
               );
             })}
 
-            <button
-              type="button"
-              onClick={addLine}
-              className="text-blue-600 text-sm mt-1 mb-4"
-            >
-              + Agregar otro artículo
-            </button>
+            <div className="flex justify-start mb-4">
+              <button
+                type="button"
+                onClick={addLine}
+                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:brightness-110 transition w-full sm:w-auto"
+              >
+                Agregar artículo
+              </button>
+            </div>
           </div>
         )}
 
@@ -397,7 +410,7 @@ function Transactions({ token }) {
         {transactions.map((tx) => (
           <li
             key={tx.id}
-            className="p-4 border border-gray-200 rounded shadow-sm flex justify-between items-center"
+            className="p-4 border border-gray-200 rounded shadow-sm flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2"
           >
             <div>
               <p className="text-sm font-semibold text-gray-800">
