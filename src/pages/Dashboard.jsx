@@ -39,6 +39,8 @@ function Dashboard({ token }) {
   const api = import.meta.env.VITE_API_URL;
   const [categories, setCategories] = useState([]);
 
+  const [todayExpense, setTodayExpense] = useState(0);
+
   const fetchSummary = async () => {
     try {
       const res = await axios.get(`${api}/dashboard/summary`, {
@@ -63,6 +65,21 @@ function Dashboard({ token }) {
 
   useEffect(() => {
     if (token) fetchSummary();
+  }, [token]);
+
+  useEffect(() => {
+    const fetchTodayExpense = async () => {
+      try {
+        const res = await axios.get(`${api}/dashboard/today-expense`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setTodayExpense(res.data.data.totalExpenseToday || 0);
+      } catch (err) {
+        console.error("Error al cargar gasto de hoy:", err);
+      }
+    };
+
+    if (token) fetchTodayExpense();
   }, [token]);
 
   useEffect(() => {
@@ -173,7 +190,7 @@ function Dashboard({ token }) {
           isCurrency
           color="gray"
         />
-        
+
         <MetricCard
           title="Gastos presupuestados"
           value={data.budgetedExpenseTotal}
@@ -189,6 +206,12 @@ function Dashboard({ token }) {
 
         {/* === Grupo 3 === */}
         <MetricCard
+          title="Gasto total hoy"
+          value={todayExpense}
+          isCurrency
+          color="red"
+        />
+        <MetricCard
           title="Gasto diario promedio"
           value={data.averageDailyExpense}
           isCurrency
@@ -201,17 +224,18 @@ function Dashboard({ token }) {
           color="red"
           subtitle={data.topCategoryName || ""}
         />
-        
+
         <MetricCard
           title="Transacciones totales"
           value={data.totalTransactions}
           color="gray"
         />
-        <MetricCard
+        {/* <MetricCard
           title="Transacciones por día"
           value={data.averageTransactionsPerDay}
           color="gray"
-        />
+        /> */}
+     
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
