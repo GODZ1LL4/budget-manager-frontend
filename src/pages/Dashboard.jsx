@@ -122,6 +122,15 @@ function Dashboard({ token }) {
 
   if (!data) return <p className="p-4">Cargando métricas...</p>;
 
+  const daysInMonth = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth() + 1,
+    0
+  ).getDate();
+  const projectedExpense = data.averageDailyExpense * daysInMonth;
+
+  const projectedSaving = data.totalIncome - projectedExpense;
+
   const pieData = Object.entries(data.expensesByCategory).map(
     ([catId, value]) => ({
       name: data.categoryNameMap?.[catId] || `Categoría ${catId}`,
@@ -176,21 +185,13 @@ function Dashboard({ token }) {
           isCurrency
           color={data.balance >= 0 ? "green" : "red"}
         />
-
         {/* === Grupo 2 === */}
-        <MetricCard
-          title="Gasto mensual promedio"
-          value={data.averageMonthlyExpense}
-          isCurrency
-          color="red"
-        />
         <MetricCard
           title="Presupuesto del mes"
           value={data.totalMonthlyBudget}
           isCurrency
           color="gray"
         />
-
         <MetricCard
           title="Gastos presupuestados"
           value={data.budgetedExpenseTotal}
@@ -203,7 +204,16 @@ function Dashboard({ token }) {
           isCurrency
           color={data.budgetBalance >= 0 ? "green" : "red"}
         />
-
+        <MetricCard
+          title="Presupuesto usado"
+          value={(data.budgetedExpenseTotal / data.totalMonthlyBudget) * 100}
+          suffix="%"
+          color={
+            (data.budgetedExpenseTotal / data.totalMonthlyBudget) * 100 > 90
+              ? "red"
+              : "gray"
+          }
+        />
         {/* === Grupo 3 === */}
         <MetricCard
           title="Gasto total hoy"
@@ -218,24 +228,72 @@ function Dashboard({ token }) {
           color="red"
         />
         <MetricCard
+          title="Gasto mensual promedio"
+          value={data.averageMonthlyExpense}
+          isCurrency
+          color="red"
+        />
+        <MetricCard
           title="Mayor gasto por categoría"
           value={data.topCategoryThisMonth?.amount || 0}
           isCurrency
           color="red"
           subtitle={data.topCategoryName || ""}
         />
-
         <MetricCard
-          title="Transacciones totales"
-          value={data.totalTransactions}
-          color="gray"
+          title="Gasto proyectado del mes"
+          value={projectedExpense}
+          isCurrency
+          color="red"
         />
+
         {/* <MetricCard
           title="Transacciones por día"
           value={data.averageTransactionsPerDay}
           color="gray"
         /> */}
-     
+
+        <MetricCard
+          title="Ahorro proyectado del mes"
+          value={projectedSaving}
+          isCurrency
+          color={projectedSaving >= 0 ? "green" : "red"}
+        />
+        <MetricCard
+          title="% del ingreso gastado"
+          value={(data.totalExpense / data.totalIncome) * 100}
+          suffix="%"
+          color={data.totalExpense / data.totalIncome > 80 ? "red" : "gray"}
+        />
+        <MetricCard
+          title="Transacciones totales"
+          value={data.totalTransactions}
+          color="gray"
+        />
+        <MetricCard
+          title="Días con bajo gasto"
+          value={data.daysBelowAverage || 0}
+          color="green"
+        />
+        <MetricCard
+          title="Día con menor gasto"
+          value={data.minExpenseDay?.amount || 0}
+          isCurrency
+          subtitle={data.minExpenseDay?.date || "—"}
+          color="green"
+        />
+        <MetricCard
+          title="Día con mayor gasto"
+          value={data.maxExpenseDay?.amount || 0}
+          isCurrency
+          subtitle={data.maxExpenseDay?.date || "—"}
+          color="red"
+        />
+        <MetricCard
+          title="Días con gasto alto"
+          value={data.daysAboveAverage || 0}
+          color="red"
+        />
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
@@ -337,7 +395,9 @@ function Dashboard({ token }) {
           distribuidos por categoría.
         </p>
       </CollapseSection>
-
+      <CollapseSection title="Comparativa de saldos por cuenta">
+        <AccountBalancesChart token={token} />
+      </CollapseSection>
       <CollapseSection title="Tendencia de precios por artículo">
         <ItemPriceTrendChart token={token} />
       </CollapseSection>
@@ -354,9 +414,6 @@ function Dashboard({ token }) {
       </CollapseSection>
       <CollapseSection title="Presupuesto vs Gasto por categoría">
         <BudgetVsActualChart token={token} />
-      </CollapseSection>
-      <CollapseSection title="Comparativa de saldos por cuenta">
-        <AccountBalancesChart token={token} />
       </CollapseSection>
       <CollapseSection title="Evolución del balance mensual">
         <MonthlyBalanceTrendChart token={token} />
