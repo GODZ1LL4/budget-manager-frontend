@@ -5,6 +5,7 @@ import CollapseSection from "../components/CollapseSection";
 import ItemPriceTrendChart from "../components/ItemPriceTrendChart";
 import CategorySpendingBarChart from "../components/CategorySpendingBarChart";
 import CategoryMonthlyTrendChart from "../components/CategoryMonthlyTrendChart";
+import Modal from "../components/Modal";
 
 import CategoryTrendSelectorChart from "../components/CategoryTrendSelectorChart";
 import BudgetVsActualChart from "../components/BudgetVsActualChart";
@@ -40,6 +41,10 @@ function Dashboard({ token }) {
   const [categories, setCategories] = useState([]);
 
   const [todayExpense, setTodayExpense] = useState(0);
+
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [categoryTransactions, setCategoryTransactions] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchSummary = async () => {
     try {
@@ -374,6 +379,27 @@ function Dashboard({ token }) {
                 label={({ name, percent }) =>
                   `${name} (${(percent * 100).toFixed(1)}%)`
                 }
+                onClick={async (entry, index) => {
+                  const catId = Object.keys(data.expensesByCategory)[index];
+                  setSelectedCategory(
+                    data.categoryNameMap?.[catId] || "Sin nombre"
+                  );
+                  try {
+                    const res = await axios.get(
+                      `${api}/dashboard/transactions-by-category?category_id=${catId}`,
+                      {
+                        headers: { Authorization: `Bearer ${token}` },
+                      }
+                    );
+                    setCategoryTransactions(res.data.data);
+                    setIsModalOpen(true);
+                  } catch (err) {
+                    console.error(
+                      "Error al cargar transacciones de categoría:",
+                      err
+                    );
+                  }
+                }}
               >
                 {pieData.map((_, index) => (
                   <Cell
@@ -387,6 +413,34 @@ function Dashboard({ token }) {
                 labelFormatter={(label) => `Categoría: ${label}`}
               />
             </PieChart>
+            <Modal
+              isOpen={isModalOpen}
+              onClose={() => setIsModalOpen(false)}
+              title={`Transacciones: ${selectedCategory}`}
+            >
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {categoryTransactions.length === 0 ? (
+                  <p className="text-sm text-gray-600">
+                    Sin transacciones registradas.
+                  </p>
+                ) : (
+                  categoryTransactions.map((tx) => (
+                    <div
+                      key={tx.id}
+                      className="border-b pb-1 text-sm flex justify-between text-gray-700"
+                    >
+                      <span>{tx.date}</span>
+                      <span className="text-right truncate w-32">
+                        {tx.description || "Sin descripción"}
+                      </span>
+                      <span className="text-red-600 font-medium">
+                        RD$ {parseFloat(tx.amount).toFixed(2)}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Modal>
           </ResponsiveContainer>
         </div>
 
