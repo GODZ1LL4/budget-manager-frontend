@@ -16,6 +16,7 @@ function Navbar({ onLogout, setView }) {
     {
       title: "Gestión Financiera",
       links: [
+        { name: "Escenarios", view: "scenarios" },
         { name: "Metas de ahorro", view: "goals" },
         { name: "Presupuestos", view: "budgets" },
       ],
@@ -37,7 +38,7 @@ function Navbar({ onLogout, setView }) {
     <nav className="bg-blue-900 text-white px-6 py-4 shadow-md flex items-center justify-between flex-wrap relative z-50">
       <div className="flex items-center gap-2">
         <h1 className="text-xl font-bold text-yellow-400 flex items-center gap-2">
-          💸 Flujo Personal
+          💸 FinanceFlow
         </h1>
       </div>
 

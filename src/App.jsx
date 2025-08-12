@@ -9,6 +9,7 @@ import Items from "./pages/Items";
 import Goals from "./pages/Goals";
 import Dashboard from "./pages/Dashboard";
 import AppLayout from "./components/AppLayout";
+import Scenarios from "./pages/Scenarios";
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -20,7 +21,7 @@ function App() {
   // ✅ Obtener sesión al cargar la app
   useEffect(() => {
     const restoreSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
+      const { data } = await supabase.auth.getSession();
       if (data?.session) {
         setSession(data.session);
       }
@@ -61,11 +62,14 @@ function App() {
         <AppLayout onLogout={handleLogout} setView={setView}>
           {view === "categories" && <Categories token={session.access_token} />}
           {view === "accounts" && <Accounts token={session.access_token} />}
-          {view === "transactions" && <Transactions token={session.access_token} />}
+          {view === "transactions" && (
+            <Transactions token={session.access_token} />
+          )}
           {view === "budgets" && <Budgets token={session.access_token} />}
           {view === "items" && <Items token={session.access_token} />}
           {view === "goals" && <Goals token={session.access_token} />}
           {view === "dashboard" && <Dashboard token={session.access_token} />}
+          {view === "scenarios" && <Scenarios token={session.access_token} />}
         </AppLayout>
       )}
 
