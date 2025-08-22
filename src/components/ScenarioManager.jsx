@@ -5,16 +5,20 @@ import dayjs from "dayjs";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 dayjs.extend(isSameOrBefore);
 
+import ImportBudgetModal from "./ImportBudgetModal";
 import CollapseSection from "./CollapseSection";
 import ScenarioForm from "./ScenarioForm";
 import ScenarioCalendar from "./ScenarioCalendar";
 import Modal from "./Modal";
 import TransactionForm from "./TransactionForm";
+import { useCallback } from "react";
+
+import { toast } from "react-toastify";
 
 function Sparkline({ values = [], width = 240, height = 48, padding = 6 }) {
   // Filtra valores no finitos
   const clean = Array.isArray(values)
-    ? values.filter(v => Number.isFinite(v))
+    ? values.filter((v) => Number.isFinite(v))
     : [];
 
   // Si no hay datos, no renderiza
@@ -22,7 +26,7 @@ function Sparkline({ values = [], width = 240, height = 48, padding = 6 }) {
 
   const max = Math.max(...clean);
   const min = Math.min(...clean);
-  const range = (max - min) || 1;
+  const range = max - min || 1;
 
   // Si solo hay un punto, dibuja una línea plana a la mitad
   if (clean.length === 1) {
@@ -31,7 +35,14 @@ function Sparkline({ values = [], width = 240, height = 48, padding = 6 }) {
     const x2 = width - padding;
     return (
       <svg width={width} height={height} className="w-full h-12">
-        <line x1={x1} y1={y} x2={x2} y2={y} stroke="currentColor" strokeWidth="2" />
+        <line
+          x1={x1}
+          y1={y}
+          x2={x2}
+          y2={y}
+          stroke="currentColor"
+          strokeWidth="2"
+        />
       </svg>
     );
   }
@@ -48,11 +59,15 @@ function Sparkline({ values = [], width = 240, height = 48, padding = 6 }) {
 
   return (
     <svg width={width} height={height} className="w-full h-12">
-      <polyline fill="none" stroke="currentColor" strokeWidth="2" points={points} />
+      <polyline
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        points={points}
+      />
     </svg>
   );
 }
-
 
 function BudgetsDiff({ aiMonth, aiBudgets, currentBudgets, categoriesById }) {
   const currentByCat = useMemo(() => {
@@ -66,9 +81,12 @@ function BudgetsDiff({ aiMonth, aiBudgets, currentBudgets, categoriesById }) {
 
   return (
     <div className="mt-4">
-      <h5 className="font-semibold text-gray-800 mb-1">Cambios de presupuesto</h5>
+      <h5 className="font-semibold text-gray-800 mb-1">
+        Cambios de presupuesto
+      </h5>
       <div className="text-xs text-gray-500 mb-2">
-        Comparación contra presupuestos actuales del mes {aiMonth || "(mes del plan)"}.
+        Comparación contra presupuestos actuales del mes{" "}
+        {aiMonth || "(mes del plan)"}.
       </div>
       <ul className="space-y-1 text-sm">
         {(aiBudgets || []).map((b, i) => {
@@ -88,13 +106,17 @@ function BudgetsDiff({ aiMonth, aiBudgets, currentBudgets, categoriesById }) {
               >
                 RD$ {prev.toFixed(2)} →{" "}
                 <strong>RD$ {Number(b.amount).toFixed(2)}</strong>
-                {diff !== 0 ? ` (${diff > 0 ? "+" : ""}${diff.toFixed(2)})` : ""}
+                {diff !== 0
+                  ? ` (${diff > 0 ? "+" : ""}${diff.toFixed(2)})`
+                  : ""}
               </span>
             </li>
           );
         })}
         {(!aiBudgets || aiBudgets.length === 0) && (
-          <li className="text-gray-500 italic">Sin sugerencias de presupuesto</li>
+          <li className="text-gray-500 italic">
+            Sin sugerencias de presupuesto
+          </li>
         )}
       </ul>
     </div>
@@ -105,7 +127,6 @@ function BudgetsDiff({ aiMonth, aiBudgets, currentBudgets, categoriesById }) {
  * Expande transacciones recurrentes de un plan SOLO dentro del mes target "YYYY-MM".
  * Soporta: daily, weekly, biweekly, monthly (respeta exclude_weekends).
  */
-
 
 function ScenarioManager({ token }) {
   const [scenarios, setScenarios] = useState([]);
@@ -124,23 +145,40 @@ function ScenarioManager({ token }) {
   const [categories, setCategories] = useState([]);
 
   const [showEditScenario, setShowEditScenario] = useState(false);
-  const [scenarioForm, setScenarioForm] = useState({ name: "", description: "" });
+  const [scenarioForm, setScenarioForm] = useState({
+    name: "",
+    description: "",
+  });
   const [scenarioEditingId, setScenarioEditingId] = useState(null);
 
+  const [calendarRange, setCalendarRange] = useState({
+    start: dayjs().startOf("month").format("YYYY-MM-DD"),
+    end: dayjs().endOf("month").add(1, "day").format("YYYY-MM-DD"), // end exclusivo
+  });
 
+  // Mes visible (tomamos el “centro” del grid para obtener el mes real)
+  const visibleMonthKey = useMemo(() => {
+    return dayjs(calendarRange.start).add(15, "day").format("YYYY-MM");
+  }, [calendarRange]);
 
-
+  // Solo las transacciones del mes visible
+  const monthProjection = useMemo(() => {
+    return (projection || []).filter(
+      (tx) => dayjs(tx.date).format("YYYY-MM") === visibleMonthKey
+    );
+  }, [projection, visibleMonthKey]);
 
   const stats = useMemo(() => {
     let income = 0;
     let expense = 0;
     const categoryTotals = {};
-    for (const tx of projection) {
-      if (tx.type === "income") income += tx.amount;
+    for (const tx of monthProjection) {
+      const amt = Number(tx.amount || 0);
+      if (tx.type === "income") income += amt;
       if (tx.type === "expense") {
-        expense += tx.amount;
+        expense += amt;
         const cat = tx.category_name || "Sin categoría";
-        categoryTotals[cat] = (categoryTotals[cat] || 0) + tx.amount;
+        categoryTotals[cat] = (categoryTotals[cat] || 0) + amt;
       }
     }
     return {
@@ -149,11 +187,9 @@ function ScenarioManager({ token }) {
       totalExpense: expense,
       categoryTotals,
     };
-  }, [projection]);
+  }, [monthProjection]);
 
   const api = import.meta.env.VITE_API_URL;
-
-
 
   useEffect(() => {
     let isMounted = true;
@@ -181,9 +217,11 @@ function ScenarioManager({ token }) {
     };
   }, [token, api]);
 
-  const fetchProjection = async (id) => {
+  // 🟢 Trae la proyección SOLO del rango visible (end es EXCLUSIVO)
+  const fetchProjectionRange = async (id, start, end) => {
     try {
       const res = await axios.get(`${api}/scenarios/${id}/projection`, {
+        params: { start, end }, // FullCalendar manda end EXCLUSIVO
         headers: { Authorization: `Bearer ${token}` },
       });
       setProjection(res.data.data || []);
@@ -194,7 +232,13 @@ function ScenarioManager({ token }) {
 
   const handleSelectScenario = (scenario) => {
     setSelectedScenario(scenario);
-    fetchProjection(scenario.id);
+    const start = dayjs().startOf("month").format("YYYY-MM-DD");
+    const endExclusive = dayjs()
+      .endOf("month")
+      .add(1, "day")
+      .format("YYYY-MM-DD");
+    setCalendarRange({ start, end: endExclusive });
+    fetchProjectionRange(scenario.id, start, endExclusive);
   };
 
   const handleDateRangeSelect = (start, end) => {
@@ -247,18 +291,6 @@ function ScenarioManager({ token }) {
           },
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        const updatedProjection = projection.map((tx) =>
-          tx.id === editId
-            ? {
-                ...tx,
-                name: formData.name,
-                amount: formData.amount,
-                type: formData.type,
-                category_id: formData.category_id || null,
-              }
-            : tx
-        );
-        setProjection(updatedProjection);
       } else {
         await axios.post(
           `${api}/scenarios/scenario_transactions`,
@@ -275,8 +307,17 @@ function ScenarioManager({ token }) {
           },
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        fetchProjection(selectedScenario.id);
       }
+
+      // ✅ Refresca usando el rango visible actual (no uses fetchProjection)
+      if (selectedScenario) {
+        await fetchProjectionRange(
+          selectedScenario.id,
+          calendarRange.start,
+          calendarRange.end
+        );
+      }
+
       setShowModal(false);
       setEditMode(false);
       setEditId(null);
@@ -293,8 +334,16 @@ function ScenarioManager({ token }) {
       await axios.delete(`${api}/scenarios/scenario_transactions/${editId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const updated = projection.filter((tx) => tx.id !== editId);
-      setProjection(updated);
+
+      // ✅ Refresca con el rango visible
+      if (selectedScenario) {
+        await fetchProjectionRange(
+          selectedScenario.id,
+          calendarRange.start,
+          calendarRange.end
+        );
+      }
+
       setShowModal(false);
       setEditMode(false);
       setEditId(null);
@@ -312,7 +361,9 @@ function ScenarioManager({ token }) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setScenarios((prev) =>
-        prev.map((s) => (s.id === scenarioEditingId ? { ...s, ...res.data.data } : s))
+        prev.map((s) =>
+          s.id === scenarioEditingId ? { ...s, ...res.data.data } : s
+        )
       );
       if (selectedScenario?.id === scenarioEditingId) {
         setSelectedScenario((prev) => ({ ...prev, ...res.data.data }));
@@ -326,7 +377,12 @@ function ScenarioManager({ token }) {
   };
 
   const handleDeleteScenario = async (id) => {
-    if (!confirm("¿Eliminar este escenario? Se borrarán sus transacciones simuladas.")) return;
+    if (
+      !confirm(
+        "¿Eliminar este escenario? Se borrarán sus transacciones simuladas."
+      )
+    )
+      return;
     try {
       await axios.delete(`${api}/scenarios/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -342,14 +398,40 @@ function ScenarioManager({ token }) {
     }
   };
 
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importPreview, setImportPreview] = useState(null); // datos del preview
+  const [importScope, setImportScope] = useState("current"); // "current" | "all"
+  const [importLoading, setImportLoading] = useState(false);
+  const [, setImportConflicts] = useState([]);
 
-
+  const fetchImportPreview = useCallback(
+    async (scope = "current") => {
+      if (!selectedScenario) return;
+      setImportLoading(true);
+      try {
+        const res = await axios.get(
+          `${api}/scenarios/${selectedScenario.id}/budget-import-preview`,
+          {
+            params: { scope },
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        setImportPreview(res.data.data || null);
+        setImportConflicts(res.data.data?.conflicts || []);
+      } catch (err) {
+        console.error("❌ Error al obtener preview de importación:", err);
+        alert("No se pudo obtener el preview de importación.");
+      } finally {
+        setImportLoading(false);
+      }
+    },
+    [api, token, selectedScenario]
+  );
 
   return (
     <div className="p-6 bg-white rounded shadow space-y-6">
       <h2 className="text-2xl font-bold text-gray-800 flex items-center justify-between">
         Escenarios
-        
       </h2>
 
       <ScenarioForm
@@ -362,12 +444,16 @@ function ScenarioManager({ token }) {
               headers: { Authorization: `Bearer ${token}` },
             })
             .then((res) => setScenarios(res.data.data || []))
-            .catch((err) => console.error("❌ Error recargando escenarios:", err));
+            .catch((err) =>
+              console.error("❌ Error recargando escenarios:", err)
+            );
         }}
       />
 
       <div>
-        <h3 className="text-lg font-semibold text-gray-700 mb-2">Escenarios guardados</h3>
+        <h3 className="text-lg font-semibold text-gray-700 mb-2">
+          Escenarios guardados
+        </h3>
         <ul className="space-y-2">
           {scenarios.map((sc) => (
             <li
@@ -388,7 +474,10 @@ function ScenarioManager({ token }) {
                   <button
                     className="text-sm px-2 py-1 rounded border hover:bg-gray-100"
                     onClick={() => {
-                      setScenarioForm({ name: sc.name, description: sc.description || "" });
+                      setScenarioForm({
+                        name: sc.name,
+                        description: sc.description || "",
+                      });
                       setScenarioEditingId(sc.id);
                       setShowEditScenario(true);
                     }}
@@ -414,7 +503,18 @@ function ScenarioManager({ token }) {
             <h3 className="text-lg font-semibold text-gray-800 mb-3">
               Estadísticas del escenario
             </h3>
-
+            <div className="flex justify-end mt-3">
+              <button
+                className="bg-indigo-600 text-white px-4 py-2 mb-2 rounded hover:bg-indigo-700"
+                onClick={() => {
+                  setImportScope("current");
+                  setShowImportModal(true);
+                  fetchImportPreview("current");
+                }}
+              >
+                Importar a presupuesto
+              </button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div className="p-3 border rounded bg-white">
                 <p className="text-sm text-gray-500">Balance</p>
@@ -454,7 +554,9 @@ function ScenarioManager({ token }) {
                   </li>
                 ))}
                 {Object.keys(stats.categoryTotals).length === 0 && (
-                  <li className="text-gray-500 italic">No hay gastos registrados</li>
+                  <li className="text-gray-500 italic">
+                    No hay gastos registrados
+                  </li>
                 )}
               </ul>
             </div>
@@ -464,11 +566,17 @@ function ScenarioManager({ token }) {
             projection={projection}
             onDateRangeSelect={handleDateRangeSelect}
             onEventClick={handleEventClick}
+            onViewRangeChange={(start, end) => {
+              setCalendarRange({ start, end }); // guarda rango visible
+              if (selectedScenario) {
+                fetchProjectionRange(selectedScenario.id, start, end); // end exclusivo
+              }
+            }}
           />
 
           <CollapseSection title="Transacciones proyectadas">
             <ul className="space-y-3">
-              {projection.map((tx) => (
+              {monthProjection.map((tx) => (
                 <li
                   key={`${tx.id}-${tx.date}`}
                   className="p-3 border rounded flex flex-col sm:flex-row sm:justify-between sm:items-center bg-gray-50"
@@ -477,7 +585,9 @@ function ScenarioManager({ token }) {
                     <p className="font-medium text-gray-800">
                       <span
                         className={
-                          tx.type === "income" ? "text-green-600" : "text-red-600"
+                          tx.type === "income"
+                            ? "text-green-600"
+                            : "text-red-600"
                         }
                       >
                         {tx.type === "income" ? "+" : "-"}RD$
@@ -569,7 +679,44 @@ function ScenarioManager({ token }) {
         </div>
       </Modal>
 
-    
+      <ImportBudgetModal
+        isOpen={showImportModal}
+        onClose={() => {
+          setShowImportModal(false);
+          setImportPreview(null);
+          setImportConflicts([]);
+        }}
+        scope={importScope}
+        setScope={(s) => {
+          setImportScope(s);
+          fetchImportPreview(s);
+        }}
+        loading={importLoading}
+        preview={importPreview} // { scope, from, to, items[], conflicts[] }
+        onConfirm={async ({ strategy }) => {
+          try {
+            const res = await axios.post(
+              `${api}/scenarios/${selectedScenario.id}/import-to-budgets`,
+              { scope: importScope, strategy },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            const { inserted, updated, skipped } = res.data.data || {};
+            toast.success(
+              `Presupuesto importado ✅\nInsertados: ${inserted}, Actualizados: ${updated}, Omitidos: ${skipped}`,
+              { duration: 5000 }
+            );
+
+            setShowImportModal(false);
+            setImportPreview(null);
+            setImportConflicts([]);
+          } catch (err) {
+            console.error("❌ Error al importar a budgets:", err);
+            toast.error(
+              err.response?.data?.error || "No se pudo importar a presupuesto."
+            );
+          }
+        }}
+      />
     </div>
   );
 }
