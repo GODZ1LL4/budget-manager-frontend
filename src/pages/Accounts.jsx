@@ -1,11 +1,44 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import Modal from "../components/Modal"; // ajusta el case si tu archivo es 'modal.jsx'
+
+// 🔔 react-toastify
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function Accounts({ token }) {
   const [name, setName] = useState("");
   const [accounts, setAccounts] = useState([]);
   const [editId, setEditId] = useState(null);
   const [balances, setBalances] = useState({});
+
+  const [showTransfer, setShowTransfer] = useState(false);
+  const [tFrom, setTFrom] = useState("");
+  const [tFromName, setTFromName] = useState("");
+  const [tTo, setTTo] = useState("");
+  const [tAmount, setTAmount] = useState("");
+  const [tDate, setTDate] = useState(
+    () => new Date().toISOString().split("T")[0]
+  );
+  const [tDesc, setTDesc] = useState("");
+  const [tLoading, setTLoading] = useState(false);
+  const [tError, setTError] = useState(""); // solo para errores del server (en el modal)
+
+  // Estados para el modal de eliminar
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleteAcc, setDeleteAcc] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const openDelete = (acc) => {
+    setDeleteAcc(acc);
+    setShowDelete(true);
+  };
+  const closeDelete = () => {
+    if (!deleteLoading) {
+      setShowDelete(false);
+      setDeleteAcc(null);
+    }
+  };
 
   const api = import.meta.env.VITE_API_URL;
 
@@ -16,7 +49,7 @@ function Accounts({ token }) {
       });
       setAccounts(res.data.data);
     } catch {
-      alert("Error al obtener cuentas");
+      toast.error("Error al obtener cuentas");
     }
   };
 
@@ -27,58 +60,70 @@ function Accounts({ token }) {
       });
       setBalances(res.data.data);
     } catch {
+      // Puedes mostrar toast si lo deseas:
+      // toast.error("No se pudo cargar balances");
       console.error("No se pudo cargar balances");
     }
   };
 
-  const reload = () => {
-    fetchAccounts();
-    fetchBalances();
+  const reload = async () => {
+    await Promise.all([fetchAccounts(), fetchBalances()]);
   };
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    if (!name.trim()) {
+      toast.error("El nombre de la cuenta es obligatorio");
+      return;
+    }
     try {
       await axios.post(
         `${api}/accounts`,
         { name },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       setName("");
-      reload();
+      await reload();
+      toast.success("Cuenta creada correctamente");
     } catch {
-      alert("Error al crear cuenta");
+      toast.error("Error al crear cuenta");
     }
   };
 
   const handleUpdate = async (id) => {
+    if (!name.trim()) {
+      toast.error("El nombre de la cuenta es obligatorio");
+      return;
+    }
     try {
       await axios.put(
         `${api}/accounts/${id}`,
         { name },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       setEditId(null);
       setName("");
-      reload();
+      await reload();
+      toast.success("Cuenta actualizada");
     } catch {
-      alert("Error al actualizar cuenta");
+      toast.error("Error al actualizar cuenta");
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("¿Eliminar esta cuenta?")) return;
+  const confirmDelete = async () => {
+    if (!deleteAcc) return;
+    setDeleteLoading(true);
     try {
-      await axios.delete(`${api}/accounts/${id}`, {
+      await axios.delete(`${api}/accounts/${deleteAcc.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      reload();
-    } catch {
-      alert("Error al eliminar cuenta");
+      await reload();
+      toast.success(`Cuenta "${deleteAcc.name}" eliminada`);
+      closeDelete();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Error al eliminar cuenta");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -88,8 +133,83 @@ function Accounts({ token }) {
   };
 
   useEffect(() => {
-    if (token) reload();
+    if (token) {
+      reload();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  const submitTransfer = async (e) => {
+    e.preventDefault();
+    setTError("");
+
+    // ✅ Validaciones con toast
+    if (!tFrom || !tTo || !tDate || tAmount === "") {
+      toast.error("Completa todos los campos.");
+      return;
+    }
+
+    const amountNum = Number(tAmount);
+    if (Number.isNaN(amountNum)) {
+      toast.error("Monto inválido.");
+      return;
+    }
+    if (amountNum <= 0) {
+      toast.error("El monto debe ser mayor que 0.");
+      return;
+    }
+
+    if (tFrom === tTo) {
+      toast.error("Las cuentas deben ser distintas.");
+      return;
+    }
+
+    const fromBalance = balances[tFrom] ?? 0;
+    if (fromBalance < amountNum) {
+      toast.error("Saldo insuficiente en la cuenta origen.");
+      return;
+    }
+
+    try {
+      setTLoading(true);
+      await axios.post(
+        `${api}/accounts/transfer`,
+        {
+          from_account_id: tFrom,
+          to_account_id: tTo,
+          amount: amountNum,
+          date: tDate,
+          description: tDesc || null,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      // Mensaje de éxito con nombres
+      const toName =
+        accounts.find((a) => a.id === tTo)?.name || "cuenta destino";
+      toast.success(
+        `Transferencia realizada: ${amountNum.toFixed(
+          2
+        )} DOP de ${tFromName} a ${toName}`
+      );
+
+      // reset + cerrar + recargar
+      setShowTransfer(false);
+      setTFrom("");
+      setTTo("");
+      setTAmount("");
+      setTDesc("");
+      await reload();
+    } catch (err) {
+      console.error(err);
+      const msg =
+        err?.response?.data?.error || "No se pudo realizar la transferencia.";
+      setTError(msg); // visible dentro del modal (panel rojo)
+      toast.error(msg);
+    } finally {
+      setTLoading(false);
+    }
+  };
 
   return (
     <div className="bg-white rounded shadow p-6">
@@ -145,19 +265,30 @@ function Accounts({ token }) {
                   <td className="p-2 border border-gray-300 italic text-gray-500">
                     {balances[acc.id]?.toFixed(2) ?? "0.00"}
                   </td>
-                  <td className="p-2 border border-gray-300 text-center space-x-2">
-                    <button
-                      onClick={() => handleUpdate(acc.id)}
-                      className="bg-[#f6e652] text-black px-2 py-1 rounded text-xs"
-                    >
-                      Guardar
-                    </button>
-                    <button
-                      onClick={() => setEditId(null)}
-                      className="text-gray-500 text-xs"
-                    >
-                      Cancelar
-                    </button>
+                  <td className="p-2 border border-gray-300">
+                    <div className="flex justify-center flex-wrap gap-2">
+                      {/* Guardar (verde) */}
+                      <button
+                        type="button"
+                        onClick={() => handleUpdate(acc.id)}
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
+                 bg-green-600 text-white hover:brightness-110 focus:outline-none
+                 focus:ring-2 focus:ring-green-400 focus:ring-offset-1 transition"
+                      >
+                        Guardar
+                      </button>
+
+                      {/* Cancelar (gris) */}
+                      <button
+                        type="button"
+                        onClick={() => setEditId(null)}
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
+                 bg-gray-200 text-gray-800 hover:brightness-110 focus:outline-none
+                 focus:ring-2 focus:ring-gray-300 focus:ring-offset-1 transition"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                   </td>
                 </>
               ) : (
@@ -166,19 +297,51 @@ function Accounts({ token }) {
                   <td className="p-2 border border-gray-300 text-gray-600">
                     {balances[acc.id]?.toFixed(2) ?? "0.00"}
                   </td>
-                  <td className="p-2 border border-gray-300 text-center space-x-2">
-                    <button
-                      onClick={() => startEdit(acc)}
-                      className="text-blue-600 text-xs hover:underline"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(acc.id)}
-                      className="text-red-600 text-xs hover:underline"
-                    >
-                      Eliminar
-                    </button>
+                  <td className="p-2 border border-gray-300">
+                    <div className="flex justify-center flex-wrap gap-2">
+                      {/* Transferir (azul) */}
+                      <button
+                        onClick={() => {
+                          setTFrom(acc.id);
+                          setTFromName(acc.name);
+                          setTTo("");
+                          setTAmount("");
+                          setTDate(new Date().toISOString().split("T")[0]);
+                          setTDesc("");
+                          setTError("");
+                          setShowTransfer(true);
+                        }}
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
+                 bg-blue-600 text-white hover:brightness-110 focus:outline-none
+                 focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 transition"
+                        type="button"
+                      >
+                        Transferir
+                      </button>
+
+                      {/* Editar (ámbar) */}
+                      <button
+                        onClick={() => startEdit(acc)}
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
+                 bg-amber-500 text-black hover:brightness-110 focus:outline-none
+                 focus:ring-2 focus:ring-amber-400 focus:ring-offset-1 transition"
+                        type="button"
+                      >
+                        Editar
+                      </button>
+
+                      {/* Eliminar (rojo) */}
+                      <button
+                        onClick={() => openDelete(acc)} // si ya agregaste el modal de eliminar
+                        // onClick={() => handleDelete(acc.id)} // si aún usas la función directa
+                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
+                 bg-red-600 text-white hover:brightness-110 focus:outline-none
+                 focus:ring-2 focus:ring-red-400 focus:ring-offset-1 transition"
+                        type="button"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
                   </td>
                 </>
               )}
@@ -186,6 +349,160 @@ function Accounts({ token }) {
           ))}
         </tbody>
       </table>
+
+      <Modal
+        isOpen={showTransfer}
+        onClose={() => !tLoading && setShowTransfer(false)}
+        title={`Transferir desde ${tFromName}`}
+      >
+        <form onSubmit={submitTransfer} className="space-y-4">
+          {/* Panel en-modal solo para errores del servidor */}
+          {tError && (
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">
+              {tError}
+            </div>
+          )}
+
+          <div className="flex flex-col">
+            <label className="text-sm font-medium mb-1">Hacia</label>
+            <select
+              value={tTo}
+              onChange={(e) => setTTo(e.target.value)}
+              className="border border-gray-300 p-2 rounded"
+              disabled={tLoading}
+              required
+            >
+              <option value="">Selecciona una cuenta</option>
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id} disabled={acc.id === tFrom}>
+                  {acc.name} {acc.id === tFrom ? "(misma cuenta)" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-sm font-medium mb-1">Monto</label>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0"
+              value={tAmount}
+              onChange={(e) => setTAmount(e.target.value)}
+              onBlur={() => {
+                if (tAmount !== "" && !Number.isNaN(Number(tAmount))) {
+                  setTAmount(Number(tAmount).toFixed(2));
+                }
+              }}
+              className="border border-gray-300 p-2 rounded"
+              disabled={tLoading}
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Saldo disponible: {balances[tFrom]?.toFixed(2) ?? "0.00"}
+            </p>
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-sm font-medium mb-1">Fecha</label>
+            <input
+              type="date"
+              value={tDate}
+              onChange={(e) => setTDate(e.target.value)}
+              className="border border-gray-300 p-2 rounded"
+              disabled={tLoading}
+              required
+            />
+          </div>
+
+          <div className="flex flex-col">
+            <label className="text-sm font-medium mb-1">
+              Descripción (opcional)
+            </label>
+            <input
+              type="text"
+              value={tDesc}
+              onChange={(e) => setTDesc(e.target.value)}
+              className="border border-gray-300 p-2 rounded"
+              disabled={tLoading}
+              placeholder="Ej: mover a ahorro"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:brightness-110 transition disabled:opacity-60"
+              disabled={tLoading}
+            >
+              {tLoading ? "Transfiriendo..." : "Confirmar transferencia"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowTransfer(false)}
+              className="px-4 py-2 text-sm rounded border border-gray-300"
+              disabled={tLoading}
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal isOpen={showDelete} onClose={closeDelete} title="Eliminar cuenta">
+        {(() => {
+          const bal = deleteAcc ? Number(balances[deleteAcc.id] ?? 0) : 0;
+          const hasBalance = Math.abs(bal) > 0.000001; // opcional: bloquear si tiene saldo
+
+          return (
+            <div className="space-y-4">
+              <div className="text-sm">
+                <p>
+                  ¿Seguro que deseas eliminar la cuenta{" "}
+                  <strong>{deleteAcc?.name}</strong>?
+                </p>
+                <p className="text-gray-500 mt-1">
+                  Esta acción no se puede deshacer.
+                </p>
+
+                {/* Aviso opcional si hay saldo */}
+                {hasBalance && (
+                  <div className="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2">
+                    La cuenta tiene un saldo de{" "}
+                    <strong>{bal.toFixed(2)}</strong>. Te recomiendo transferir
+                    o ajustar el saldo antes de eliminarla.
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={confirmDelete}
+                  className={`px-4 py-2 text-sm rounded text-white transition
+              ${
+                hasBalance
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-red-600 hover:brightness-110"
+              }`}
+                  disabled={deleteLoading || hasBalance} // ← quita "|| hasBalance" si quieres permitir eliminar con saldo
+                >
+                  {deleteLoading ? "Eliminando..." : "Eliminar"}
+                </button>
+                <button
+                  type="button"
+                  onClick={closeDelete}
+                  className="px-4 py-2 text-sm rounded border border-gray-300"
+                  disabled={deleteLoading}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
     </div>
   );
 }

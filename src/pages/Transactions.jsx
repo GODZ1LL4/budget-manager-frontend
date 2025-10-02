@@ -416,20 +416,35 @@ function Transactions({ token }) {
               <p className="text-sm font-semibold text-gray-800">
                 <span
                   className={
-                    tx.type === "income" ? "text-green-600" : "text-red-600"
+                    tx.type === "income"
+                      ? "text-green-600"
+                      : tx.type === "expense"
+                      ? "text-red-600"
+                      : "text-gray-700"
                   }
                 >
-                  {tx.type === "income" ? "+" : "-"}
-                  {tx.amount.toFixed(2)} DOP
+                  {tx.type === "income"
+                    ? "+"
+                    : tx.type === "expense"
+                    ? "-"
+                    : ""}
+                  {Number(tx.amount).toFixed(2)} DOP
                 </span>{" "}
                 —{" "}
                 <span className="text-gray-600">
-                  {tx.categories?.name || "Sin categoría"}
+                  {tx.type === "transfer"
+                    ? "Transferencia"
+                    : tx.categories?.name || "Sin categoría"}
                 </span>
               </p>
               <p className="text-xs text-gray-500">
                 {tx.description || "Sin descripción"} —{" "}
-                {tx.accounts?.name || "Sin cuenta"} — {tx.date}
+                {tx.type === "transfer"
+                  ? `${tx.account_from?.name || "¿?"} → ${
+                      tx.account_to?.name || "¿?"
+                    }`
+                  : tx.account?.name || "Sin cuenta"}{" "}
+                — {tx.date}
               </p>
             </div>
             <button
