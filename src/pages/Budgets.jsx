@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import Modal from "../components/Modal";
+import { toast } from "react-toastify";
 
 function Budgets({ token }) {
   const [budgets, setBudgets] = useState([]);
@@ -14,6 +16,12 @@ function Budgets({ token }) {
 
   const [filterType, setFilterType] = useState("month"); // "month" o "year"
   const [filterValue, setFilterValue] = useState(month);
+
+  // Importación desde mes anterior
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importPreview, setImportPreview] = useState(null);
+  const [importItems, setImportItems] = useState([]);
+  const [importLoading, setImportLoading] = useState(false);
 
   const api = import.meta.env.VITE_API_URL;
 
@@ -32,7 +40,7 @@ function Budgets({ token }) {
 
       setBudgets(res.data.data);
     } catch {
-      alert("Error al cargar presupuestos");
+      toast.error("Error al cargar presupuestos");
     }
   };
 
@@ -43,7 +51,7 @@ function Budgets({ token }) {
       });
       setCategories(res.data.data.filter((cat) => cat.type === "expense"));
     } catch {
-      alert("Error al cargar categorías");
+      toast.error("Error al cargar categorías");
     }
   };
 
@@ -65,30 +73,40 @@ function Budgets({ token }) {
 
       setCategoryId("");
       setLimitAmount("");
+      toast.success("Presupuesto creado correctamente");
       fetchBudgets();
     } catch {
-      alert("Error al crear el presupuesto");
+      toast.error("Error al crear el presupuesto");
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("¿Deseas eliminar este presupuesto?")) return;
+    if (!window.confirm("¿Deseas eliminar este presupuesto?")) return;
     try {
       await axios.delete(`${api}/budgets/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+      toast.success("Presupuesto eliminado");
       fetchBudgets();
     } catch {
-      alert("Error al eliminar el presupuesto");
+      toast.error("Error al eliminar el presupuesto");
     }
   };
 
+  // Estado derivado: ¿están todos seleccionados en el modal?
+  const allSelected =
+    importItems.length > 0 && importItems.every((it) => it.selected);
+
   useEffect(() => {
-    fetchCategories();
+    if (token) {
+      fetchCategories();
+    }
   }, [token]);
 
   useEffect(() => {
-    fetchBudgets();
+    if (token) {
+      fetchBudgets();
+    }
   }, [token, filterType, filterValue]);
 
   return (
@@ -159,12 +177,51 @@ function Budgets({ token }) {
           />
         </div>
 
-        <div className="col-span-full">
+        <div className="col-span-full flex flex-wrap gap-2">
           <button
             type="submit"
             className="w-full md:w-auto bg-[#1e40af] text-white font-semibold px-4 py-2 rounded hover:brightness-90 transition"
           >
             Agregar Flujo
+          </button>
+
+          {/* Botón para sugerir desde el mes anterior */}
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                setImportLoading(true);
+                const res = await axios.get(
+                  `${api}/budgets/history-import-preview?month=${month}`,
+                  {
+                    headers: { Authorization: `Bearer ${token}` },
+                  }
+                );
+
+                const preview = res.data.data;
+                setImportPreview(preview);
+                setImportItems(
+                  (preview.items || []).map((item) => ({
+                    ...item,
+                    // Por defecto seleccionamos las que NO tienen presupuesto existente
+                    selected: !item.existing_budget_limit,
+                  }))
+                );
+                setShowImportModal(true);
+              } catch {
+                toast.error(
+                  "Error al obtener sugerencias desde el mes anterior"
+                );
+              } finally {
+                setImportLoading(false);
+              }
+            }}
+            className="bg-gray-100 text-gray-800 text-sm px-3 py-2 rounded border border-gray-300 hover:bg-gray-200 transition"
+            disabled={importLoading}
+          >
+            {importLoading
+              ? "Cargando sugerencias..."
+              : "Sugerir desde mes anterior"}
           </button>
         </div>
       </form>
@@ -264,6 +321,168 @@ function Budgets({ token }) {
           );
         })}
       </ul>
+
+      {/* Modal de importación desde mes anterior */}
+      <Modal
+        isOpen={showImportModal}
+        onClose={() => {
+          setShowImportModal(false);
+          setImportPreview(null);
+          setImportItems([]);
+        }}
+        title="Sugerir presupuestos desde el mes anterior"
+        size="lg"
+      >
+        {!importPreview || importItems.length === 0 ? (
+          <p className="text-sm text-gray-600">
+            {importPreview
+              ? `No se encontraron gastos en ${importPreview.from_month} para sugerir presupuestos.`
+              : "Cargando información..."}
+          </p>
+        ) : (
+          <>
+            {/* Texto + Marcar/Desmarcar todos */}
+            <div className="flex justify-between items-center mb-3 gap-2">
+              <p className="text-sm text-gray-700">
+                Basado en tus gastos de{" "}
+                <strong>{importPreview.from_month}</strong>, se sugieren
+                presupuestos para el mes{" "}
+                <strong>{importPreview.to_month}</strong>. Las categorías
+                seleccionadas sin presupuesto se crearán con ese monto y, si una
+                categoría ya tiene presupuesto, se <strong>actualizará</strong>{" "}
+                al valor sugerido del mes anterior.
+              </p>
+              <button
+                type="button"
+                className="text-xs text-blue-600 hover:text-blue-800 underline shrink-0"
+                onClick={() => {
+                  const newValue = !allSelected;
+                  setImportItems((prev) =>
+                    prev.map((it) => ({ ...it, selected: newValue }))
+                  );
+                }}
+              >
+                {allSelected ? "Desmarcar todos" : "Marcar todos"}
+              </button>
+            </div>
+
+            <div className="max-h-96 overflow-y-auto border rounded mb-4">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="p-2 text-left">Seleccionar</th>
+                    <th className="p-2 text-left">Categoría</th>
+                    <th className="p-2 text-right">
+                      Gasto {importPreview.from_month}
+                    </th>
+                    <th className="p-2 text-right">
+                      Presupuesto actual {importPreview.to_month}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {importItems.map((item, idx) => (
+                    <tr
+                      key={item.category_id}
+                      className="border-t hover:bg-gray-50"
+                    >
+                      <td className="p-2">
+                        <input
+                          type="checkbox"
+                          checked={item.selected}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setImportItems((prev) =>
+                              prev.map((it, i) =>
+                                i === idx ? { ...it, selected: checked } : it
+                              )
+                            );
+                          }}
+                        />
+                      </td>
+                      <td className="p-2">
+                        {item.category_name || "Sin nombre"}
+                      </td>
+                      <td className="p-2 text-right">
+                        {item.spent_last_month.toFixed(2)}
+                      </td>
+                      <td className="p-2 text-right">
+                        {item.existing_budget_limit != null
+                          ? item.existing_budget_limit.toFixed(2)
+                          : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Botones: acción primero, cancelar al final */}
+            <div className="flex justify-end gap-2">
+              <button
+                className="px-4 py-2 rounded bg-[#1e40af] text-white"
+                type="button"
+                onClick={async () => {
+                  const selected = importItems.filter((it) => it.selected);
+
+                  if (selected.length === 0) {
+                    toast.error(
+                      "Selecciona al menos una categoría para importar."
+                    );
+                    return;
+                  }
+
+                  try {
+                    const res = await axios.post(
+                      `${api}/budgets/history-import`,
+                      {
+                        month: importPreview.to_month,
+                        items: selected.map((it) => ({
+                          category_id: it.category_id,
+                          limit_amount: it.spent_last_month,
+                        })),
+                      },
+                      {
+                        headers: { Authorization: `Bearer ${token}` },
+                      }
+                    );
+
+                    const { insertedCount, updatedCount } = res.data || {};
+                    toast.success(
+                      `Presupuestos procesados. Nuevos: ${
+                        insertedCount || 0
+                      }, actualizados: ${updatedCount || 0}.`
+                    );
+
+                    setShowImportModal(false);
+                    setImportPreview(null);
+                    setImportItems([]);
+                    fetchBudgets();
+                  } catch {
+                    toast.error(
+                      "Error al importar presupuestos desde el mes anterior."
+                    );
+                  }
+                }}
+              >
+                Crear/Actualizar presupuestos
+              </button>
+
+              <button
+                type="button"
+                className="px-4 py-2 rounded border border-gray-300 text-gray-700"
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportPreview(null);
+                  setImportItems([]);
+                }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </>
+        )}
+      </Modal>
     </div>
   );
 }

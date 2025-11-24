@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Modal from "../components/Modal";
+import { toast } from "react-toastify";
 
 function Items({ token }) {
   const [items, setItems] = useState([]);
@@ -11,12 +12,19 @@ function Items({ token }) {
   const [taxes, setTaxes] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
   const [price, setPrice] = useState("");
-  const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(
+    () => new Date().toISOString().split("T")[0]
+  );
   const [priceHistory, setPriceHistory] = useState([]);
   const [showTaxModal, setShowTaxModal] = useState(false);
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [itemToEdit, setItemToEdit] = useState(null);
   const [showEditItemModal, setShowEditItemModal] = useState(false);
+
+  // NUEVO: modal de confirmación de borrado
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+
   const api = import.meta.env.VITE_API_URL;
 
   const formatCurrency = (amount) =>
@@ -33,7 +41,7 @@ function Items({ token }) {
       });
       setItems(res.data.data);
     } catch {
-      alert("Error al cargar artículos");
+      toast.error("Error al cargar artículos");
     }
   };
 
@@ -44,7 +52,7 @@ function Items({ token }) {
       });
       setTaxes(res.data.data);
     } catch {
-      alert("Error al cargar impuestos");
+      toast.error("Error al cargar impuestos");
     }
   };
 
@@ -55,7 +63,7 @@ function Items({ token }) {
       });
       setPriceHistory(res.data.data);
     } catch {
-      alert("Error al obtener historial de precios");
+      toast.error("Error al obtener historial de precios");
     }
   };
 
@@ -80,9 +88,10 @@ function Items({ token }) {
       setDescription("");
       setCategory("");
       setSelectedTaxId("");
+      toast.success("Artículo creado correctamente");
       fetchItems();
     } catch {
-      alert("Error al crear artículo");
+      toast.error("Error al crear artículo");
     }
   };
 
@@ -106,9 +115,10 @@ function Items({ token }) {
 
       setItemToEdit(null);
       setShowEditItemModal(false);
+      toast.success("Artículo actualizado correctamente");
       fetchItems();
     } catch {
-      alert("Error al editar artículo");
+      toast.error("Error al editar artículo");
     }
   };
 
@@ -116,20 +126,59 @@ function Items({ token }) {
     e.preventDefault();
     if (!selectedItem) return;
 
+    const numericPrice = parseFloat(price);
+    if (Number.isNaN(numericPrice)) {
+      toast.error("Precio inválido");
+      return;
+    }
+
     try {
       await axios.post(
         `${api}/item-prices`,
         {
           item_id: selectedItem.id,
-          price: parseFloat(price),
+          price: numericPrice,
           date,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+
       setPrice("");
-      fetchPrices(selectedItem.id);
+      await fetchPrices(selectedItem.id);
+      await fetchItems();
+      setSelectedItem((prev) =>
+        prev ? { ...prev, latest_price: numericPrice } : prev
+      );
+      toast.success("Precio agregado correctamente");
     } catch {
-      alert("Error al agregar precio");
+      toast.error("Error al agregar precio");
+    }
+  };
+
+  // Borrado de artículo (se ejecuta luego de confirmar en el modal)
+  const handleDeleteItem = async (item) => {
+    if (!item) return;
+
+    try {
+      await axios.delete(`${api}/items/${item.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      toast.success("Artículo eliminado correctamente");
+      setItemToDelete(null);
+      fetchItems();
+    } catch (err) {
+      const errorCode = err?.response?.data?.error;
+      const message = err?.response?.data?.message;
+
+      if (errorCode === "ITEM_IN_USE") {
+        toast.error(
+          message ||
+            "No se puede eliminar el artículo porque ya se ha usado en transacciones."
+        );
+      } else {
+        toast.error("Error al eliminar artículo");
+      }
     }
   };
 
@@ -144,7 +193,8 @@ function Items({ token }) {
     <div className="bg-white rounded shadow p-6">
       <h2 className="text-2xl font-bold text-gray-800 mb-2">Artículos</h2>
       <p className="text-sm text-gray-500 mb-4">
-        Registra productos y controla cómo varían sus precios a lo largo del tiempo.
+        Registra productos y controla cómo varían sus precios a lo largo del
+        tiempo.
       </p>
 
       <button
@@ -155,7 +205,10 @@ function Items({ token }) {
       </button>
 
       {/* Formulario solo para crear artículos */}
-      <form onSubmit={handleCreateItem} className="grid gap-4 mb-6 md:grid-cols-3">
+      <form
+        onSubmit={handleCreateItem}
+        className="grid gap-4 mb-6 md:grid-cols-3"
+      >
         <div className="flex flex-col">
           <label className="text-sm font-medium mb-1">Nombre</label>
           <input
@@ -262,6 +315,15 @@ function Items({ token }) {
                   className="text-gray-600 text-sm underline"
                 >
                   Editar
+                </button>
+                <button
+                  onClick={() => {
+                    setItemToDelete(item);
+                    setShowDeleteModal(true);
+                  }}
+                  className="text-red-600 text-sm underline"
+                >
+                  Eliminar
                 </button>
               </div>
             </div>
@@ -380,15 +442,20 @@ function Items({ token }) {
                 { name, rate, is_exempt },
                 { headers: { Authorization: `Bearer ${token}` } }
               );
+              toast.success("Impuesto guardado correctamente");
               fetchTaxes();
               e.target.reset();
             } catch {
-              alert("Error al guardar impuesto");
+              toast.error("Error al guardar impuesto");
             }
           }}
           className="space-y-2"
         >
-          <input name="name" className="w-full p-2 border" placeholder="Nombre" />
+          <input
+            name="name"
+            className="w-full p-2 border"
+            placeholder="Nombre"
+          />
           <input
             name="rate"
             type="number"
@@ -415,11 +482,14 @@ function Items({ token }) {
               </span>
               <button
                 onClick={async () => {
-                  if (confirm("¿Eliminar impuesto?")) {
+                  try {
                     await axios.delete(`${api}/taxes/${tax.id}`, {
                       headers: { Authorization: `Bearer ${token}` },
                     });
+                    toast.success("Impuesto eliminado");
                     fetchTaxes();
+                  } catch {
+                    toast.error("Error al eliminar impuesto");
                   }
                 }}
                 className="text-red-500 text-sm"
@@ -429,6 +499,43 @@ function Items({ token }) {
             </li>
           ))}
         </ul>
+      </Modal>
+
+      {/* Modal confirmación de eliminación de artículo */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setItemToDelete(null);
+        }}
+        title="Eliminar artículo"
+      >
+        <p className="text-sm text-gray-700 mb-6">
+          {itemToDelete
+            ? `¿Seguro que deseas eliminar el artículo "${itemToDelete.name}"? Esta acción no se puede deshacer.`
+            : ""}
+        </p>
+        <div className="flex justify-end gap-2">
+        <button
+            className="px-4 py-2 rounded bg-red-600 text-white"
+            onClick={async () => {
+              await handleDeleteItem(itemToDelete);
+              setShowDeleteModal(false);
+              setItemToDelete(null);
+            }}
+          >
+            Eliminar
+          </button>
+          <button
+            className="px-4 py-2 rounded border border-gray-300 text-gray-700"
+            onClick={() => {
+              setShowDeleteModal(false);
+              setItemToDelete(null);
+            }}
+          >
+            Cancelar
+          </button>       
+        </div>
       </Modal>
     </div>
   );

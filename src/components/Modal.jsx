@@ -1,7 +1,9 @@
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 
-function Modal({ isOpen, onClose, title, children }) {
+function Modal({ isOpen, onClose, title, children, size = "md" }) {
+  const sizeClass = size === "lg" ? "max-w-4xl" : "max-w-md";
+
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
@@ -29,7 +31,9 @@ function Modal({ isOpen, onClose, title, children }) {
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded bg-white p-6 text-left align-middle shadow-xl transition-all">
+              <Dialog.Panel
+                className={`w-full ${sizeClass} transform overflow-hidden rounded bg-white p-6 text-left align-middle shadow-xl transition-all`}
+              >
                 <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">
                   {title}
                 </Dialog.Title>
