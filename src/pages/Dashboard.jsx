@@ -34,6 +34,9 @@ import StabilityBalanceChart from "../components/StabilityBalanceChart";
 import TopItemsByQuantityChart from "../components/TopItemsByQuantityChart";
 import TopItemsByValueChart from "../components/TopItemsByValueChart";
 import ItemTrendChart from "../components/ItemTrendChart";
+import ItemsToRestockChart from "../components/ItemsToRestockChart";
+import CategoryMonthlyComparisonTable from "../components/CategoryMonthlyComparisonTable";
+import ItemMonthlyComparisonTable from "../components/ItemMonthlyComparisonTable";
 
 function Dashboard({ token }) {
   const [data, setData] = useState(null);
@@ -452,6 +455,13 @@ function Dashboard({ token }) {
       <CollapseSection title="Comparativa de saldos por cuenta">
         <AccountBalancesChart token={token} />
       </CollapseSection>
+      <CollapseSection title="Comparativo mensual por categoría">
+        <CategoryMonthlyComparisonTable token={token} />
+      </CollapseSection>
+
+      <CollapseSection title="Comparativo mensual por artículo">
+        <ItemMonthlyComparisonTable token={token} />
+      </CollapseSection>
       <CollapseSection title="Tendencia de precios por artículo">
         <ItemPriceTrendChart token={token} />
       </CollapseSection>
@@ -533,6 +543,11 @@ function Dashboard({ token }) {
       <CollapseSection title="Tendencia mensual por artículo">
         <ItemTrendChart token={token} />
       </CollapseSection>
+      <CollapseSection title="Tendencia mensual por artículo">
+        <ItemsToRestockChart token={token} />
+      </CollapseSection>
+
+
     </div>
   );
 }
