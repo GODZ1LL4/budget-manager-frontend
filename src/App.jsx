@@ -70,6 +70,7 @@ function App() {
           {view === "goals" && <Goals token={session.access_token} />}
           {view === "dashboard" && <Dashboard token={session.access_token} />}
           {view === "scenarios" && <Scenarios token={session.access_token} />}
+      
         </AppLayout>
       )}
 

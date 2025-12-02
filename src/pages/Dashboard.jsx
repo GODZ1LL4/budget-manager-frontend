@@ -4,7 +4,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import CollapseSection from "../components/CollapseSection";
 import ItemPriceTrendChart from "../components/ItemPriceTrendChart";
 import CategorySpendingBarChart from "../components/CategorySpendingBarChart";
-import CategoryMonthlyTrendChart from "../components/CategoryMonthlyTrendChart";
+
 import Modal from "../components/Modal";
 
 import CategoryTrendSelectorChart from "../components/CategoryTrendSelectorChart";
@@ -27,7 +27,7 @@ import ExpenseByStabilityChart from "../components/ExpenseByStabilityChart";
 import TopVariableCategoriesChart from "../components/TopVariableCategoriesChart";
 import GoalsProgressChart from "../components/GoalsProgressChart";
 import SavingRealVsProjectedChart from "../components/SavingRealVsProjectedChart";
-import FinancialScenarioChart from "../components/FinancialScenarioChart";
+
 import ProjectedExpenseByCategoryChart from "../components/ProjectedExpenseByCategoryChart";
 import ProjectedIncomeByCategoryChart from "../components/ProjectedIncomeByCategoryChart";
 import StabilityBalanceChart from "../components/StabilityBalanceChart";
@@ -37,6 +37,9 @@ import ItemTrendChart from "../components/ItemTrendChart";
 import ItemsToRestockChart from "../components/ItemsToRestockChart";
 import CategoryMonthlyComparisonTable from "../components/CategoryMonthlyComparisonTable";
 import ItemMonthlyComparisonTable from "../components/ItemMonthlyComparisonTable";
+import TopItemsByValueYearlyChart from "../components/TopItemsByValueYearlyChart";
+import TopItemsByCategoryChart from "../components/TopItemsByCategoryChart";
+import ItemsAnnualSummaryTable from "../components/ItemsAnnualSummaryTable";
 
 function Dashboard({ token }) {
   const [data, setData] = useState(null);
@@ -137,6 +140,14 @@ function Dashboard({ token }) {
   ).getDate();
   const projectedExpense = data.averageDailyExpense * daysInMonth;
 
+  const budgetUsagePct =
+    data.totalMonthlyBudget > 0
+      ? (data.budgetedExpenseTotal / data.totalMonthlyBudget) * 100
+      : 0;
+
+  const incomeSpentPct =
+    data.totalIncome > 0 ? (data.totalExpense / data.totalIncome) * 100 : 0;
+
   const projectedSaving = data.totalIncome - projectedExpense;
 
   const pieData = Object.entries(data.expensesByCategory).map(
@@ -162,6 +173,20 @@ function Dashboard({ token }) {
     "#0ea5e9",
     "#84cc16",
   ];
+
+  const formatSignedCurrency = (amount) => {
+    const safe = Number.isFinite(Number(amount)) ? Number(amount) : 0;
+    const sign = safe > 0 ? "+" : safe < 0 ? "-" : "";
+    const abs = Math.abs(safe);
+
+    const formatted = new Intl.NumberFormat("es-DO", {
+      style: "currency",
+      currency: "DOP",
+      minimumFractionDigits: 2,
+    }).format(abs);
+
+    return `${sign}${formatted}`;
+  };
 
   return (
     <div className="p-4 space-y-6">
@@ -214,14 +239,11 @@ function Dashboard({ token }) {
         />
         <MetricCard
           title="Presupuesto usado"
-          value={(data.budgetedExpenseTotal / data.totalMonthlyBudget) * 100}
+          value={budgetUsagePct}
           suffix="%"
-          color={
-            (data.budgetedExpenseTotal / data.totalMonthlyBudget) * 100 > 90
-              ? "red"
-              : "gray"
-          }
+          color={budgetUsagePct > 90 ? "red" : "gray"}
         />
+
         {/* === Grupo 3 === */}
         <MetricCard
           title="Gasto total hoy"
@@ -269,10 +291,11 @@ function Dashboard({ token }) {
         />
         <MetricCard
           title="% del ingreso gastado"
-          value={(data.totalExpense / data.totalIncome) * 100}
+          value={incomeSpentPct}
           suffix="%"
-          color={data.totalExpense / data.totalIncome > 80 ? "red" : "gray"}
+          color={incomeSpentPct > 80 ? "red" : "gray"}
         />
+
         <MetricCard
           title="Transacciones totales"
           value={data.totalTransactions}
@@ -291,46 +314,93 @@ function Dashboard({ token }) {
           color="green"
         />
         <MetricCard
+          title="Días con gasto alto"
+          value={data.daysAboveAverage || 0}
+          color="red"
+        />
+        <MetricCard
           title="Día con mayor gasto"
           value={data.maxExpenseDay?.amount || 0}
           isCurrency
           subtitle={data.maxExpenseDay?.date || "—"}
           color="red"
         />
-        <MetricCard
-          title="Días con gasto alto"
-          value={data.daysAboveAverage || 0}
-          color="red"
-        />
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
+        {/* Comparación con mes anterior (en RD$) */}
         <div className="bg-white p-4 rounded shadow">
           <h3 className="text-md font-semibold mb-2 text-gray-700">
             Comparación con mes anterior
           </h3>
-          <ul className="text-sm space-y-1">
+          <ul className="text-sm space-y-1 text-gray-700">
             <li>
               Ingresos:{" "}
               <strong>
-                {formatPercent(data.previousMonthComparison.incomeDiffPercent)}
+                {formatSignedCurrency(
+                  data.previousMonthComparison.incomeDiffAbs
+                )}
               </strong>
             </li>
             <li>
               Gastos:{" "}
               <strong>
-                {formatPercent(data.previousMonthComparison.expenseDiffPercent)}
+                {formatSignedCurrency(
+                  data.previousMonthComparison.expenseDiffAbs
+                )}
               </strong>
             </li>
             <li>
               Ahorro:{" "}
               <strong>
-                {formatPercent(data.previousMonthComparison.savingRateDiff)}
+                {formatSignedCurrency(
+                  data.previousMonthComparison.savingDiffAbs
+                )}
               </strong>
             </li>
           </ul>
         </div>
 
+        {/* Variaciones por categoría (en RD$) */}
+        <div className="bg-white p-4 rounded shadow">
+          <h3 className="text-md font-semibold mb-2 text-gray-700">
+            Variaciones por categoría
+          </h3>
+
+          {data.mostIncreasedCategoryAbs ? (
+            <p className="text-sm text-gray-700">
+              Mayor aumento:{" "}
+              <strong>
+                {data.categoryNameMap?.[
+                  data.mostIncreasedCategoryAbs.category_id
+                ] || `Categoría ${data.mostIncreasedCategoryAbs.category_id}`}
+              </strong>{" "}
+              ({formatSignedCurrency(data.mostIncreasedCategoryAbs.diff || 0)})
+            </p>
+          ) : (
+            <p className="text-sm text-gray-400">
+              Sin datos suficientes para aumentos.
+            </p>
+          )}
+
+          {data.mostDecreasedCategoryAbs ? (
+            <p className="text-sm text-gray-700">
+              Mayor disminución:{" "}
+              <strong>
+                {data.categoryNameMap?.[
+                  data.mostDecreasedCategoryAbs.category_id
+                ] || `Categoría ${data.mostDecreasedCategoryAbs.category_id}`}
+              </strong>{" "}
+              ({formatSignedCurrency(data.mostDecreasedCategoryAbs.diff || 0)})
+            </p>
+          ) : (
+            <p className="text-sm text-gray-400">
+              Sin datos suficientes para disminuciones.
+            </p>
+          )}
+        </div>
+
+        {/* Metas de ahorro */}
         <div className="bg-white p-4 rounded shadow">
           <h3 className="text-md font-semibold mb-2 text-gray-700">
             Metas de ahorro
@@ -338,31 +408,6 @@ function Dashboard({ token }) {
           <p className="text-sm text-gray-600">
             Cumplidas: <strong>{data.goalsSummary.completedGoals}</strong> /{" "}
             {data.goalsSummary.totalGoals}
-          </p>
-        </div>
-
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="text-md font-semibold mb-2 text-gray-700">
-            Variaciones por categoría
-          </h3>
-          <p className="text-sm">
-            Mayor aumento:{" "}
-            <strong>
-              {data.categoryNameMap?.[
-                data.mostIncreasedCategory?.category_id
-              ] || `Categoría ${data.mostIncreasedCategory?.category_id}`}
-            </strong>{" "}
-            ({formatPercent(data.mostIncreasedCategory?.percent || 0)})
-          </p>
-
-          <p className="text-sm">
-            Mayor disminución:{" "}
-            <strong>
-              {data.categoryNameMap?.[
-                data.mostDecreasedCategory?.category_id
-              ] || `Categoría ${data.mostDecreasedCategory?.category_id}`}
-            </strong>{" "}
-            ({formatPercent(data.mostDecreasedCategory?.percent || 0)})
           </p>
         </div>
       </div>
@@ -469,9 +514,6 @@ function Dashboard({ token }) {
       <CollapseSection title="Gasto total por categoría (últimos 6 meses)">
         <CategorySpendingBarChart token={token} />
       </CollapseSection>
-      <CollapseSection title="Evolución mensual por categoría">
-        <CategoryMonthlyTrendChart token={token} />
-      </CollapseSection>
 
       <CollapseSection title="Evolución de categorías seleccionadas">
         <CategoryTrendSelectorChart token={token} />
@@ -520,9 +562,7 @@ function Dashboard({ token }) {
       <CollapseSection title="Comparativa: Ahorro Real vs Proyectado">
         <SavingRealVsProjectedChart token={token} />
       </CollapseSection>
-      <CollapseSection title="Proyección por Escenario (Ahorro, Gasto, Ingreso)">
-        <FinancialScenarioChart token={token} />
-      </CollapseSection>
+
       <CollapseSection title="Proyección de Gastos por Categoría y Estabilidad">
         <ProjectedExpenseByCategoryChart token={token} />
       </CollapseSection>
@@ -534,6 +574,9 @@ function Dashboard({ token }) {
       </CollapseSection>
       <CollapseSection title="Top 10 artículos más consumidos (anual)">
         <TopItemsByQuantityChart token={token} />
+      </CollapseSection>
+      <CollapseSection title="Top 10 artículos por gasto anual">
+        <TopItemsByValueYearlyChart token={token} />
       </CollapseSection>
 
       <CollapseSection title="Top 10 artículos por gasto mensual">
@@ -547,7 +590,12 @@ function Dashboard({ token }) {
         <ItemsToRestockChart token={token} />
       </CollapseSection>
 
-
+      <CollapseSection title="Top ítems por categoría (anual)">
+        <TopItemsByCategoryChart token={token} categories={categories} />
+      </CollapseSection>
+      <CollapseSection title="Resumen anual de artículos (mixto)">
+        <ItemsAnnualSummaryTable token={token} />
+      </CollapseSection>
     </div>
   );
 }
@@ -566,7 +614,8 @@ function MetricCard({
     red: "text-red-600",
   };
 
-  const safeValue = isNaN(value) ? 0 : value;
+  const numericValue = Number(value);
+  const safeValue = Number.isFinite(numericValue) ? numericValue : 0;
 
   const displayValue = isCurrency
     ? new Intl.NumberFormat("es-DO", {

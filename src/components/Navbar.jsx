@@ -11,6 +11,7 @@ function Navbar({ onLogout, setView }) {
       links: [
         { name: "Artículos", view: "items" },
         { name: "Categorías", view: "categories" },
+       
       ],
     },
     {

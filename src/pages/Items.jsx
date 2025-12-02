@@ -21,9 +21,13 @@ function Items({ token }) {
   const [itemToEdit, setItemToEdit] = useState(null);
   const [showEditItemModal, setShowEditItemModal] = useState(false);
 
-  // NUEVO: modal de confirmación de borrado
+  // Modal de confirmación de borrado
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
+
+  // Búsqueda y selección
+  const [search, setSearch] = useState("");
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const api = import.meta.env.VITE_API_URL;
 
@@ -182,6 +186,116 @@ function Items({ token }) {
     }
   };
 
+  // Lista filtrada por búsqueda
+  const filteredItems = items.filter((item) =>
+    item.name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Helpers de selección
+  const toggleItemSelection = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const allFilteredSelected =
+    filteredItems.length > 0 &&
+    filteredItems.every((item) => selectedIds.includes(item.id));
+
+  const toggleSelectAllFiltered = () => {
+    setSelectedIds((prev) => {
+      const allSelected =
+        filteredItems.length > 0 &&
+        filteredItems.every((item) => prev.includes(item.id));
+
+      if (allSelected) {
+        // desmarcar todos los filtrados
+        return prev.filter(
+          (id) => !filteredItems.some((item) => item.id === id)
+        );
+      } else {
+        // marcar todos los filtrados
+        const set = new Set(prev);
+        filteredItems.forEach((item) => set.add(item.id));
+        return Array.from(set);
+      }
+    });
+  };
+
+  // Exportar precios seleccionados
+  const handleExport = async () => {
+    if (selectedIds.length === 0) {
+      toast.error("Debes seleccionar al menos un artículo");
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `${api}/items-with-price/export-prices`,
+        { ids: selectedIds },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob",
+        }
+      );
+
+      const blob = new Blob([response.data], {
+        type: "text/csv;charset=utf-8;",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `precios-articulos-${new Date().toISOString().split("T")[0]}.csv`
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al exportar precios");
+    }
+  };
+
+  // Importar precios desde CSV
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await axios.post(
+        `${api}/items-with-price/import-prices`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      toast.success(
+        `Importación completada. Filas insertadas: ${res.data.inserted}`
+      );
+      if (res.data.errors?.length) {
+        console.warn("Errores de importación:", res.data.errors);
+        // aquí podrías abrir un modal con detalle si quieres
+      }
+
+      fetchItems();
+    } catch (error) {
+      console.error(error);
+      toast.error("Error al importar archivo de precios");
+    } finally {
+      e.target.value = ""; // reset input file
+    }
+  };
+
   useEffect(() => {
     if (token) {
       fetchItems();
@@ -260,20 +374,106 @@ function Items({ token }) {
         </div>
       </form>
 
+      {/* Barra de búsqueda + selección + exportar/importar */}
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <input
+            type="text"
+            placeholder="Buscar artículo..."
+            className="border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 p-2 rounded-md w-full md:w-1/3 text-sm"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+
+          <div className="flex flex-wrap items-center gap-3 justify-between md:justify-end w-full md:w-auto text-sm">
+            <span className="text-xs text-gray-500">
+              Total:{" "}
+              <span className="font-semibold">{filteredItems.length}</span> ·
+              Seleccionados:{" "}
+              <span className="font-semibold text-blue-600">
+                {selectedIds.length}
+              </span>
+            </span>
+
+            {/* Marcar / desmarcar todos */}
+            <button
+              type="button"
+              onClick={toggleSelectAllFiltered}
+              disabled={filteredItems.length === 0}
+              className={`
+          inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm
+          border border-gray-300 bg-gray-50 text-gray-700
+          hover:bg-gray-100 hover:border-gray-400
+          disabled:opacity-40 disabled:cursor-not-allowed
+          transition-colors
+        `}
+            >
+              <span className="text-xs">☑️</span>
+              {allFilteredSelected ? "Desmarcar todos" : "Marcar todos"}
+            </button>
+
+            {/* Exportar precios */}
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={selectedIds.length === 0}
+              className={`
+          inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm
+          bg-blue-600 text-white shadow-sm
+          hover:bg-blue-700
+          disabled:opacity-40 disabled:cursor-not-allowed
+          transition-colors
+        `}
+            >
+              <span className="text-xs">⬇️</span>
+              <span>Exportar precios</span>
+            </button>
+
+            {/* Importar precios */}
+            <label
+              className={`
+          inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm
+          border border-blue-600 text-blue-700 bg-white
+          hover:bg-blue-50
+          cursor-pointer transition-colors
+        `}
+            >
+              <span className="text-xs">⬆️</span>
+              <span>Importar precios</span>
+              <input
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={handleImport}
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+
       <ul className="space-y-4">
-        {items.map((item) => (
+        {filteredItems.map((item) => (
           <li
             key={item.id}
             className="p-4 bg-gray-50 border border-gray-300 rounded shadow-sm"
           >
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="font-semibold text-gray-800">
-                  {item.name}{" "}
-                  <span className="text-sm italic text-gray-500">
-                    ({item.category})
+            <div className="flex justify-between items-start gap-4">
+              <div className="flex-1">
+                <label className="flex items-center gap-2 mb-1">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={selectedIds.includes(item.id)}
+                    onChange={() => toggleItemSelection(item.id)}
+                  />
+                  <span className="font-semibold text-gray-800">
+                    {item.name}{" "}
+                    <span className="text-sm italic text-gray-500">
+                      ({item.category})
+                    </span>
                   </span>
-                </p>
+                </label>
+
                 <p className="text-sm text-gray-600">{item.description}</p>
                 <p className="text-sm text-gray-500 mt-1">
                   Impuesto:{" "}
@@ -290,7 +490,7 @@ function Items({ token }) {
                     : "No registrado"}
                 </p>
               </div>
-              <div className="space-x-2">
+              <div className="space-x-2 whitespace-nowrap">
                 <button
                   onClick={() => {
                     setSelectedItem(item);
@@ -516,7 +716,7 @@ function Items({ token }) {
             : ""}
         </p>
         <div className="flex justify-end gap-2">
-        <button
+          <button
             className="px-4 py-2 rounded bg-red-600 text-white"
             onClick={async () => {
               await handleDeleteItem(itemToDelete);
@@ -534,7 +734,7 @@ function Items({ token }) {
             }}
           >
             Cancelar
-          </button>       
+          </button>
         </div>
       </Modal>
     </div>
