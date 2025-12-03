@@ -7,37 +7,30 @@ import CategorySpendingBarChart from "../components/CategorySpendingBarChart";
 
 import Modal from "../components/Modal";
 
-import CategoryTrendSelectorChart from "../components/CategoryTrendSelectorChart";
 import BudgetVsActualChart from "../components/BudgetVsActualChart";
 import AccountBalancesChart from "../components/AccountBalancesChart";
-import MonthlyBalanceTrendChart from "../components/MonthlyBalanceTrendChart";
 
 import OverBudgetChart from "../components/OverBudgetChart";
-import SavingTrendChart from "../components/SavingTrendChart";
 
 import MonthlyIncomeVsExpenseChart from "../components/MonthlyIncomeVsExpenseChart";
 import CategoryVariationChart from "../components/CategoryVariationChart";
 import TransactionsCalendar from "../components/TransactionsCalendar";
 import { toast } from "react-toastify";
-import BudgetVsActualHistoryChart from "../components/BudgetVsActualHistoryChart";
-import BudgetVsActualYearlyChart from "../components/BudgetVsActualYearlyChart";
+
 import BudgetVsActualSummaryChart from "../components/BudgetVsActualSummaryChart";
-import RealisticProjectionChart from "../components/RealisticProjectionChart";
+
 import ExpenseByStabilityChart from "../components/ExpenseByStabilityChart";
 import TopVariableCategoriesChart from "../components/TopVariableCategoriesChart";
 import GoalsProgressChart from "../components/GoalsProgressChart";
-import SavingRealVsProjectedChart from "../components/SavingRealVsProjectedChart";
 
 import ProjectedExpenseByCategoryChart from "../components/ProjectedExpenseByCategoryChart";
 import ProjectedIncomeByCategoryChart from "../components/ProjectedIncomeByCategoryChart";
-import StabilityBalanceChart from "../components/StabilityBalanceChart";
-import TopItemsByQuantityChart from "../components/TopItemsByQuantityChart";
-import TopItemsByValueChart from "../components/TopItemsByValueChart";
+
 import ItemTrendChart from "../components/ItemTrendChart";
-import ItemsToRestockChart from "../components/ItemsToRestockChart";
+
 import CategoryMonthlyComparisonTable from "../components/CategoryMonthlyComparisonTable";
 import ItemMonthlyComparisonTable from "../components/ItemMonthlyComparisonTable";
-import TopItemsByValueYearlyChart from "../components/TopItemsByValueYearlyChart";
+
 import TopItemsByCategoryChart from "../components/TopItemsByCategoryChart";
 import ItemsAnnualSummaryTable from "../components/ItemsAnnualSummaryTable";
 
@@ -157,8 +150,6 @@ function Dashboard({ token }) {
     })
   );
 
-  const formatPercent = (value) =>
-    value > 0 ? `▲ ${value.toFixed(1)}%` : `▼ ${Math.abs(value).toFixed(1)}%`;
   const COLORS = [
     "#6366f1",
     "#10b981",
@@ -412,10 +403,11 @@ function Dashboard({ token }) {
         </div>
       </div>
 
-      <CollapseSection title="Calendario financiero">
+      <CollapseSection title="1- Calendario financiero">
         <TransactionsCalendar token={token} />
       </CollapseSection>
-      <CollapseSection title="Distribución de gastos por categoría">
+
+      <CollapseSection title="2- Distribución de gastos por categoría">
         <div style={{ width: "100%", height: 300 }}>
           <ResponsiveContainer>
             <PieChart>
@@ -461,6 +453,7 @@ function Dashboard({ token }) {
                 labelFormatter={(label) => `Categoría: ${label}`}
               />
             </PieChart>
+
             <Modal
               isOpen={isModalOpen}
               onClose={() => setIsModalOpen(false)}
@@ -497,103 +490,76 @@ function Dashboard({ token }) {
           distribuidos por categoría.
         </p>
       </CollapseSection>
-      <CollapseSection title="Comparativa de saldos por cuenta">
+
+      <CollapseSection title="3- Comparativa de saldos por cuenta">
         <AccountBalancesChart token={token} />
       </CollapseSection>
-      <CollapseSection title="Comparativo mensual por categoría">
+
+      <CollapseSection title="4- Comparativo mensual por categoría">
         <CategoryMonthlyComparisonTable token={token} />
       </CollapseSection>
 
-      <CollapseSection title="Comparativo mensual por artículo">
+      <CollapseSection title="5- Comparativo mensual por artículo">
         <ItemMonthlyComparisonTable token={token} />
       </CollapseSection>
-      <CollapseSection title="Tendencia de precios por artículo">
+
+      <CollapseSection title="6- Tendencia de precios por artículo">
         <ItemPriceTrendChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="Gasto total por categoría (últimos 6 meses)">
+      <CollapseSection title="7- Gasto total por categoría (últimos 6 meses)">
         <CategorySpendingBarChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="Evolución de categorías seleccionadas">
-        <CategoryTrendSelectorChart token={token} />
-      </CollapseSection>
-      <CollapseSection title="Presupuesto vs Gasto por categoría">
+      <CollapseSection title="8- Presupuesto vs Gasto por categoría">
         <BudgetVsActualChart token={token} />
       </CollapseSection>
-      <CollapseSection title="Evolución del balance mensual">
-        <MonthlyBalanceTrendChart token={token} />
-      </CollapseSection>
 
-      <CollapseSection title="Top categorías con gasto excesivo">
+      <CollapseSection title="9- Top categorías con gasto excesivo">
         <OverBudgetChart token={token} />
       </CollapseSection>
-      <CollapseSection title="Evolución del ahorro mensual">
-        <SavingTrendChart token={token} />
-      </CollapseSection>
 
-      <CollapseSection title="Promedio mensual: Ingreso vs Gasto">
+      <CollapseSection title="10- Promedio mensual: Ingreso vs Gasto">
         <MonthlyIncomeVsExpenseChart token={token} />
       </CollapseSection>
-      <CollapseSection title="Variaciones anuales por categoría">
+
+      <CollapseSection title="11- Variaciones anuales por categoría">
         <CategoryVariationChart token={token} categories={categories} />
       </CollapseSection>
-      <CollapseSection title="Histórico de Presupuesto vs Gasto por Categoría">
-        <BudgetVsActualHistoryChart token={token} />
-      </CollapseSection>
-      <CollapseSection title="Presupuesto vs Gasto Real por Categoría (Año)">
-        <BudgetVsActualYearlyChart token={token} />
-      </CollapseSection>
-      <CollapseSection title="Resumen Anual: Presupuesto vs Gasto Total">
+
+      <CollapseSection title="12- Resumen Anual: Presupuesto vs Gasto Total">
         <BudgetVsActualSummaryChart token={token} />
       </CollapseSection>
-      <CollapseSection title="Proyección realista (solo categorías fijas y variables)">
-        <RealisticProjectionChart token={token} />
-      </CollapseSection>
-      <CollapseSection title="Gastos por tipo de estabilidad">
+
+      <CollapseSection title="13- Gastos por tipo de estabilidad">
         <ExpenseByStabilityChart token={token} />
       </CollapseSection>
-      <CollapseSection title="Top categorías variables con más gasto">
+
+      <CollapseSection title="14- Top categorías variables con más gasto">
         <TopVariableCategoriesChart token={token} />
       </CollapseSection>
-      <CollapseSection title="Progreso de metas de ahorro">
+
+      <CollapseSection title="15- Progreso de metas de ahorro">
         <GoalsProgressChart token={token} />
       </CollapseSection>
-      <CollapseSection title="Comparativa: Ahorro Real vs Proyectado">
-        <SavingRealVsProjectedChart token={token} />
-      </CollapseSection>
 
-      <CollapseSection title="Proyección de Gastos por Categoría y Estabilidad">
+      <CollapseSection title="16- Proyección de Gastos por Categoría y Estabilidad">
         <ProjectedExpenseByCategoryChart token={token} />
       </CollapseSection>
-      <CollapseSection title="Proyección de Ingresos por Categoría y Estabilidad">
+
+      <CollapseSection title="17- Proyección de Ingresos por Categoría y Estabilidad">
         <ProjectedIncomeByCategoryChart token={token} />
       </CollapseSection>
-      <CollapseSection title="Balance Promedio por Tipo de Estabilidad">
-        <StabilityBalanceChart token={token} />
-      </CollapseSection>
-      <CollapseSection title="Top 10 artículos más consumidos (anual)">
-        <TopItemsByQuantityChart token={token} />
-      </CollapseSection>
-      <CollapseSection title="Top 10 artículos por gasto anual">
-        <TopItemsByValueYearlyChart token={token} />
-      </CollapseSection>
 
-      <CollapseSection title="Top 10 artículos por gasto mensual">
-        <TopItemsByValueChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="Tendencia mensual por artículo">
+      <CollapseSection title="18- Tendencia mensual por artículo">
         <ItemTrendChart token={token} />
       </CollapseSection>
-      <CollapseSection title="Tendencia mensual por artículo">
-        <ItemsToRestockChart token={token} />
-      </CollapseSection>
 
-      <CollapseSection title="Top ítems por categoría (anual)">
+      <CollapseSection title="19- Top ítems por categoría (anual)">
         <TopItemsByCategoryChart token={token} categories={categories} />
       </CollapseSection>
-      <CollapseSection title="Resumen anual de artículos (mixto)">
+
+      <CollapseSection title="20- Resumen anual de artículos (mixto)">
         <ItemsAnnualSummaryTable token={token} />
       </CollapseSection>
     </div>
