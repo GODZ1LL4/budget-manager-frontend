@@ -519,7 +519,7 @@ function Dashboard({ token }) {
         <OverBudgetChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="10- Promedio mensual: Ingreso vs Gasto">
+      <CollapseSection title="10- Balance de Ingreso vs Gasto">
         <MonthlyIncomeVsExpenseChart token={token} />
       </CollapseSection>
 
