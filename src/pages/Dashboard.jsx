@@ -1,38 +1,28 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { toast } from "react-toastify";
+
 import CollapseSection from "../components/CollapseSection";
 import ItemPriceTrendChart from "../components/reports/ItemPriceTrendChart";
-import CategorySpendingBarChart from "../components/reports/CategorySpendingBarChart";
-
-import Modal from "../components/Modal";
-
+import ExpenseDistributionByCategoryChart from "../components/reports/ExpenseDistributionByCategoryChart";
 import BudgetVsActualChart from "../components/reports/BudgetVsActualChart";
 import AccountBalancesChart from "../components/reports/AccountBalancesChart";
-
 import OverBudgetChart from "../components/reports/OverBudgetChart";
-
 import MonthlyIncomeVsExpenseChart from "../components/reports/MonthlyIncomeVsExpenseChart";
 import CategoryVariationChart from "../components/reports/CategoryVariationChart";
 import TransactionsCalendar from "../components/reports/TransactionsCalendar";
-import { toast } from "react-toastify";
-
 import BudgetVsActualSummaryChart from "../components/reports/BudgetVsActualSummaryChart";
-
 import ExpenseByStabilityChart from "../components/reports/ExpenseByStabilityChart";
 import TopVariableCategoriesChart from "../components/reports/TopVariableCategoriesChart";
 import GoalsProgressChart from "../components/reports/GoalsProgressChart";
-
 import ProjectedExpenseByCategoryChart from "../components/reports/ProjectedExpenseByCategoryChart";
 import ProjectedIncomeByCategoryChart from "../components/reports/ProjectedIncomeByCategoryChart";
-
 import ItemTrendChart from "../components/reports/ItemTrendChart";
-
 import CategoryMonthlyComparisonTable from "../components/reports/CategoryMonthlyComparisonTable";
 import ItemMonthlyComparisonTable from "../components/reports/ItemMonthlyComparisonTable";
-
 import TopItemsByCategoryChart from "../components/reports/TopItemsByCategoryChart";
 import ItemsAnnualSummaryTable from "../components/reports/ItemsAnnualSummaryTable";
+import BurnRateChart from "../components/reports/BurnRateChart";
 
 function Dashboard({ token }) {
   const [data, setData] = useState(null);
@@ -40,10 +30,7 @@ function Dashboard({ token }) {
   const [categories, setCategories] = useState([]);
 
   const [todayExpense, setTodayExpense] = useState(0);
-
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [categoryTransactions, setCategoryTransactions] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [yearlyStabilitySummary, setYearlyStabilitySummary] = useState(null);
 
   const fetchSummary = async () => {
     try {
@@ -84,6 +71,27 @@ function Dashboard({ token }) {
     };
 
     if (token) fetchTodayExpense();
+  }, [token]);
+
+  useEffect(() => {
+    const fetchYearlyStabilitySummary = async () => {
+      try {
+        const res = await axios.get(
+          `${api}/analytics/yearly-income-expense-by-stability`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        setYearlyStabilitySummary(res.data.data);
+      } catch (err) {
+        console.error(
+          "Error al cargar resumen anual por tipo de estabilidad:",
+          err
+        );
+      }
+    };
+
+    if (token) fetchYearlyStabilitySummary();
   }, [token]);
 
   useEffect(() => {
@@ -142,28 +150,6 @@ function Dashboard({ token }) {
     data.totalIncome > 0 ? (data.totalExpense / data.totalIncome) * 100 : 0;
 
   const projectedSaving = data.totalIncome - projectedExpense;
-
-  const pieData = Object.entries(data.expensesByCategory).map(
-    ([catId, value]) => ({
-      name: data.categoryNameMap?.[catId] || `Categoría ${catId}`,
-      value,
-    })
-  );
-
-  const COLORS = [
-    "#6366f1",
-    "#10b981",
-    "#f59e0b",
-    "#ef4444",
-    "#3b82f6",
-    "#8b5cf6",
-    "#ec4899",
-    "#14b8a6",
-    "#f43f5e",
-    "#a855f7",
-    "#0ea5e9",
-    "#84cc16",
-  ];
 
   const formatSignedCurrency = (amount) => {
     const safe = Number.isFinite(Number(amount)) ? Number(amount) : 0;
@@ -319,12 +305,12 @@ function Dashboard({ token }) {
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
+        {/* Resumen anual & Metas (flip card) */}
+        <FlipMetricCard summary={yearlyStabilitySummary} />
+
         {/* Comparación con mes anterior (en RD$) */}
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="text-md font-semibold mb-2 text-gray-700">
-            Comparación con mes anterior
-          </h3>
-          <ul className="text-sm space-y-1 text-gray-700">
+        <ChromeInfoCard title="Comparación con mes anterior (en RD$)">
+          <ul className="space-y-1">
             <li>
               Ingresos:{" "}
               <strong>
@@ -350,16 +336,12 @@ function Dashboard({ token }) {
               </strong>
             </li>
           </ul>
-        </div>
+        </ChromeInfoCard>
 
         {/* Variaciones por categoría (en RD$) */}
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="text-md font-semibold mb-2 text-gray-700">
-            Variaciones por categoría
-          </h3>
-
+        <ChromeInfoCard title="Variaciones por categoría (en RD$)">
           {data.mostIncreasedCategoryAbs ? (
-            <p className="text-sm text-gray-700">
+            <p>
               Mayor aumento:{" "}
               <strong>
                 {data.categoryNameMap?.[
@@ -369,13 +351,13 @@ function Dashboard({ token }) {
               ({formatSignedCurrency(data.mostIncreasedCategoryAbs.diff || 0)})
             </p>
           ) : (
-            <p className="text-sm text-gray-400">
+            <p className="text-slate-500">
               Sin datos suficientes para aumentos.
             </p>
           )}
 
           {data.mostDecreasedCategoryAbs ? (
-            <p className="text-sm text-gray-700">
+            <p className="mt-1">
               Mayor disminución:{" "}
               <strong>
                 {data.categoryNameMap?.[
@@ -385,22 +367,11 @@ function Dashboard({ token }) {
               ({formatSignedCurrency(data.mostDecreasedCategoryAbs.diff || 0)})
             </p>
           ) : (
-            <p className="text-sm text-gray-400">
+            <p className="mt-1 text-slate-500">
               Sin datos suficientes para disminuciones.
             </p>
           )}
-        </div>
-
-        {/* Metas de ahorro */}
-        <div className="bg-white p-4 rounded shadow">
-          <h3 className="text-md font-semibold mb-2 text-gray-700">
-            Metas de ahorro
-          </h3>
-          <p className="text-sm text-gray-600">
-            Cumplidas: <strong>{data.goalsSummary.completedGoals}</strong> /{" "}
-            {data.goalsSummary.totalGoals}
-          </p>
-        </div>
+        </ChromeInfoCard>
       </div>
 
       <CollapseSection title="1- Calendario financiero">
@@ -408,87 +379,11 @@ function Dashboard({ token }) {
       </CollapseSection>
 
       <CollapseSection title="2- Distribución de gastos por categoría">
-        <div style={{ width: "100%", height: 300 }}>
-          <ResponsiveContainer>
-            <PieChart>
-              <Pie
-                data={pieData}
-                dataKey="value"
-                nameKey="name"
-                outerRadius="80%"
-                label={({ name, percent }) =>
-                  `${name} (${(percent * 100).toFixed(1)}%)`
-                }
-                onClick={async (entry, index) => {
-                  const catId = Object.keys(data.expensesByCategory)[index];
-                  setSelectedCategory(
-                    data.categoryNameMap?.[catId] || "Sin nombre"
-                  );
-                  try {
-                    const res = await axios.get(
-                      `${api}/dashboard/transactions-by-category?category_id=${catId}`,
-                      {
-                        headers: { Authorization: `Bearer ${token}` },
-                      }
-                    );
-                    setCategoryTransactions(res.data.data);
-                    setIsModalOpen(true);
-                  } catch (err) {
-                    console.error(
-                      "Error al cargar transacciones de categoría:",
-                      err
-                    );
-                  }
-                }}
-              >
-                {pieData.map((_, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[index % COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(value) => `RD$ ${value.toFixed(2)}`}
-                labelFormatter={(label) => `Categoría: ${label}`}
-              />
-            </PieChart>
-
-            <Modal
-              isOpen={isModalOpen}
-              onClose={() => setIsModalOpen(false)}
-              title={`Transacciones: ${selectedCategory}`}
-            >
-              <div className="space-y-2 max-h-80 overflow-y-auto">
-                {categoryTransactions.length === 0 ? (
-                  <p className="text-sm text-gray-600">
-                    Sin transacciones registradas.
-                  </p>
-                ) : (
-                  categoryTransactions.map((tx) => (
-                    <div
-                      key={tx.id}
-                      className="border-b pb-1 text-sm flex justify-between text-gray-700"
-                    >
-                      <span>{tx.date}</span>
-                      <span className="text-right truncate w-32">
-                        {tx.description || "Sin descripción"}
-                      </span>
-                      <span className="text-red-600 font-medium">
-                        RD$ {parseFloat(tx.amount).toFixed(2)}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </Modal>
-          </ResponsiveContainer>
-        </div>
-
-        <p className="text-sm text-gray-600 mt-2">
-          Este gráfico muestra el porcentaje del total de gastos del mes actual,
-          distribuidos por categoría.
-        </p>
+        <ExpenseDistributionByCategoryChart
+          expensesByCategory={data.expensesByCategory}
+          categoryNameMap={data.categoryNameMap}
+          token={token}
+        />
       </CollapseSection>
 
       <CollapseSection title="3- Comparativa de saldos por cuenta">
@@ -506,9 +401,8 @@ function Dashboard({ token }) {
       <CollapseSection title="6- Tendencia de precios por artículo">
         <ItemPriceTrendChart token={token} />
       </CollapseSection>
-
-      <CollapseSection title="7- Gasto total por categoría (últimos 6 meses)">
-        <CategorySpendingBarChart token={token} />
+      <CollapseSection title="7- Ritmo de gasto del mes (Burn Rate)">
+        <BurnRateChart token={token} />
       </CollapseSection>
 
       <CollapseSection title="8- Presupuesto vs Gasto por categoría">
@@ -574,12 +468,6 @@ function MetricCard({
   isCurrency = false,
   subtitle = "",
 }) {
-  const colorMap = {
-    gray: "text-gray-800",
-    green: "text-green-600",
-    red: "text-red-600",
-  };
-
   const numericValue = Number(value);
   const safeValue = Number.isFinite(numericValue) ? numericValue : 0;
 
@@ -591,15 +479,305 @@ function MetricCard({
       }).format(safeValue)
     : `${safeValue.toFixed(2)}${suffix}`;
 
+  // Acentos según tipo
+  const accentValueClass =
+    color === "green"
+      ? "text-emerald-300"
+      : color === "red"
+      ? "text-rose-300"
+      : "text-slate-100";
+
+  const accentSideClass =
+    color === "green"
+      ? "from-emerald-500 to-emerald-300"
+      : color === "red"
+      ? "from-rose-500 to-rose-300"
+      : "from-slate-500 to-slate-300";
+
   return (
-    <div className="p-4 bg-white rounded shadow">
-      <p className="text-sm text-gray-500">{title}</p>
-      <p className={`text-lg font-bold ${colorMap[color]}`}>{displayValue}</p>
-      {subtitle && (
-        <p className="text-xs text-gray-500 mt-1 whitespace-nowrap truncate">
-          {subtitle}
+    <div
+      className="
+        relative overflow-hidden rounded-2xl p-4
+        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800
+        border border-slate-700/80
+        shadow-[0_10px_30px_rgba(0,0,0,0.65)]
+        transition-all duration-300
+        hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.9)]
+      "
+    >
+      {/* Barra lateral cromada de acento */}
+      <div
+        className={`
+          absolute inset-y-0 left-0 w-[3px]
+          bg-gradient-to-b ${accentSideClass}
+        `}
+      />
+
+      {/* Borde interior sutil (efecto panel metálico */}
+      <div
+        className="
+          pointer-events-none absolute inset-[1px] rounded-2xl
+          border border-white/5
+        "
+      />
+
+      {/* Brillo superior sutil */}
+      <div
+        className="
+          pointer-events-none absolute inset-x-0 top-0 h-8
+          bg-gradient-to-b from-white/10 via-white/5 to-transparent
+          opacity-40
+        "
+      />
+
+      {/* Contenido */}
+      <div className="relative z-10 flex flex-col gap-1">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+          {title}
         </p>
-      )}
+
+        <p
+          className={`
+            text-xl font-extrabold mt-0.5 leading-tight
+            ${accentValueClass}
+          `}
+        >
+          {displayValue}
+        </p>
+
+        {subtitle && (
+          <p className="text-xs mt-1 text-slate-400 truncate">{subtitle}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ChromeInfoCard({ title, children }) {
+  return (
+    <div
+      className="
+        relative overflow-hidden rounded-2xl p-4
+        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800
+        border border-slate-700/80
+        shadow-[0_10px_30px_rgba(0,0,0,0.65)]
+        transition-all duration-300
+        hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.9)]
+      "
+    >
+      {/* Barra lateral neutral */}
+      <div
+        className="
+          absolute inset-y-0 left-0 w-[3px]
+          bg-gradient-to-b from-slate-500 to-slate-300
+        "
+      />
+
+      {/* Borde interior sutil */}
+      <div
+        className="
+          pointer-events-none absolute inset-[1px] rounded-2xl
+          border border-white/5
+        "
+      />
+
+      {/* Brillo superior */}
+      <div
+        className="
+          pointer-events-none absolute inset-x-0 top-0 h-8
+          bg-gradient-to-b from-white/10 via-white/5 to-transparent
+          opacity-40
+        "
+      />
+
+      <div className="relative z-10">
+        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300 mb-2">
+          {title}
+        </h3>
+        <div className="text-xs text-slate-200 space-y-1">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function formatCurrencyDOP(value) {
+  const num = Number(value) || 0;
+  return new Intl.NumberFormat("es-DO", {
+    style: "currency",
+    currency: "DOP",
+    minimumFractionDigits: 2,
+  }).format(num);
+}
+
+function FlipMetricCard({ summary }) {
+  const [flipped, setFlipped] = useState(false);
+
+  if (!summary) {
+    return (
+      <div
+        className="
+          relative overflow-hidden rounded-2xl p-4
+          bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800
+          border border-slate-700/80
+          shadow-[0_10px_30px_rgba(0,0,0,0.65)]
+          flex items-center justify-center
+          text-sm text-slate-300
+        "
+      >
+        Cargando resumen anual...
+      </div>
+    );
+  }
+
+  const { year, total, byStability } = summary;
+
+  const stabilityLabels = {
+    fixed: "Fijo",
+    variable: "Variable",
+    occasional: "Ocasional",
+  };
+
+  const ahorroNeto = Number(total?.income || 0) - Number(total?.expense || 0);
+
+  return (
+    <div
+      className="
+        relative overflow-hidden rounded-2xl
+        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800
+        border border-slate-700/80
+        shadow-[0_10px_30px_rgba(0,0,0,0.65)]
+        transition-all duration-300
+        hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.9)]
+        h-full min-h-[190px]
+        cursor-pointer
+      "
+      onClick={() => setFlipped((prev) => !prev)}
+    >
+      {/* Barra lateral de acento */}
+      <div
+        className="
+          absolute inset-y-0 left-0 w-[3px]
+          bg-gradient-to-b from-emerald-500 to-emerald-300
+        "
+      />
+
+      {/* Borde interior */}
+      <div
+        className="
+          pointer-events-none absolute inset-[1px] rounded-2xl
+          border border-white/5
+        "
+      />
+
+      {/* Brillo superior */}
+      <div
+        className="
+          pointer-events-none absolute inset-x-0 top-0 h-8
+          bg-gradient-to-b from-white/10 via-white/5 to-transparent
+          opacity-40
+        "
+      />
+
+      {/* Contenido flippeable */}
+      <div
+        className={`
+          relative w-full h-full
+          transition-transform duration-500
+          [transform-style:preserve-3d]
+          ${flipped ? "[transform:rotateY(180deg)]" : ""}
+        `}
+      >
+        {/* FRONT */}
+        <div
+          className="
+            absolute inset-0 p-4
+            [backface-visibility:hidden]
+            flex flex-col justify-between
+          "
+        >
+          <div>
+            <p className="text-xs font-bold text-slate-200 uppercase tracking-[0.18em]">
+              Resumen anual {year}
+            </p>
+            <p className="text-[11px] font-semibold text-slate-400 mt-0.5">
+              (Click para ver por estabilidad)
+            </p>
+          </div>
+
+          <div className="mt-3 space-y-1 text-sm">
+            <div className="flex justify-between">
+              <span className="text-slate-300">Ingreso total</span>
+              <span className="font-semibold text-emerald-300">
+                {formatCurrencyDOP(total?.income)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-300">Gasto total</span>
+              <span className="font-semibold text-rose-300">
+                {formatCurrencyDOP(total?.expense)}
+              </span>
+            </div>
+            <div className="flex justify-between border-t border-slate-600 pt-2 mt-2">
+              <span className="text-slate-200 font-medium">Ahorro neto</span>
+              <span
+                className={
+                  ahorroNeto >= 0
+                    ? "font-bold text-emerald-300"
+                    : "font-bold text-rose-300"
+                }
+              >
+                {formatCurrencyDOP(ahorroNeto)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* BACK */}
+        <div
+          className="
+            absolute inset-0 p-4
+            [backface-visibility:hidden]
+            [transform:rotateY(180deg)]
+            flex flex-col
+          "
+        >
+          <div className="mb-2">
+            <p className="text-xs font-bold text-slate-200 uppercase tracking-[0.18em]">
+              Detalle por estabilidad
+            </p>
+            <p className="text-[11px] font-semibold text-slate-400 mt-0.5">
+              (Click para volver)
+            </p>
+          </div>
+
+          <div className="mt-1 space-y-2 text-xs overflow-y-auto">
+            {Object.entries(byStability || {}).map(([key, value]) => (
+              <div
+                key={key}
+                className="border border-slate-600 rounded px-2 py-1.5 bg-slate-900/60"
+              >
+                <div className="mb-1">
+                  <span className="font-semibold text-slate-100">
+                    {stabilityLabels[key] || key}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-300">Ingresos</span>
+                  <span className="font-medium text-emerald-300">
+                    {formatCurrencyDOP(value.income)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-300">Gastos</span>
+                  <span className="font-medium text-rose-300">
+                    {formatCurrencyDOP(value.expense)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

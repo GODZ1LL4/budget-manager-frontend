@@ -1,1 +1,41 @@
 @import "tailwindcss";
+
+/* ======================== */
+/*  FULLCALENDAR DARK THEME */
+/* ======================== */
+
+.fc {
+    --fc-page-bg-color: #020617;                 /* fondo base */
+    --fc-neutral-bg-color: #020617;
+    --fc-neutral-text-color: #e5e7eb;
+    --fc-border-color: rgba(148, 163, 184, 0.4); /* slate-400/40 */
+    --fc-today-bg-color: rgba(56, 189, 248, 0.15); /* cyan-400/15 */
+  
+    --fc-button-text-color: #e5e7eb;
+    --fc-button-bg-color: #0f172a;
+    --fc-button-border-color: #1f2937;
+    --fc-button-hover-bg-color: #1f2937;
+    --fc-button-hover-border-color: #374151;
+  
+    --fc-event-bg-color: #ef4444;
+    --fc-event-border-color: #ef4444;
+    --fc-event-text-color: #f9fafb;
+  }
+  
+  /* números de día arriba a la derecha */
+  .fc .fc-daygrid-day-number {
+    color: #e5e7eb;
+  }
+  
+  /* encabezados de columna (lun, mar, ... ) */
+  .fc .fc-col-header-cell-cushion {
+    color: #e5e7eb;
+    font-weight: 600;
+  }
+  
+  /* Título Mes - Año en el header del calendario */
+.fc .fc-toolbar-title {
+    color: #e5e7eb;      /* texto claro */
+    font-weight: 600;
+  }
+  
