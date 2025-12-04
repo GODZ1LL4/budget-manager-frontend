@@ -2,37 +2,37 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import CollapseSection from "../components/CollapseSection";
-import ItemPriceTrendChart from "../components/ItemPriceTrendChart";
-import CategorySpendingBarChart from "../components/CategorySpendingBarChart";
+import ItemPriceTrendChart from "../components/reports/ItemPriceTrendChart";
+import CategorySpendingBarChart from "../components/reports/CategorySpendingBarChart";
 
 import Modal from "../components/Modal";
 
-import BudgetVsActualChart from "../components/BudgetVsActualChart";
-import AccountBalancesChart from "../components/AccountBalancesChart";
+import BudgetVsActualChart from "../components/reports/BudgetVsActualChart";
+import AccountBalancesChart from "../components/reports/AccountBalancesChart";
 
-import OverBudgetChart from "../components/OverBudgetChart";
+import OverBudgetChart from "../components/reports/OverBudgetChart";
 
-import MonthlyIncomeVsExpenseChart from "../components/MonthlyIncomeVsExpenseChart";
-import CategoryVariationChart from "../components/CategoryVariationChart";
-import TransactionsCalendar from "../components/TransactionsCalendar";
+import MonthlyIncomeVsExpenseChart from "../components/reports/MonthlyIncomeVsExpenseChart";
+import CategoryVariationChart from "../components/reports/CategoryVariationChart";
+import TransactionsCalendar from "../components/reports/TransactionsCalendar";
 import { toast } from "react-toastify";
 
-import BudgetVsActualSummaryChart from "../components/BudgetVsActualSummaryChart";
+import BudgetVsActualSummaryChart from "../components/reports/BudgetVsActualSummaryChart";
 
-import ExpenseByStabilityChart from "../components/ExpenseByStabilityChart";
-import TopVariableCategoriesChart from "../components/TopVariableCategoriesChart";
-import GoalsProgressChart from "../components/GoalsProgressChart";
+import ExpenseByStabilityChart from "../components/reports/ExpenseByStabilityChart";
+import TopVariableCategoriesChart from "../components/reports/TopVariableCategoriesChart";
+import GoalsProgressChart from "../components/reports/GoalsProgressChart";
 
-import ProjectedExpenseByCategoryChart from "../components/ProjectedExpenseByCategoryChart";
-import ProjectedIncomeByCategoryChart from "../components/ProjectedIncomeByCategoryChart";
+import ProjectedExpenseByCategoryChart from "../components/reports/ProjectedExpenseByCategoryChart";
+import ProjectedIncomeByCategoryChart from "../components/reports/ProjectedIncomeByCategoryChart";
 
-import ItemTrendChart from "../components/ItemTrendChart";
+import ItemTrendChart from "../components/reports/ItemTrendChart";
 
-import CategoryMonthlyComparisonTable from "../components/CategoryMonthlyComparisonTable";
-import ItemMonthlyComparisonTable from "../components/ItemMonthlyComparisonTable";
+import CategoryMonthlyComparisonTable from "../components/reports/CategoryMonthlyComparisonTable";
+import ItemMonthlyComparisonTable from "../components/reports/ItemMonthlyComparisonTable";
 
-import TopItemsByCategoryChart from "../components/TopItemsByCategoryChart";
-import ItemsAnnualSummaryTable from "../components/ItemsAnnualSummaryTable";
+import TopItemsByCategoryChart from "../components/reports/TopItemsByCategoryChart";
+import ItemsAnnualSummaryTable from "../components/reports/ItemsAnnualSummaryTable";
 
 function Dashboard({ token }) {
   const [data, setData] = useState(null);
