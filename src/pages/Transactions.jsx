@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import Modal from "../components/Modal"; // ajusta la ruta según tu estructura
 
 function Transactions({ token }) {
   const [amount, setAmount] = useState("");
@@ -25,18 +26,83 @@ function Transactions({ token }) {
   const [recurrence, setRecurrence] = useState("");
   const [recurrenceEndDate, setRecurrenceEndDate] = useState("");
 
+  // Modal de detalle de lista de compras
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [selectedTx, setSelectedTx] = useState(null);
+  const [selectedTxItems, setSelectedTxItems] = useState([]);
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
+
+  // Filtros
+  const [filterDescription, setFilterDescription] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const [filterAccountId, setFilterAccountId] = useState("");
+  const [filterCategoryId, setFilterCategoryId] = useState("");
+
+  // Fecha desde: 1er día del mes actual
+  const [filterDateFrom, setFilterDateFrom] = useState(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    return `${year}-${month}-01`;
+  });
+
+  // Fecha hasta: hoy
+  const [filterDateTo, setFilterDateTo] = useState(() => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const day = String(today.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  });
+
   const api = import.meta.env.VITE_API_URL;
+
+  const fetchTransactions = async (customFilters) => {
+    try {
+      // Si viene un event (onClick directo), lo ignoramos
+      if (customFilters && customFilters.nativeEvent) {
+        customFilters = undefined;
+      }
+
+      const {
+        description = filterDescription,
+        type = filterType,
+        accountId = filterAccountId,
+        categoryId = filterCategoryId,
+        dateFrom = filterDateFrom,
+        dateTo = filterDateTo,
+      } = customFilters || {};
+
+      const params = {};
+
+      if (description.trim()) params.description = description.trim();
+      if (type && type !== "all") params.type = type;
+      if (accountId) params.account_id = accountId;
+      if (categoryId) params.category_id = categoryId;
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+
+      console.log("➡️ Filtros enviados a /transactions:", params);
+
+      const res = await axios.get(`${api}/transactions`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params,
+      });
+
+      setTransactions(res.data.data || []);
+    } catch (err) {
+      console.error("Error cargando transacciones:", err);
+      alert("Error cargando transacciones");
+    }
+  };
 
   const fetchInitialData = async () => {
     try {
-      const [accRes, catRes, txRes, itemRes] = await Promise.all([
+      const [accRes, catRes, itemRes] = await Promise.all([
         axios.get(`${api}/accounts`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         axios.get(`${api}/categories`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get(`${api}/transactions`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         axios.get(`${api}/items-with-price`, {
@@ -46,17 +112,46 @@ function Transactions({ token }) {
 
       setAccounts(accRes.data.data);
       setCategories(catRes.data.data);
-      setTransactions(txRes.data.data);
       setItems(itemRes.data.data);
-    } catch {
+
+      // 🔁 carga inicial de transacciones con rango por defecto (1er día del mes → hoy)
+      await fetchTransactions();
+    } catch (err) {
+      console.error("Error cargando datos iniciales:", err);
       alert("Error cargando datos iniciales");
     }
+  };
+
+  const openDetail = async (tx) => {
+    setSelectedTx(tx);
+    setIsDetailOpen(true);
+    setSelectedTxItems([]);
+    setIsLoadingItems(true);
+
+    try {
+      const res = await axios.get(`${api}/transactions/${tx.id}/items`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSelectedTxItems(res.data.data || []);
+    } catch (err) {
+      console.error("Error cargando items de la transacción:", err);
+      alert("No se pudieron cargar los artículos de esta compra");
+    } finally {
+      setIsLoadingItems(false);
+    }
+  };
+
+  const closeDetail = () => {
+    setIsDetailOpen(false);
+    setSelectedTx(null);
+    setSelectedTxItems([]);
   };
 
   useEffect(() => {
     if (token) fetchInitialData();
   }, [token]);
 
+  // Recalcular total cuando es lista de compra
   useEffect(() => {
     if (isShoppingList && items.length > 0) {
       console.log("🔄 Recalculando total de compra...");
@@ -146,8 +241,11 @@ function Transactions({ token }) {
       setArticleLines([{ item_id: "", quantity: 1 }]);
       setRecurrence("");
       setRecurrenceEndDate("");
-      fetchInitialData();
-    } catch {
+      setIsShoppingList(false);
+      setDiscount(0);
+      await fetchTransactions();
+    } catch (err) {
+      console.error("Error al crear transacción:", err);
       alert("Error al crear transacción");
     }
   };
@@ -158,11 +256,32 @@ function Transactions({ token }) {
       await axios.delete(`${api}/transactions/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      fetchInitialData();
-    } catch {
+      await fetchTransactions();
+    } catch (err) {
+      console.error("Error al eliminar transacción:", err);
       alert("Error al eliminar");
     }
   };
+
+  // Limpiar categoría de filtro si no corresponde al tipo
+  useEffect(() => {
+    const selectedCategory = categories.find((c) => c.id === filterCategoryId);
+
+    if (!selectedCategory) {
+      setFilterCategoryId("");
+      return;
+    }
+
+    if (filterType === "expense" && selectedCategory.type !== "expense") {
+      setFilterCategoryId("");
+    }
+    if (filterType === "income" && selectedCategory.type !== "income") {
+      setFilterCategoryId("");
+    }
+    if (filterType === "transfer") {
+      setFilterCategoryId("");
+    }
+  }, [filterType, categories, filterCategoryId]);
 
   return (
     <div className="bg-white rounded shadow p-6">
@@ -172,6 +291,7 @@ function Transactions({ token }) {
         asociar artículos.
       </p>
 
+      {/* Formulario principal */}
       <form
         onSubmit={handleSubmit}
         className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
@@ -403,59 +523,380 @@ function Transactions({ token }) {
         </div>
       </form>
 
+      {/* Filtros de transacciones */}
+      <div className="mb-4 border border-gray-200 rounded-lg p-4 bg-gray-50">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">Filtros</h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {/* Descripción */}
+          <div className="flex flex-col">
+            <label className="text-xs font-medium mb-1">Descripción</label>
+            <input
+              type="text"
+              value={filterDescription}
+              onChange={(e) => setFilterDescription(e.target.value)}
+              className="border border-gray-300 p-2 rounded text-sm"
+              placeholder="Buscar por descripción"
+            />
+          </div>
+
+          {/* Tipo */}
+          <div className="flex flex-col">
+            <label className="text-xs font-medium mb-1">Tipo</label>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="border border-gray-300 p-2 rounded text-sm"
+            >
+              <option value="all">Todos</option>
+              <option value="expense">Gasto</option>
+              <option value="income">Ingreso</option>
+              <option value="transfer">Transferencia</option>
+            </select>
+          </div>
+
+          {/* Categoría */}
+          <div className="flex flex-col">
+            <label className="text-xs font-medium mb-1">Categoría</label>
+            <select
+              value={filterCategoryId}
+              onChange={(e) => setFilterCategoryId(e.target.value)}
+              className="border border-gray-300 p-2 rounded text-sm"
+              disabled={filterType === "transfer"}
+            >
+              <option value="">Todas</option>
+
+              {categories
+                .filter((cat) => {
+                  if (filterType === "all") return true;
+                  if (filterType === "transfer") return false;
+                  return cat.type === filterType;
+                })
+                .map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          {/* Cuenta */}
+          <div className="flex flex-col">
+            <label className="text-xs font-medium mb-1">Cuenta</label>
+            <select
+              value={filterAccountId}
+              onChange={(e) => setFilterAccountId(e.target.value)}
+              className="border border-gray-300 p-2 rounded text-sm"
+            >
+              <option value="">Todas</option>
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Fecha desde */}
+          <div className="flex flex-col">
+            <label className="text-xs font-medium mb-1">Desde</label>
+            <input
+              type="date"
+              value={filterDateFrom}
+              onChange={(e) => setFilterDateFrom(e.target.value)}
+              className="border border-gray-300 p-2 rounded text-sm"
+            />
+          </div>
+
+          {/* Fecha hasta */}
+          <div className="flex flex-col">
+            <label className="text-xs font-medium mb-1">Hasta</label>
+            <input
+              type="date"
+              value={filterDateTo}
+              onChange={(e) => setFilterDateTo(e.target.value)}
+              className="border border-gray-300 p-2 rounded text-sm"
+            />
+          </div>
+        </div>
+
+        <div className="mt-3 flex flex-col sm:flex-row gap-2">
+          <button
+            type="button"
+            onClick={() => fetchTransactions()}
+            className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:brightness-110 transition w-full sm:w-auto"
+          >
+            Buscar
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              const today = new Date();
+              const year = today.getFullYear();
+              const month = String(today.getMonth() + 1).padStart(2, "0");
+              const day = String(today.getDate()).padStart(2, "0");
+
+              const newDateFrom = `${year}-${month}-01`;
+              const newDateTo = `${year}-${month}-${day}`;
+
+              setFilterDescription("");
+              setFilterType("all");
+              setFilterAccountId("");
+              setFilterCategoryId("");
+              setFilterDateFrom(newDateFrom);
+              setFilterDateTo(newDateTo);
+
+              fetchTransactions({
+                description: "",
+                type: "all",
+                accountId: "",
+                categoryId: "",
+                dateFrom: newDateFrom,
+                dateTo: newDateTo,
+              });
+            }}
+            className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition w-full sm:w-auto"
+          >
+            Limpiar filtros
+          </button>
+        </div>
+      </div>
+
+      {/* Historial */}
       <h3 className="text-lg font-semibold text-gray-800 mb-3">
         Historial reciente
       </h3>
       <ul className="space-y-3">
-        {transactions.map((tx) => (
-          <li
-            key={tx.id}
-            className="p-4 border border-gray-200 rounded shadow-sm flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2"
-          >
-            <div>
-              <p className="text-sm font-semibold text-gray-800">
-                <span
-                  className={
-                    tx.type === "income"
-                      ? "text-green-600"
-                      : tx.type === "expense"
-                      ? "text-red-600"
-                      : "text-gray-700"
-                  }
-                >
-                  {tx.type === "income"
-                    ? "+"
-                    : tx.type === "expense"
-                    ? "-"
-                    : ""}
-                  {Number(tx.amount).toFixed(2)} DOP
-                </span>{" "}
-                —{" "}
-                <span className="text-gray-600">
-                  {tx.type === "transfer"
-                    ? "Transferencia"
-                    : tx.categories?.name || "Sin categoría"}
-                </span>
-              </p>
-              <p className="text-xs text-gray-500">
-                {tx.description || "Sin descripción"} —{" "}
-                {tx.type === "transfer"
-                  ? `${tx.account_from?.name || "¿?"} → ${
-                      tx.account_to?.name || "¿?"
-                    }`
-                  : tx.account?.name || "Sin cuenta"}{" "}
-                — {tx.date}
-              </p>
-            </div>
-            <button
-              onClick={() => handleDelete(tx.id)}
-              className="text-red-600 text-xs hover:underline"
+        {transactions.map((tx) => {
+          const isShoppingListTx = tx.is_shopping_list === true;
+
+          return (
+            <li
+              key={tx.id}
+              className="p-4 border border-gray-200 rounded shadow-sm flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2"
             >
-              Eliminar
-            </button>
-          </li>
-        ))}
+              <div>
+                <p className="text-sm font-semibold text-gray-800 flex flex-wrap items-center gap-2">
+                  <span
+                    className={
+                      tx.type === "income"
+                        ? "text-green-600"
+                        : tx.type === "expense"
+                        ? "text-red-600"
+                        : "text-gray-700"
+                    }
+                  >
+                    {tx.type === "income"
+                      ? "+"
+                      : tx.type === "expense"
+                      ? "-"
+                      : ""}
+                    {Number(tx.amount).toFixed(2)} DOP
+                  </span>
+
+                  <span className="text-gray-600">
+                    —{" "}
+                    {tx.type === "transfer"
+                      ? "Transferencia"
+                      : tx.categories?.name || "Sin categoría"}
+                  </span>
+
+                  {isShoppingListTx && (
+                    <button
+                      type="button"
+                      onClick={() => openDetail(tx)}
+                      className="inline-flex items-center text-[10px] uppercase tracking-wide bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full hover:bg-indigo-100 border border-indigo-100"
+                      title="Ver detalle de la lista de compra"
+                    >
+                      <span className="mr-1">🛒</span>
+                      Lista de compra
+                    </button>
+                  )}
+                </p>
+
+                <p className="text-xs text-gray-500 mt-1">
+                  {tx.description || "Sin descripción"} —{" "}
+                  {tx.type === "transfer"
+                    ? `${tx.account_from?.name || "¿?"} → ${
+                        tx.account_to?.name || "¿?"
+                      }`
+                    : tx.account?.name || "Sin cuenta"}{" "}
+                  — {tx.date}
+                </p>
+              </div>
+
+              <button
+                onClick={() => handleDelete(tx.id)}
+                className="text-red-600 text-xs hover:underline"
+              >
+                Eliminar
+              </button>
+            </li>
+          );
+        })}
       </ul>
+
+      {/* Modal detalle lista de compra */}
+      <Modal
+        isOpen={isDetailOpen}
+        onClose={closeDetail}
+        title={
+          selectedTx
+            ? `Detalle de compra — ${selectedTx.date}`
+            : "Detalle de compra"
+        }
+        size="lg"
+      >
+        {!selectedTx ? (
+          <p className="text-sm text-gray-500">Cargando...</p>
+        ) : (
+          <div className="space-y-5">
+            {/* Encabezado con resumen */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                  Resumen de la transacción
+                </p>
+                <p className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  {Number(selectedTx.amount).toFixed(2)} DOP
+                  {selectedTx.discount_percent > 0 && (
+                    <span className="inline-flex items-center text-[10px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-100">
+                      🔖 Descuento {selectedTx.discount_percent}%
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {selectedTx.description || "Sin descripción"}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="inline-flex items-center bg-gray-50 text-gray-700 px-2 py-1 rounded-full border border-gray-100">
+                  🧾 <span className="ml-1 font-medium">Fecha:</span>
+                  <span className="ml-1">{selectedTx.date}</span>
+                </span>
+                <span className="inline-flex items-center bg-blue-50 text-blue-700 px-2 py-1 rounded-full border border-blue-100">
+                  💼 <span className="ml-1 font-medium">Cuenta:</span>
+                  <span className="ml-1">
+                    {selectedTx.account?.name || "Sin cuenta"}
+                  </span>
+                </span>
+                {selectedTx.categories && (
+                  <span className="inline-flex items-center bg-purple-50 text-purple-700 px-2 py-1 rounded-full border border-purple-100">
+                    🏷️ <span className="ml-1 font-medium">Categoría:</span>
+                    <span className="ml-1">
+                      {selectedTx.categories.name}
+                    </span>
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Tabla de artículos */}
+            <div className="border-t pt-4">
+              <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                🛒 Artículos comprados
+                {selectedTxItems.length > 0 && (
+                  <span className="text-[11px] font-normal text-gray-500">
+                    {selectedTxItems.length} ítem
+                    {selectedTxItems.length > 1 ? "s" : ""}
+                  </span>
+                )}
+              </h4>
+
+              {isLoadingItems && (
+                <p className="text-xs text-gray-500 italic">
+                  Cargando artículos...
+                </p>
+              )}
+
+              {!isLoadingItems && selectedTxItems.length === 0 && (
+                <p className="text-xs text-gray-500 italic">
+                  No hay artículos asociados a esta transacción.
+                </p>
+              )}
+
+              {!isLoadingItems && selectedTxItems.length > 0 && (
+                <div className="overflow-x-auto rounded border border-gray-100">
+                  <table className="min-w-full text-xs">
+                    <thead className="bg-gray-50">
+                      <tr className="border-b border-gray-100">
+                        <th className="py-2 pl-3 pr-2 text-left font-semibold text-gray-600">
+                          #
+                        </th>
+                        <th className="py-2 px-2 text-left font-semibold text-gray-600">
+                          Artículo
+                        </th>
+                        <th className="py-2 px-2 text-center font-semibold text-gray-600">
+                          Cantidad
+                        </th>
+                        <th className="py-2 px-2 text-right font-semibold text-gray-600">
+                          Precio unit.
+                        </th>
+                        <th className="py-2 px-2 text-center font-semibold text-gray-600">
+                          ITBIS
+                        </th>
+                        <th className="py-2 pr-3 pl-2 text-right font-semibold text-gray-600">
+                          Total línea
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedTxItems.map((item, idx) => {
+                        const itemName =
+                          item.items?.name || "Artículo sin nombre";
+
+                        return (
+                          <tr
+                            key={item.id}
+                            className={
+                              idx % 2 === 0
+                                ? "bg-white border-b border-gray-50"
+                                : "bg-gray-50/50 border-b border-gray-50"
+                            }
+                          >
+                            <td className="py-2 pl-3 pr-2 text-gray-500">
+                              {idx + 1}
+                            </td>
+                            <td className="py-2 px-2 text-gray-800">
+                              {itemName}
+                            </td>
+                            <td className="py-2 px-2 text-center text-gray-700">
+                              {item.quantity}
+                            </td>
+                            <td className="py-2 px-2 text-right text-gray-700">
+                              {Number(item.unit_price_net).toFixed(2)} DOP
+                            </td>
+                            <td className="py-2 px-2 text-center text-gray-700">
+                              {item.is_exempt_used
+                                ? "Exento"
+                                : `${item.tax_rate_used || 0}%`}
+                            </td>
+                            <td className="py-2 pr-3 pl-2 text-right font-semibold text-gray-800">
+                              {Number(item.line_total_final).toFixed(2)} DOP
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={closeDetail}
+                className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
