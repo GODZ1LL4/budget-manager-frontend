@@ -75,102 +75,177 @@ function Goals({ token }) {
   };
 
   useEffect(() => {
-    fetchGoals();
+    if (token) fetchGoals();
   }, [token]);
 
   return (
-    <div className="bg-white rounded shadow p-6">
-      <h2 className="text-2xl font-bold mb-2 text-lime-600">Metas de Ahorro</h2>
-      <p className="text-sm text-gray-500 mb-4">
-        Crea metas de ahorro con una fecha objetivo y visualizá tu progreso en
-        tiempo real.
-      </p>
+    <div
+      className="
+        rounded-2xl p-6
+        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950
+        border border-slate-800
+        shadow-[0_18px_45px_rgba(0,0,0,0.9)]
+        text-slate-200 space-y-5
+      "
+    >
+      <div>
+        <h2 className="text-2xl font-bold text-emerald-300 mb-1">
+          Metas de Ahorro
+        </h2>
+        <p className="text-sm text-slate-400">
+          Crea metas con una fecha objetivo y seguí tu progreso en tiempo real.
+        </p>
+      </div>
 
-      <form onSubmit={handleCreate} className="grid gap-4 mb-6 md:grid-cols-3">
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Nombre</label>
+      {/* Formulario */}
+      <form
+        onSubmit={handleCreate}
+        className="grid gap-4 mb-4 md:grid-cols-3"
+      >
+        {/* Nombre */}
+        <div className="flex flex-col space-y-1">
+          <label className="text-sm font-medium text-slate-300">
+            Nombre
+          </label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ej: Viaje, computadora..."
-            className="border border-gray-300 p-2 rounded"
+            className="
+              w-full rounded-lg px-3 py-2 text-sm
+              bg-slate-900 border border-slate-700
+              text-slate-100 placeholder:text-slate-500
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
             required
           />
         </div>
 
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">
-            Monto objetivo (USD)
+        {/* Monto objetivo */}
+        <div className="flex flex-col space-y-1">
+          <label className="text-sm font-medium text-slate-300">
+            Monto objetivo (DOP)
           </label>
           <input
             type="number"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             placeholder="1000"
-            className="border border-gray-300 p-2 rounded"
+            min="0"
+            className="
+              w-full rounded-lg px-3 py-2 text-sm
+              bg-slate-900 border border-slate-700
+              text-slate-100 placeholder:text-slate-500
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
             required
           />
         </div>
 
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Fecha límite</label>
+        {/* Fecha límite */}
+        <div className="flex flex-col space-y-1">
+          <label className="text-sm font-medium text-slate-300">
+            Fecha límite
+          </label>
           <input
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            className="border border-gray-300 p-2 rounded"
+            className="
+              w-full rounded-lg px-3 py-2 text-sm
+              bg-slate-900 border border-slate-700
+              text-slate-100
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
           />
         </div>
 
-        <div className="md:col-span-3">
+        <div className="md:col-span-3 flex justify-end">
           <button
             type="submit"
-            className="bg-lime-600 text-white font-semibold px-4 py-2 rounded hover:brightness-90 transition w-full md:w-auto"
+            className="
+              inline-flex items-center justify-center
+              px-5 py-2.5 text-sm font-semibold rounded-lg
+              bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
+              text-slate-950
+              shadow-[0_0_18px_rgba(16,185,129,0.7)]
+              hover:brightness-110 active:scale-95
+              transition-all w-full md:w-auto
+            "
           >
-            Crear Meta
+            Crear meta
           </button>
         </div>
       </form>
 
+      {/* Lista de metas */}
       <ul className="space-y-4">
         {goals.map((goal) => {
-          const progress = goal.current_amount / goal.target_amount;
-          const progressColor = progress >= 1 ? "#16a34a" : "#3b82f6"; // verde si completo, azul si no
+          const progress =
+            goal.target_amount > 0
+              ? goal.current_amount / goal.target_amount
+              : 0;
+          const progressColor = progress >= 1 ? "#22c55e" : "#3b82f6";
 
           return (
             <li
               key={goal.id}
-              className="p-4 border border-gray-300 rounded bg-gray-50 shadow-sm"
+              className="
+                p-4 rounded-2xl
+                bg-slate-950/60
+                border border-slate-800
+                shadow-[0_10px_30px_rgba(0,0,0,0.7)]
+              "
             >
-              <div className="flex justify-between items-center mb-2">
+              <div className="flex justify-between items-start gap-3 mb-2">
                 <div>
-                  <p className="font-semibold text-gray-800">{goal.name}</p>
-                  <p className="text-sm text-gray-600">
-                    {goal.current_amount} / {goal.target_amount} USD
-                    {goal.due_date ? ` — Vence: ${goal.due_date}` : ""}
+                  <p className="font-semibold text-slate-100">
+                    {goal.name}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    {goal.current_amount.toFixed(2)} /{" "}
+                    {goal.target_amount.toFixed(2)} DOP
+                    {goal.due_date ? (
+                      <span className="ml-1 text-slate-500">
+                        — Vence: {goal.due_date}
+                      </span>
+                    ) : null}
                   </p>
                 </div>
                 <button
                   onClick={() => handleDelete(goal.id)}
-                  className="text-red-600 text-sm hover:underline"
+                  className="
+                    text-xs font-semibold
+                    text-rose-400 hover:text-rose-300
+                    hover:underline transition-colors
+                  "
                 >
                   Eliminar
                 </button>
               </div>
 
+              {/* Slider de progreso */}
               <input
                 type="range"
                 min="0"
-                max={goal.target_amount}
+                max={goal.target_amount || 0}
                 step="0.01"
                 value={goal.current_amount}
                 onChange={(e) => handleUpdate(goal.id, e.target.value)}
-                className="w-full mt-1"
+                className="
+                  w-full mt-1
+                  accent-emerald-400
+                  bg-transparent
+                "
               />
 
-              <div className="w-full h-2 bg-gray-200 rounded mt-1">
+              {/* Barra visual */}
+              <div className="w-full h-2 bg-slate-800 rounded-full mt-2 overflow-hidden">
                 <div
-                  className="h-2 rounded transition-all duration-300"
+                  className="h-2 rounded-full transition-all duration-300"
                   style={{
                     width: `${Math.min(100, progress * 100)}%`,
                     backgroundColor: progressColor,
@@ -180,6 +255,13 @@ function Goals({ token }) {
             </li>
           );
         })}
+
+        {goals.length === 0 && (
+          <li className="text-sm text-slate-500 italic">
+            Aún no tienes metas creadas. Crea la primera desde el formulario
+            superior.
+          </li>
+        )}
       </ul>
     </div>
   );

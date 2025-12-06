@@ -284,73 +284,117 @@ function Transactions({ token }) {
   }, [filterType, categories, filterCategoryId]);
 
   return (
-    <div className="bg-white rounded shadow p-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-2">Transacciones</h2>
-      <p className="text-sm text-gray-500 mb-4">
-        Registra tus ingresos y gastos, o marca como lista de compra para
-        asociar artículos.
-      </p>
+    <div
+      className="
+        rounded-2xl p-6
+        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950
+        border border-slate-800
+        shadow-[0_18px_45px_rgba(0,0,0,0.9)]
+        text-slate-200 space-y-6
+      "
+    >
+      <div>
+        <h2 className="text-2xl font-bold mb-1 text-[#f6e652]">
+          Transacciones
+        </h2>
+        <p className="text-sm text-slate-400">
+          Registra tus ingresos y gastos, o marca como lista de compra para
+          asociar artículos.
+        </p>
+      </div>
 
       {/* Formulario principal */}
       <form
         onSubmit={handleSubmit}
-        className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
+        className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3"
       >
         <div className="col-span-full">
-          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+          <label className="inline-flex items-center gap-2 text-sm text-slate-300">
             <input
               type="checkbox"
               checked={isShoppingList}
               onChange={(e) => setIsShoppingList(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500/70"
             />
             Esta transacción es una lista de compra
           </label>
         </div>
 
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Monto</label>
+        {/* Monto */}
+        <div className="flex flex-col space-y-1">
+          <label className="text-sm font-medium text-slate-300">Monto</label>
           <input
             type="number"
             step="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             readOnly={isShoppingList}
-            className={`border border-gray-300 p-2 rounded ${
-              isShoppingList ? "bg-gray-100 text-gray-500" : ""
-            }`}
+            className={`
+              w-full rounded-lg px-3 py-2 text-sm
+              border
+              ${
+                isShoppingList
+                  ? "bg-slate-900/70 border-slate-800 text-slate-500"
+                  : "bg-slate-900 border-slate-700 text-slate-100"
+              }
+              placeholder:text-slate-500
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            `}
             required
           />
         </div>
 
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Tipo</label>
+        {/* Tipo */}
+        <div className="flex flex-col space-y-1">
+          <label className="text-sm font-medium text-slate-300">Tipo</label>
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="border border-gray-300 p-2 rounded"
+            className="
+              w-full rounded-lg px-3 py-2 text-sm
+              bg-slate-900 border border-slate-700
+              text-slate-100
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
           >
             <option value="expense">Gasto</option>
             <option value="income">Ingreso</option>
           </select>
         </div>
 
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Fecha</label>
+        {/* Fecha */}
+        <div className="flex flex-col space-y-1">
+          <label className="text-sm font-medium text-slate-300">Fecha</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="border border-gray-300 p-2 rounded"
+            className="
+              w-full rounded-lg px-3 py-2 text-sm
+              bg-slate-900 border border-slate-700
+              text-slate-100
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
             required
           />
         </div>
 
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Cuenta</label>
+        {/* Cuenta */}
+        <div className="flex flex-col space-y-1">
+          <label className="text-sm font-medium text-slate-300">Cuenta</label>
           <select
             value={accountId}
             onChange={(e) => setAccountId(e.target.value)}
-            className="border border-gray-300 p-2 rounded"
+            className="
+              w-full rounded-lg px-3 py-2 text-sm
+              bg-slate-900 border border-slate-700
+              text-slate-100
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
             required
           >
             <option value="">Selecciona una cuenta</option>
@@ -362,12 +406,21 @@ function Transactions({ token }) {
           </select>
         </div>
 
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Categoría</label>
+        {/* Categoría */}
+        <div className="flex flex-col space-y-1">
+          <label className="text-sm font-medium text-slate-300">
+            Categoría
+          </label>
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            className="border border-gray-300 p-2 rounded"
+            className="
+              w-full rounded-lg px-3 py-2 text-sm
+              bg-slate-900 border border-slate-700
+              text-slate-100
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
             required
           >
             <option value="">Selecciona una categoría</option>
@@ -381,12 +434,19 @@ function Transactions({ token }) {
           </select>
         </div>
 
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Repetir</label>
+        {/* Recurrencia */}
+        <div className="flex flex-col space-y-1">
+          <label className="text-sm font-medium text-slate-300">Repetir</label>
           <select
             value={recurrence}
             onChange={(e) => setRecurrence(e.target.value)}
-            className="border border-gray-300 p-2 rounded"
+            className="
+              w-full rounded-lg px-3 py-2 text-sm
+              bg-slate-900 border border-slate-700
+              text-slate-100
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
           >
             <option value="">Una vez</option>
             <option value="monthly">Mensual</option>
@@ -396,35 +456,54 @@ function Transactions({ token }) {
         </div>
 
         {recurrence && (
-          <div className="flex flex-col">
-            <label className="text-sm font-medium mb-1">Repetir hasta</label>
+          <div className="flex flex-col space-y-1">
+            <label className="text-sm font-medium text-slate-300">
+              Repetir hasta
+            </label>
             <input
               type="date"
               value={recurrenceEndDate}
               onChange={(e) => setRecurrenceEndDate(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
             />
           </div>
         )}
 
-        <div className="flex flex-col md:col-span-3">
-          <label className="text-sm font-medium mb-1">Descripción</label>
+        {/* Descripción */}
+        <div className="flex flex-col md:col-span-3 space-y-1">
+          <label className="text-sm font-medium text-slate-300">
+            Descripción
+          </label>
           <input
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Ejemplo: compra supermercado"
-            className="border border-gray-300 p-2 rounded"
+            className="
+              w-full rounded-lg px-3 py-2 text-sm
+              bg-slate-900 border border-slate-700
+              text-slate-100 placeholder:text-slate-500
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
           />
         </div>
 
+        {/* Lista de compra */}
         {isShoppingList && (
-          <div className="md:col-span-3">
-            <h4 className="font-semibold text-gray-700 mb-1 mt-2">
+          <div className="md:col-span-3 mt-2">
+            <h4 className="font-semibold text-slate-100 mb-2">
               Artículos comprados
             </h4>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
-              <label className="text-sm font-medium mb-1 sm:mb-0">
+
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
+              <label className="text-sm font-medium text-slate-300">
                 Descuento (%)
               </label>
               <input
@@ -434,7 +513,13 @@ function Transactions({ token }) {
                 max="100"
                 step="0.01"
                 onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                className="border border-gray-300 px-2 py-1 rounded text-sm w-full sm:w-24"
+                className="
+                  w-full sm:w-24 rounded-lg px-3 py-1.5 text-sm
+                  bg-slate-900 border border-slate-700
+                  text-slate-100 placeholder:text-slate-500
+                  focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                  transition-colors
+                "
                 placeholder="Ej. 5"
               />
             </div>
@@ -450,7 +535,10 @@ function Transactions({ token }) {
               return (
                 <div
                   key={idx}
-                  className="space-y-2 mb-4 border-b border-gray-200 pb-4"
+                  className="
+                    mb-4 rounded-xl border border-slate-800 bg-slate-950/50
+                    p-3 space-y-2
+                  "
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-6 gap-2">
                     <select
@@ -458,7 +546,13 @@ function Transactions({ token }) {
                       onChange={(e) =>
                         updateLine(idx, "item_id", e.target.value)
                       }
-                      className="border p-2 sm:col-span-2 w-full rounded"
+                      className="
+                        w-full rounded-lg px-3 py-2 text-sm
+                        bg-slate-900 border border-slate-700
+                        text-slate-100
+                        focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                        transition-colors sm:col-span-2
+                      "
                     >
                       <option value="">Selecciona artículo</option>
                       {items.map((it) => (
@@ -471,19 +565,29 @@ function Transactions({ token }) {
                     <input
                       type="number"
                       placeholder="Cantidad"
-                      className="border p-2 sm:col-span-1 w-full rounded"
+                      className="
+                        w-full rounded-lg px-3 py-2 text-sm
+                        bg-slate-900 border border-slate-700
+                        text-slate-100 placeholder:text-slate-500
+                        focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                        transition-colors sm:col-span-1
+                      "
                       value={line.quantity}
                       onChange={(e) =>
                         updateLine(idx, "quantity", e.target.value)
                       }
                     />
 
-                    <div className="text-sm text-gray-600 sm:col-span-2">
+                    <div className="text-sm  text-slate-300 sm:col-span-2">
                       <p>
-                        Precio: <strong>{price.toFixed(2)} DOP</strong>
+                        Precio:{" "}
+                        <strong className="text-emerald-300">
+                          {price.toFixed(2)} DOP
+                        </strong>
                       </p>
                       <p>
-                        ITBIS: <strong>{taxLabel}</strong>
+                        ITBIS:{" "}
+                        <strong className="text-slate-100">{taxLabel}</strong>
                       </p>
                     </div>
                   </div>
@@ -492,7 +596,15 @@ function Transactions({ token }) {
                     <button
                       type="button"
                       onClick={() => removeLine(idx)}
-                      className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:brightness-110 transition w-full sm:w-auto"
+                      className="
+                        w-full sm:w-auto
+                        px-4 py-2 text-sm  font-semibold rounded-lg
+                        bg-gradient-to-r from-rose-600 via-rose-500 to-rose-400
+                        text-white
+                        shadow-[0_0_12px_rgba(248,113,113,0.45)]
+                        hover:brightness-110 active:scale-95
+                        transition-all
+                      "
                     >
                       Quitar artículo
                     </button>
@@ -505,7 +617,13 @@ function Transactions({ token }) {
               <button
                 type="button"
                 onClick={addLine}
-                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:brightness-110 transition w-full sm:w-auto"
+                className="
+                  w-full sm:w-auto
+                  px-4 py-2 text-sm font-semibold rounded-lg
+                  bg-blue-600 text-white
+                  shadow-sm hover:brightness-110 active:scale-95
+                  transition-all
+                "
               >
                 Agregar artículo
               </button>
@@ -513,10 +631,19 @@ function Transactions({ token }) {
           </div>
         )}
 
-        <div className="md:col-span-3">
+        <div className="md:col-span-3 mt-2">
           <button
             type="submit"
-            className="w-full bg-green-600 text-white font-semibold py-2 rounded hover:brightness-110 transition"
+            className="
+              w-full
+              inline-flex items-center justify-center
+              px-4 py-2.5 text-sm font-semibold rounded-lg
+              bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
+              text-slate-950
+              shadow-[0_0_18px_rgba(16,185,129,0.7)]
+              hover:brightness-110 active:scale-95
+              transition-all
+            "
           >
             Agregar transacción
           </button>
@@ -524,29 +651,47 @@ function Transactions({ token }) {
       </form>
 
       {/* Filtros de transacciones */}
-      <div className="mb-4 border border-gray-200 rounded-lg p-4 bg-gray-50">
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">Filtros</h3>
+      <div className="mb-4 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+        <h3 className="text-sm font-semibold text-slate-200 mb-3">
+          Filtros
+        </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Descripción */}
-          <div className="flex flex-col">
-            <label className="text-xs font-medium mb-1">Descripción</label>
+          <div className="flex flex-col space-y-1">
+            <label className="text-[13px] font-medium text-slate-400">
+              Descripción
+            </label>
             <input
               type="text"
               value={filterDescription}
               onChange={(e) => setFilterDescription(e.target.value)}
-              className="border border-gray-300 p-2 rounded text-sm"
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100 placeholder:text-slate-500
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
               placeholder="Buscar por descripción"
             />
           </div>
 
           {/* Tipo */}
-          <div className="flex flex-col">
-            <label className="text-xs font-medium mb-1">Tipo</label>
+          <div className="flex flex-col space-y-1">
+            <label className="text-[13px] font-medium text-slate-400">
+              Tipo
+            </label>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="border border-gray-300 p-2 rounded text-sm"
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
             >
               <option value="all">Todos</option>
               <option value="expense">Gasto</option>
@@ -556,12 +701,20 @@ function Transactions({ token }) {
           </div>
 
           {/* Categoría */}
-          <div className="flex flex-col">
-            <label className="text-xs font-medium mb-1">Categoría</label>
+          <div className="flex flex-col space-y-1">
+            <label className="text-[13px] font-medium text-slate-400">
+              Categoría
+            </label>
             <select
               value={filterCategoryId}
               onChange={(e) => setFilterCategoryId(e.target.value)}
-              className="border border-gray-300 p-2 rounded text-sm"
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
               disabled={filterType === "transfer"}
             >
               <option value="">Todas</option>
@@ -581,12 +734,20 @@ function Transactions({ token }) {
           </div>
 
           {/* Cuenta */}
-          <div className="flex flex-col">
-            <label className="text-xs font-medium mb-1">Cuenta</label>
+          <div className="flex flex-col space-y-1">
+            <label className="text-[13px] font-medium text-slate-400">
+              Cuenta
+            </label>
             <select
               value={filterAccountId}
               onChange={(e) => setFilterAccountId(e.target.value)}
-              className="border border-gray-300 p-2 rounded text-sm"
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
             >
               <option value="">Todas</option>
               {accounts.map((acc) => (
@@ -598,33 +759,56 @@ function Transactions({ token }) {
           </div>
 
           {/* Fecha desde */}
-          <div className="flex flex-col">
-            <label className="text-xs font-medium mb-1">Desde</label>
+          <div className="flex flex-col space-y-1">
+            <label className="text-[13px] font-medium text-slate-400">
+              Desde
+            </label>
             <input
               type="date"
               value={filterDateFrom}
               onChange={(e) => setFilterDateFrom(e.target.value)}
-              className="border border-gray-300 p-2 rounded text-sm"
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
             />
           </div>
 
           {/* Fecha hasta */}
-          <div className="flex flex-col">
-            <label className="text-xs font-medium mb-1">Hasta</label>
+          <div className="flex flex-col space-y-1">
+            <label className="text-[13px] font-medium text-slate-400">
+              Hasta
+            </label>
             <input
               type="date"
               value={filterDateTo}
               onChange={(e) => setFilterDateTo(e.target.value)}
-              className="border border-gray-300 p-2 rounded text-sm"
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
             />
           </div>
         </div>
 
-        <div className="mt-3 flex flex-col sm:flex-row gap-2">
+        <div className="mt-4 flex flex-col sm:flex-row gap-2">
           <button
             type="button"
             onClick={() => fetchTransactions()}
-            className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:brightness-110 transition w-full sm:w-auto"
+            className="
+              w-full sm:w-auto
+              inline-flex items-center justify-center
+              px-4 py-2 text-sm font-semibold rounded-lg
+              bg-blue-600 text-white
+              hover:brightness-110 active:scale-95
+              transition-all
+            "
           >
             Buscar
           </button>
@@ -656,7 +840,16 @@ function Transactions({ token }) {
                 dateTo: newDateTo,
               });
             }}
-            className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition w-full sm:w-auto"
+            className="
+              w-full sm:w-auto
+              inline-flex items-center justify-center
+              px-4 py-2 text-sm font-semibold rounded-lg
+              border border-slate-600
+              bg-slate-900 text-slate-200
+              hover:bg-slate-800 hover:border-slate-500
+              active:scale-95
+              transition-all
+            "
           >
             Limpiar filtros
           </button>
@@ -664,78 +857,96 @@ function Transactions({ token }) {
       </div>
 
       {/* Historial */}
-      <h3 className="text-lg font-semibold text-gray-800 mb-3">
-        Historial reciente
-      </h3>
-      <ul className="space-y-3">
-        {transactions.map((tx) => {
-          const isShoppingListTx = tx.is_shopping_list === true;
+      <div>
+        <h3 className="text-lg font-semibold text-slate-100 mb-3">
+          Historial reciente
+        </h3>
+        <ul className="space-y-3">
+          {transactions.map((tx) => {
+            const isShoppingListTx = tx.is_shopping_list === true;
 
-          return (
-            <li
-              key={tx.id}
-              className="p-4 border border-gray-200 rounded shadow-sm flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2"
-            >
-              <div>
-                <p className="text-sm font-semibold text-gray-800 flex flex-wrap items-center gap-2">
-                  <span
-                    className={
-                      tx.type === "income"
-                        ? "text-green-600"
-                        : tx.type === "expense"
-                        ? "text-red-600"
-                        : "text-gray-700"
-                    }
-                  >
-                    {tx.type === "income"
-                      ? "+"
-                      : tx.type === "expense"
-                      ? "-"
-                      : ""}
-                    {Number(tx.amount).toFixed(2)} DOP
-                  </span>
-
-                  <span className="text-gray-600">
-                    —{" "}
-                    {tx.type === "transfer"
-                      ? "Transferencia"
-                      : tx.categories?.name || "Sin categoría"}
-                  </span>
-
-                  {isShoppingListTx && (
-                    <button
-                      type="button"
-                      onClick={() => openDetail(tx)}
-                      className="inline-flex items-center text-[10px] uppercase tracking-wide bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full hover:bg-indigo-100 border border-indigo-100"
-                      title="Ver detalle de la lista de compra"
-                    >
-                      <span className="mr-1">🛒</span>
-                      Lista de compra
-                    </button>
-                  )}
-                </p>
-
-                <p className="text-xs text-gray-500 mt-1">
-                  {tx.description || "Sin descripción"} —{" "}
-                  {tx.type === "transfer"
-                    ? `${tx.account_from?.name || "¿?"} → ${
-                        tx.account_to?.name || "¿?"
-                      }`
-                    : tx.account?.name || "Sin cuenta"}{" "}
-                  — {tx.date}
-                </p>
-              </div>
-
-              <button
-                onClick={() => handleDelete(tx.id)}
-                className="text-red-600 text-xs hover:underline"
+            return (
+              <li
+                key={tx.id}
+                className="
+                  p-4 rounded-2xl
+                  border border-slate-800
+                  bg-slate-950/70
+                  shadow-[0_10px_30px_rgba(0,0,0,0.7)]
+                  flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2
+                "
               >
-                Eliminar
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+                <div>
+                  <p className="text-sm font-semibold text-slate-100 flex flex-wrap items-center gap-2">
+                    <span
+                      className={
+                        tx.type === "income"
+                          ? "text-emerald-400"
+                          : tx.type === "expense"
+                          ? "text-rose-400"
+                          : "text-slate-200"
+                      }
+                    >
+                      {tx.type === "income"
+                        ? "+"
+                        : tx.type === "expense"
+                        ? "-"
+                        : ""}
+                      {Number(tx.amount).toFixed(2)} DOP
+                    </span>
+
+                    <span className="text-slate-200">
+                      —{" "}
+                      {tx.type === "transfer"
+                        ? "Transferencia"
+                        : tx.categories?.name || "Sin categoría"}
+                    </span>
+
+                    {isShoppingListTx && (
+                      <button
+                        type="button"
+                        onClick={() => openDetail(tx)}
+                        className="
+                          inline-flex items-center
+                          text-[10px] uppercase tracking-wide
+                          bg-indigo-950/70 text-indigo-200
+                          px-2 py-0.5 rounded-full
+                          hover:bg-indigo-900 border border-indigo-800
+                        "
+                        title="Ver detalle de la lista de compra"
+                      >
+                        <span className="mr-1">🛒</span>
+                        Lista de compra
+                      </button>
+                    )}
+                  </p>
+
+                  <p className="text-sm  text-slate-400 mt-1">
+                    {tx.description || "Sin descripción"} —{" "}
+                    {tx.type === "transfer"
+                      ? `${tx.account_from?.name || "¿?"} → ${
+                          tx.account_to?.name || "¿?"
+                        }`
+                      : tx.account?.name || "Sin cuenta"}{" "}
+                    — {tx.date}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => handleDelete(tx.id)}
+                  className="
+                    text-sm  font-semibold
+                    text-rose-400 hover:text-rose-300
+                    hover:underline transition-colors
+                  "
+                >
+                  Eliminar
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
 
       {/* Modal detalle lista de compra */}
       <Modal
@@ -749,43 +960,60 @@ function Transactions({ token }) {
         size="lg"
       >
         {!selectedTx ? (
-          <p className="text-sm text-gray-500">Cargando...</p>
+          <p className="text-sm text-slate-300">Cargando...</p>
         ) : (
-          <div className="space-y-5">
-            {/* Encabezado con resumen */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="space-y-6 text-slate-200">
+            {/* === RESUMEN SUPERIOR === */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <p className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Resumen de la transacción
                 </p>
-                <p className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <p className="mt-1 text-2xl font-extrabold text-emerald-300 leading-tight">
                   {Number(selectedTx.amount).toFixed(2)} DOP
-                  {selectedTx.discount_percent > 0 && (
-                    <span className="inline-flex items-center text-[10px] font-medium bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-100">
-                      🔖 Descuento {selectedTx.discount_percent}%
-                    </span>
-                  )}
                 </p>
-                <p className="text-xs text-gray-500">
+                {selectedTx.discount_percent > 0 && (
+                  <p className="text-sm  text-emerald-300 mt-1 flex items-center gap-1">
+                    <span className="text-[11px]">🔖</span>
+                    Descuento aplicado:{" "}
+                    <span className="font-semibold">
+                      {selectedTx.discount_percent}%
+                    </span>
+                  </p>
+                )}
+                <p className="mt-2 text-sm  text-slate-400">
                   {selectedTx.description || "Sin descripción"}
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-2 text-xs">
-                <span className="inline-flex items-center bg-gray-50 text-gray-700 px-2 py-1 rounded-full border border-gray-100">
-                  🧾 <span className="ml-1 font-medium">Fecha:</span>
-                  <span className="ml-1">{selectedTx.date}</span>
+              <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-[11px] text-slate-200">
+                  <span className="text-[13px]">📅</span>
+                  <span className="font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Fecha
+                  </span>
+                  <span className="text-sm  text-slate-100">
+                    {selectedTx.date}
+                  </span>
                 </span>
-                <span className="inline-flex items-center bg-blue-50 text-blue-700 px-2 py-1 rounded-full border border-blue-100">
-                  💼 <span className="ml-1 font-medium">Cuenta:</span>
-                  <span className="ml-1">
+
+                <span className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-[11px] text-slate-200">
+                  <span className="text-[13px]">💼</span>
+                  <span className="font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Cuenta
+                  </span>
+                  <span className="text-sm  text-slate-100">
                     {selectedTx.account?.name || "Sin cuenta"}
                   </span>
                 </span>
+
                 {selectedTx.categories && (
-                  <span className="inline-flex items-center bg-purple-50 text-purple-700 px-2 py-1 rounded-full border border-purple-100">
-                    🏷️ <span className="ml-1 font-medium">Categoría:</span>
-                    <span className="ml-1">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-fuchsia-600/60 bg-gradient-to-r from-fuchsia-900/70 via-purple-900/70 to-indigo-900/70 px-3 py-1 text-[11px] text-fuchsia-100">
+                    <span className="text-[13px]">🏷️</span>
+                    <span className="font-semibold uppercase tracking-[0.16em] text-fuchsia-200">
+                      Categoría
+                    </span>
+                    <span className="text-sm  text-fuchsia-50">
                       {selectedTx.categories.name}
                     </span>
                   </span>
@@ -793,51 +1021,56 @@ function Transactions({ token }) {
               </div>
             </div>
 
-            {/* Tabla de artículos */}
-            <div className="border-t pt-4">
-              <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                🛒 Artículos comprados
+            <hr className="border-slate-800" />
+
+            {/* === TABLA DE ARTÍCULOS === */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                  <span className="text-[15px]">🛒</span>
+                  <span>Artículos comprados</span>
+                </h4>
                 {selectedTxItems.length > 0 && (
-                  <span className="text-[11px] font-normal text-gray-500">
+                  <span className="text-[11px] text-slate-400">
                     {selectedTxItems.length} ítem
                     {selectedTxItems.length > 1 ? "s" : ""}
                   </span>
                 )}
-              </h4>
+              </div>
 
               {isLoadingItems && (
-                <p className="text-xs text-gray-500 italic">
+                <p className="text-sm  text-slate-400 italic">
                   Cargando artículos...
                 </p>
               )}
 
               {!isLoadingItems && selectedTxItems.length === 0 && (
-                <p className="text-xs text-gray-500 italic">
+                <p className="text-sm  text-slate-400 italic">
                   No hay artículos asociados a esta transacción.
                 </p>
               )}
 
               {!isLoadingItems && selectedTxItems.length > 0 && (
-                <div className="overflow-x-auto rounded border border-gray-100">
-                  <table className="min-w-full text-xs">
-                    <thead className="bg-gray-50">
-                      <tr className="border-b border-gray-100">
-                        <th className="py-2 pl-3 pr-2 text-left font-semibold text-gray-600">
+                <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/60">
+                  <table className="min-w-full text-sm ">
+                    <thead className="bg-slate-900/80">
+                      <tr className="border-b border-slate-800">
+                        <th className="py-2 pl-4 pr-2 text-left font-semibold text-slate-300">
                           #
                         </th>
-                        <th className="py-2 px-2 text-left font-semibold text-gray-600">
+                        <th className="py-2 px-2 text-left font-semibold text-slate-300">
                           Artículo
                         </th>
-                        <th className="py-2 px-2 text-center font-semibold text-gray-600">
+                        <th className="py-2 px-2 text-center font-semibold text-slate-300">
                           Cantidad
                         </th>
-                        <th className="py-2 px-2 text-right font-semibold text-gray-600">
+                        <th className="py-2 px-2 text-right font-semibold text-slate-300">
                           Precio unit.
                         </th>
-                        <th className="py-2 px-2 text-center font-semibold text-gray-600">
+                        <th className="py-2 px-2 text-center font-semibold text-slate-300">
                           ITBIS
                         </th>
-                        <th className="py-2 pr-3 pl-2 text-right font-semibold text-gray-600">
+                        <th className="py-2 pr-4 pl-2 text-right font-semibold text-slate-300">
                           Total línea
                         </th>
                       </tr>
@@ -852,28 +1085,28 @@ function Transactions({ token }) {
                             key={item.id}
                             className={
                               idx % 2 === 0
-                                ? "bg-white border-b border-gray-50"
-                                : "bg-gray-50/50 border-b border-gray-50"
+                                ? "bg-slate-950/40"
+                                : "bg-slate-900/50"
                             }
                           >
-                            <td className="py-2 pl-3 pr-2 text-gray-500">
+                            <td className="py-2 pl-4 pr-2 text-slate-400">
                               {idx + 1}
                             </td>
-                            <td className="py-2 px-2 text-gray-800">
+                            <td className="py-2 px-2 text-slate-100">
                               {itemName}
                             </td>
-                            <td className="py-2 px-2 text-center text-gray-700">
+                            <td className="py-2 px-2 text-center text-slate-200">
                               {item.quantity}
                             </td>
-                            <td className="py-2 px-2 text-right text-gray-700">
+                            <td className="py-2 px-2 text-right text-slate-200">
                               {Number(item.unit_price_net).toFixed(2)} DOP
                             </td>
-                            <td className="py-2 px-2 text-center text-gray-700">
+                            <td className="py-2 px-2 text-center text-slate-200">
                               {item.is_exempt_used
                                 ? "Exento"
                                 : `${item.tax_rate_used || 0}%`}
                             </td>
-                            <td className="py-2 pr-3 pl-2 text-right font-semibold text-gray-800">
+                            <td className="py-2 pr-4 pl-2 text-right font-semibold text-slate-100">
                               {Number(item.line_total_final).toFixed(2)} DOP
                             </td>
                           </tr>
@@ -885,11 +1118,19 @@ function Transactions({ token }) {
               )}
             </div>
 
+            {/* === FOOTER === */}
             <div className="flex justify-end pt-2">
               <button
                 type="button"
                 onClick={closeDetail}
-                className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 bg-white hover:bg-gray-50"
+                className="
+                  px-4 py-2 text-sm font-semibold rounded-lg
+                  border border-slate-600
+                  bg-slate-900 text-slate-100
+                  hover:bg-slate-800 hover:border-slate-500
+                  active:scale-95
+                  transition-all
+                "
               >
                 Cerrar
               </button>

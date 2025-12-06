@@ -110,25 +110,43 @@ function Budgets({ token }) {
   }, [token, filterType, filterValue]);
 
   return (
-    <div className="bg-white rounded shadow p-6">
-      <h2 className="text-2xl font-bold mb-2 text-[#1e40af]">
+    <div
+      className="
+        rounded-2xl p-6
+        bg-slate-950/70
+        border border-slate-800
+        shadow-[0_18px_40px_rgba(0,0,0,0.7)]
+        text-slate-100
+        space-y-4
+      "
+    >
+      <h2 className="text-2xl font-bold mb-1 text-slate-200">
         Flujos Personales
       </h2>
-      <p className="text-sm text-gray-500 mb-4">
+      <p className="text-sm text-slate-400 mb-4">
         Establece un límite de gasto por categoría cada mes. El sistema te
         mostrará cuánto has utilizado.
       </p>
 
+      {/* Formulario de creación de presupuesto */}
       <form
         onSubmit={handleCreate}
         className="grid gap-4 mb-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3"
       >
         <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Categoría</label>
+          <label className="text-sm font-medium mb-1 text-slate-300">
+            Categoría
+          </label>
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            className="border border-gray-300 p-2 rounded"
+            className="
+              border border-slate-700 bg-slate-900
+              text-slate-100 text-sm
+              px-3 py-2 rounded-lg
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition
+            "
             required
           >
             <option value="">Selecciona una categoría</option>
@@ -141,46 +159,68 @@ function Budgets({ token }) {
         </div>
 
         <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Mes</label>
+          <label className="text-sm font-medium mb-1 text-slate-300">Mes</label>
           <input
             type="month"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className="border border-gray-300 p-2 rounded"
+            className="
+              border border-slate-700 bg-slate-900
+              text-slate-100 text-sm
+              px-3 py-2 rounded-lg
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition
+            "
             required
           />
         </div>
 
-        <div className="flex items-center mt-2">
+        <div className="flex items-center mt-2 sm:mt-6">
           <input
             type="checkbox"
             id="repeat"
             checked={repeatYearly}
             onChange={() => setRepeatYearly(!repeatYearly)}
-            className="mr-2"
+            className="mr-2 h-4 w-4 text-emerald-500 bg-slate-900 border-slate-600 rounded"
           />
-          <label htmlFor="repeat" className="text-sm text-gray-700">
+          <label htmlFor="repeat" className="text-sm text-slate-300">
             Repetir este presupuesto para todo el año
           </label>
         </div>
 
         <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Límite mensual</label>
+          <label className="text-sm font-medium mb-1 text-slate-300">
+            Límite mensual
+          </label>
           <input
             type="number"
             min="0"
             placeholder="Ej: 500.00"
             value={limitAmount}
             onChange={(e) => setLimitAmount(e.target.value)}
-            className="border border-gray-300 p-2 rounded"
+            className="
+              border border-slate-700 bg-slate-900
+              text-slate-100 text-sm
+              px-3 py-2 rounded-lg
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition
+            "
             required
           />
         </div>
 
-        <div className="col-span-full flex flex-wrap gap-2">
+        <div className="col-span-full flex flex-wrap gap-2 mt-2">
           <button
             type="submit"
-            className="w-full md:w-auto bg-[#1e40af] text-white font-semibold px-4 py-2 rounded hover:brightness-90 transition"
+            className="
+              w-full md:w-auto
+              bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
+              text-slate-950 font-semibold
+              px-4 py-2 rounded-lg text-sm
+              shadow-[0_0_16px_rgba(16,185,129,0.6)]
+              hover:brightness-110 active:scale-95
+              transition
+            "
           >
             Agregar Flujo
           </button>
@@ -203,7 +243,6 @@ function Budgets({ token }) {
                 setImportItems(
                   (preview.items || []).map((item) => ({
                     ...item,
-                    // Por defecto seleccionamos las que NO tienen presupuesto existente
                     selected: !item.existing_budget_limit,
                   }))
                 );
@@ -216,7 +255,14 @@ function Budgets({ token }) {
                 setImportLoading(false);
               }
             }}
-            className="bg-gray-100 text-gray-800 text-sm px-3 py-2 rounded border border-gray-300 hover:bg-gray-200 transition"
+            className="
+              bg-slate-900 text-slate-200 text-sm
+              px-3 py-2 rounded-lg
+              border border-slate-600
+              hover:bg-slate-800 hover:border-slate-500
+              active:scale-95
+              transition
+            "
             disabled={importLoading}
           >
             {importLoading
@@ -227,9 +273,11 @@ function Budgets({ token }) {
       </form>
 
       {/* 🔍 Filtro por mes o año */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:items-end mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:items-end mb-4">
         <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Ver por:</label>
+          <label className="text-sm font-medium mb-1 text-slate-300">
+            Ver por:
+          </label>
           <select
             value={filterType}
             onChange={(e) => {
@@ -238,14 +286,19 @@ function Budgets({ token }) {
               const now = new Date();
               setFilterValue(
                 type === "month"
-                  ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
-                      2,
-                      "0"
-                    )}`
+                  ? `${now.getFullYear()}-${String(
+                      now.getMonth() + 1
+                    ).padStart(2, "0")}`
                   : `${now.getFullYear()}`
               );
             }}
-            className="border border-gray-300 p-2 rounded"
+            className="
+              border border-slate-700 bg-slate-900
+              text-slate-100 text-sm
+              px-3 py-2 rounded-lg
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition
+            "
           >
             <option value="month">Mes</option>
             <option value="year">Año</option>
@@ -253,7 +306,7 @@ function Budgets({ token }) {
         </div>
 
         <div className="flex flex-col md:col-span-2">
-          <label className="text-sm font-medium mb-1">
+          <label className="text-sm font-medium mb-1 text-slate-300">
             {filterType === "month" ? "Seleccionar mes" : "Seleccionar año"}
           </label>
           {filterType === "month" ? (
@@ -261,7 +314,13 @@ function Budgets({ token }) {
               type="month"
               value={filterValue}
               onChange={(e) => setFilterValue(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
+              className="
+                border border-slate-700 bg-slate-900
+                text-slate-100 text-sm
+                px-3 py-2 rounded-lg
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition
+              "
             />
           ) : (
             <input
@@ -270,14 +329,20 @@ function Budgets({ token }) {
               max="2100"
               value={filterValue}
               onChange={(e) => setFilterValue(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
+              className="
+                border border-slate-700 bg-slate-900
+                text-slate-100 text-sm
+                px-3 py-2 rounded-lg
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition
+              "
               placeholder="Año"
             />
           )}
         </div>
       </div>
 
-      <h3 className="text-lg font-semibold mb-3 text-gray-800">Resumen</h3>
+      <h3 className="text-lg font-semibold mb-3 text-slate-200">Resumen</h3>
       <ul className="space-y-4">
         {budgets.map((b) => {
           const percent = b.spent / b.limit;
@@ -286,34 +351,53 @@ function Budgets({ token }) {
           return (
             <li
               key={b.id}
-              className={`p-4 rounded border shadow-sm ${
-                over
-                  ? "border-red-400 bg-red-50"
-                  : "border-green-400 bg-green-50"
-              }`}
+              className={`
+                p-4 rounded-xl border
+                ${
+                  over
+                    ? "border-rose-500/70 bg-rose-950/40"
+                    : "border-emerald-500/70 bg-emerald-950/40"
+                }
+                shadow-[0_10px_30px_rgba(0,0,0,0.45)]
+              `}
             >
-              <div className="flex justify-between items-center mb-2">
+              <div className="flex justify-between items-center mb-2 gap-3">
                 <div>
-                  <p className="font-semibold text-gray-800">
-                    {b.category_name} — {b.month}
+                  <p className="font-semibold text-slate-100">
+                    {b.category_name} —{" "}
+                    <span className="text-slate-300">{b.month}</span>
                   </p>
-                  <p className="text-sm text-gray-700">
-                    Gasto: {b.spent.toFixed(2)} / {b.limit.toFixed(2)}
+                  <p className="text-sm text-slate-300">
+                    Gasto:{" "}
+                    <span className="font-semibold text-slate-100">
+                      {b.spent.toFixed(2)}
+                    </span>{" "}
+                    / {b.limit.toFixed(2)}
                   </p>
                 </div>
                 <button
                   onClick={() => handleDelete(b.id)}
-                  className="text-red-600 text-sm hover:underline"
+                  className="
+                    text-xs font-semibold
+                    text-rose-300 hover:text-rose-200
+                    underline underline-offset-2
+                  "
                 >
                   Eliminar
                 </button>
               </div>
-              <div className="w-full h-2 bg-gray-200 rounded">
+              <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
                 <div
-                  className="h-2 rounded"
+                  className={`
+                    h-2 rounded-full
+                    ${
+                      over
+                        ? "bg-gradient-to-r from-rose-500 via-rose-400 to-rose-300"
+                        : "bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-300"
+                    }
+                  `}
                   style={{
                     width: `${Math.min(100, percent * 100)}%`,
-                    backgroundColor: over ? "#dc2626" : "#22c55e",
                   }}
                 />
               </div>
@@ -322,7 +406,7 @@ function Budgets({ token }) {
         })}
       </ul>
 
-      {/* Modal de importación desde mes anterior */}
+      {/* Modal de importación desde mes anterior (ya dark) */}
       <Modal
         isOpen={showImportModal}
         onClose={() => {
@@ -334,7 +418,7 @@ function Budgets({ token }) {
         size="lg"
       >
         {!importPreview || importItems.length === 0 ? (
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-slate-300">
             {importPreview
               ? `No se encontraron gastos en ${importPreview.from_month} para sugerir presupuestos.`
               : "Cargando información..."}
@@ -342,19 +426,29 @@ function Budgets({ token }) {
         ) : (
           <>
             {/* Texto + Marcar/Desmarcar todos */}
-            <div className="flex justify-between items-center mb-3 gap-2">
-              <p className="text-sm text-gray-700">
+            <div className="flex justify-between items-center mb-3 gap-3 text-slate-200">
+              <p className="text-sm text-slate-300">
                 Basado en tus gastos de{" "}
-                <strong>{importPreview.from_month}</strong>, se sugieren
-                presupuestos para el mes{" "}
-                <strong>{importPreview.to_month}</strong>. Las categorías
-                seleccionadas sin presupuesto se crearán con ese monto y, si una
-                categoría ya tiene presupuesto, se <strong>actualizará</strong>{" "}
-                al valor sugerido del mes anterior.
+                <strong className="text-slate-100">
+                  {importPreview.from_month}
+                </strong>
+                , se sugieren presupuestos para el mes{" "}
+                <strong className="text-slate-100">
+                  {importPreview.to_month}
+                </strong>
+                . Las categorías seleccionadas sin presupuesto se crearán con
+                ese monto y, si una categoría ya tiene presupuesto, se{" "}
+                <strong className="text-slate-100">actualizará</strong> al
+                valor sugerido del mes anterior.
               </p>
               <button
                 type="button"
-                className="text-xs text-blue-600 hover:text-blue-800 underline shrink-0"
+                className="
+                  text-[11px] font-semibold
+                  text-emerald-300 hover:text-emerald-200
+                  underline underline-offset-2
+                  shrink-0
+                "
                 onClick={() => {
                   const newValue = !allSelected;
                   setImportItems((prev) =>
@@ -366,16 +460,19 @@ function Budgets({ token }) {
               </button>
             </div>
 
-            <div className="max-h-96 overflow-y-auto border rounded mb-4">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-100">
+            {/* Tabla */}
+            <div className="max-h-96 overflow-y-auto border border-slate-800 rounded-lg mb-4 bg-slate-950/40">
+              <table className="w-full text-xs sm:text-sm">
+                <thead className="bg-slate-900/80 border-b border-slate-800">
                   <tr>
-                    <th className="p-2 text-left">Seleccionar</th>
-                    <th className="p-2 text-left">Categoría</th>
-                    <th className="p-2 text-right">
+                    <th className="p-2 text-left text-slate-300">
+                      Seleccionar
+                    </th>
+                    <th className="p-2 text-left text-slate-300">Categoría</th>
+                    <th className="p-2 text-right text-slate-300">
                       Gasto {importPreview.from_month}
                     </th>
-                    <th className="p-2 text-right">
+                    <th className="p-2 text-right text-slate-300">
                       Presupuesto actual {importPreview.to_month}
                     </th>
                   </tr>
@@ -384,7 +481,11 @@ function Budgets({ token }) {
                   {importItems.map((item, idx) => (
                     <tr
                       key={item.category_id}
-                      className="border-t hover:bg-gray-50"
+                      className={
+                        idx % 2 === 0
+                          ? "border-t border-slate-800 bg-slate-950/40 hover:bg-slate-900/70"
+                          : "border-t border-slate-800 bg-slate-900/60 hover:bg-slate-900"
+                      }
                     >
                       <td className="p-2">
                         <input
@@ -400,13 +501,13 @@ function Budgets({ token }) {
                           }}
                         />
                       </td>
-                      <td className="p-2">
+                      <td className="p-2 text-slate-200">
                         {item.category_name || "Sin nombre"}
                       </td>
-                      <td className="p-2 text-right">
+                      <td className="p-2 text-right text-slate-100">
                         {item.spent_last_month.toFixed(2)}
                       </td>
-                      <td className="p-2 text-right">
+                      <td className="p-2 text-right text-slate-100">
                         {item.existing_budget_limit != null
                           ? item.existing_budget_limit.toFixed(2)
                           : "—"}
@@ -418,9 +519,17 @@ function Budgets({ token }) {
             </div>
 
             {/* Botones: acción primero, cancelar al final */}
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-2 pt-1">
               <button
-                className="px-4 py-2 rounded bg-[#1e40af] text-white"
+                className="
+                  px-4 py-2 text-sm font-semibold rounded-lg
+                  bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
+                  text-slate-950
+                  shadow-[0_0_16px_rgba(16,185,129,0.6)]
+                  hover:brightness-110
+                  active:scale-95
+                  transition-all
+                "
                 type="button"
                 onClick={async () => {
                   const selected = importItems.filter((it) => it.selected);
@@ -470,7 +579,14 @@ function Budgets({ token }) {
 
               <button
                 type="button"
-                className="px-4 py-2 rounded border border-gray-300 text-gray-700"
+                className="
+                  px-4 py-2 text-sm font-semibold rounded-lg
+                  border border-slate-600
+                  bg-slate-900 text-slate-300
+                  hover:bg-slate-800 hover:border-slate-500
+                  active:scale-95
+                  transition-all
+                "
                 onClick={() => {
                   setShowImportModal(false);
                   setImportPreview(null);

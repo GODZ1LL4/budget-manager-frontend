@@ -60,8 +60,6 @@ function Accounts({ token }) {
       });
       setBalances(res.data.data);
     } catch {
-      // Puedes mostrar toast si lo deseas:
-      // toast.error("No se pudo cargar balances");
       console.error("No se pudo cargar balances");
     }
   };
@@ -143,7 +141,6 @@ function Accounts({ token }) {
     e.preventDefault();
     setTError("");
 
-    // ✅ Validaciones con toast
     if (!tFrom || !tTo || !tDate || tAmount === "") {
       toast.error("Completa todos los campos.");
       return;
@@ -184,7 +181,6 @@ function Accounts({ token }) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Mensaje de éxito con nombres
       const toName =
         accounts.find((a) => a.id === tTo)?.name || "cuenta destino";
       toast.success(
@@ -193,7 +189,6 @@ function Accounts({ token }) {
         )} DOP de ${tFromName} a ${toName}`
       );
 
-      // reset + cerrar + recargar
       setShowTransfer(false);
       setTFrom("");
       setTTo("");
@@ -204,7 +199,7 @@ function Accounts({ token }) {
       console.error(err);
       const msg =
         err?.response?.data?.error || "No se pudo realizar la transferencia.";
-      setTError(msg); // visible dentro del modal (panel rojo)
+      setTError(msg);
       toast.error(msg);
     } finally {
       setTLoading(false);
@@ -212,163 +207,231 @@ function Accounts({ token }) {
   };
 
   return (
-    <div className="bg-white rounded shadow p-6">
-      <h2 className="text-2xl font-bold mb-2 text-[#f6e652]">Cuentas</h2>
-      <p className="text-sm text-gray-500 mb-4">
+    <div
+      className="
+        rounded-2xl p-6
+        bg-slate-950/70
+        border border-slate-800
+        shadow-[0_18px_40px_rgba(0,0,0,0.7)]
+        text-slate-100
+        space-y-4
+      "
+    >
+      <h2 className="text-2xl font-bold mb-1 text-[#f6e652]">Cuentas</h2>
+      <p className="text-sm text-slate-400 mb-4">
         Gestioná tus cuentas personales o bancarias. El saldo se calcula
         automáticamente a partir de tus transacciones.
       </p>
 
+      {/* Formulario crear / editar nombre */}
       <form
         onSubmit={handleCreate}
-        className="flex flex-wrap gap-2 mb-6 items-end"
+        className="flex flex-wrap gap-3 mb-6 items-end"
       >
         <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">
+          <label className="text-sm font-medium mb-1 text-slate-300">
             Nombre de la cuenta
           </label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ej: Caja de ahorro"
-            className="border border-gray-300 p-2 rounded w-64"
+            className="
+              border border-slate-700 bg-slate-900
+              text-slate-100 placeholder:text-slate-500
+              px-3 py-2 rounded-lg w-64 text-sm
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition
+            "
           />
         </div>
         <button
           type="submit"
-          className="bg-[#f6e652] text-black font-semibold px-4 py-2 rounded hover:brightness-90 transition"
+          className="
+            bg-[#f6e652] text-black font-semibold
+            px-4 py-2 rounded-lg text-sm
+            hover:brightness-95 active:scale-95
+            transition
+          "
         >
           Agregar
         </button>
       </form>
 
-      <table className="w-full border border-gray-300 border-collapse text-sm">
-        <thead className="bg-gray-100 text-left text-gray-700">
-          <tr>
-            <th className="p-2 border border-gray-300">Nombre</th>
-            <th className="p-2 border border-gray-300">Saldo</th>
-            <th className="p-2 border border-gray-300 text-center">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {accounts.map((acc) => (
-            <tr key={acc.id} className="hover:bg-gray-50">
-              {editId === acc.id ? (
-                <>
-                  <td className="p-2 border border-gray-300">
-                    <input
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="border border-gray-300 p-1 w-full rounded"
-                    />
-                  </td>
-                  <td className="p-2 border border-gray-300 italic text-gray-500">
-                    {balances[acc.id]?.toFixed(2) ?? "0.00"}
-                  </td>
-                  <td className="p-2 border border-gray-300">
-                    <div className="flex justify-center flex-wrap gap-2">
-                      {/* Guardar (verde) */}
-                      <button
-                        type="button"
-                        onClick={() => handleUpdate(acc.id)}
-                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
-                 bg-green-600 text-white hover:brightness-110 focus:outline-none
-                 focus:ring-2 focus:ring-green-400 focus:ring-offset-1 transition"
-                      >
-                        Guardar
-                      </button>
-
-                      {/* Cancelar (gris) */}
-                      <button
-                        type="button"
-                        onClick={() => setEditId(null)}
-                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
-                 bg-gray-200 text-gray-800 hover:brightness-110 focus:outline-none
-                 focus:ring-2 focus:ring-gray-300 focus:ring-offset-1 transition"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  </td>
-                </>
-              ) : (
-                <>
-                  <td className="p-2 border border-gray-300">{acc.name}</td>
-                  <td className="p-2 border border-gray-300 text-gray-600">
-                    {balances[acc.id]?.toFixed(2) ?? "0.00"}
-                  </td>
-                  <td className="p-2 border border-gray-300">
-                    <div className="flex justify-center flex-wrap gap-2">
-                      {/* Transferir (azul) */}
-                      <button
-                        onClick={() => {
-                          setTFrom(acc.id);
-                          setTFromName(acc.name);
-                          setTTo("");
-                          setTAmount("");
-                          setTDate(new Date().toISOString().split("T")[0]);
-                          setTDesc("");
-                          setTError("");
-                          setShowTransfer(true);
-                        }}
-                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
-                 bg-blue-600 text-white hover:brightness-110 focus:outline-none
-                 focus:ring-2 focus:ring-blue-400 focus:ring-offset-1 transition"
-                        type="button"
-                      >
-                        Transferir
-                      </button>
-
-                      {/* Editar (ámbar) */}
-                      <button
-                        onClick={() => startEdit(acc)}
-                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
-                 bg-amber-500 text-black hover:brightness-110 focus:outline-none
-                 focus:ring-2 focus:ring-amber-400 focus:ring-offset-1 transition"
-                        type="button"
-                      >
-                        Editar
-                      </button>
-
-                      {/* Eliminar (rojo) */}
-                      <button
-                        onClick={() => openDelete(acc)} // si ya agregaste el modal de eliminar
-                        // onClick={() => handleDelete(acc.id)} // si aún usas la función directa
-                        className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
-                 bg-red-600 text-white hover:brightness-110 focus:outline-none
-                 focus:ring-2 focus:ring-red-400 focus:ring-offset-1 transition"
-                        type="button"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
-                  </td>
-                </>
-              )}
+      {/* Tabla de cuentas */}
+      <div className="rounded-xl border border-slate-800 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-900 text-left text-slate-300">
+            <tr>
+              <th className="p-2 border-b border-slate-800">Nombre</th>
+              <th className="p-2 border-b border-slate-800">Saldo</th>
+              <th className="p-2 border-b border-slate-800 text-center">
+                Acciones
+              </th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {accounts.map((acc, rowIdx) => (
+              <tr
+                key={acc.id}
+                className={
+                  rowIdx % 2 === 0
+                    ? "bg-slate-950/40 hover:bg-slate-900/80"
+                    : "bg-slate-900/60 hover:bg-slate-900"
+                }
+              >
+                {editId === acc.id ? (
+                  <>
+                    <td className="p-2 border-t border-slate-800 align-middle">
+                      <input
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="
+                          border border-slate-700 bg-slate-900
+                          text-slate-100 px-2 py-1 text-sm rounded-lg
+                          w-full focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                        "
+                      />
+                    </td>
+                    <td className="p-2 border-t border-slate-800 italic text-slate-400">
+                      {balances[acc.id]?.toFixed(2) ?? "0.00"}
+                    </td>
+                    <td className="p-2 border-t border-slate-800">
+                      <div className="flex justify-center flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdate(acc.id)}
+                          className="
+                            inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
+                            bg-emerald-600 text-white hover:brightness-110
+                            focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-1 focus:ring-offset-slate-950
+                            transition
+                          "
+                        >
+                          Guardar
+                        </button>
 
+                        <button
+                          type="button"
+                          onClick={() => setEditId(null)}
+                          className="
+                            inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
+                            bg-slate-800 text-slate-200 border border-slate-600
+                            hover:bg-slate-700
+                            focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-1 focus:ring-offset-slate-950
+                            transition
+                          "
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td className="p-2 border-t border-slate-800 text-slate-100">
+                      {acc.name}
+                    </td>
+                    <td className="p-2 border-t border-slate-800 text-slate-200">
+                      {balances[acc.id]?.toFixed(2) ?? "0.00"}
+                    </td>
+                    <td className="p-2 border-t border-slate-800">
+                      <div className="flex justify-center flex-wrap gap-2">
+                        {/* Transferir (azul) */}
+                        <button
+                          onClick={() => {
+                            setTFrom(acc.id);
+                            setTFromName(acc.name);
+                            setTTo("");
+                            setTAmount("");
+                            setTDate(
+                              new Date().toISOString().split("T")[0]
+                            );
+                            setTDesc("");
+                            setTError("");
+                            setShowTransfer(true);
+                          }}
+                          className="
+                            inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
+                            bg-indigo-600 text-white hover:brightness-110
+                            focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1 focus:ring-offset-slate-950
+                            transition
+                          "
+                          type="button"
+                        >
+                          Transferir
+                        </button>
+
+                        {/* Editar (ámbar) */}
+                        <button
+                          onClick={() => startEdit(acc)}
+                          className="
+                            inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
+                            bg-amber-400 text-black hover:brightness-110
+                            focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-1 focus:ring-offset-slate-950
+                            transition
+                          "
+                          type="button"
+                        >
+                          Editar
+                        </button>
+
+                        {/* Eliminar (rojo) */}
+                        <button
+                          onClick={() => openDelete(acc)}
+                          className="
+                            inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
+                            bg-rose-600 text-white hover:brightness-110
+                            focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-1 focus:ring-offset-slate-950
+                            transition
+                          "
+                          type="button"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Modal Transferencia */}
       <Modal
         isOpen={showTransfer}
         onClose={() => !tLoading && setShowTransfer(false)}
         title={`Transferir desde ${tFromName}`}
       >
-        <form onSubmit={submitTransfer} className="space-y-4">
-          {/* Panel en-modal solo para errores del servidor */}
+        <form onSubmit={submitTransfer} className="space-y-4 text-slate-200">
           {tError && (
-            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">
+            <div
+              className="
+                text-sm rounded-lg px-3 py-2
+                bg-rose-950/40 border border-rose-700/80
+                text-rose-200
+              "
+            >
               {tError}
             </div>
           )}
 
-          <div className="flex flex-col">
-            <label className="text-sm font-medium mb-1">Hacia</label>
+          <div className="flex flex-col space-y-1">
+            <label className="text-sm font-medium text-slate-300">
+              Hacia
+            </label>
             <select
               value={tTo}
               onChange={(e) => setTTo(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
               disabled={tLoading}
               required
             >
@@ -381,8 +444,10 @@ function Accounts({ token }) {
             </select>
           </div>
 
-          <div className="flex flex-col">
-            <label className="text-sm font-medium mb-1">Monto</label>
+          <div className="flex flex-col space-y-1">
+            <label className="text-sm font-medium text-slate-300">
+              Monto
+            </label>
             <input
               type="number"
               inputMode="decimal"
@@ -395,36 +460,59 @@ function Accounts({ token }) {
                   setTAmount(Number(tAmount).toFixed(2));
                 }
               }}
-              className="border border-gray-300 p-2 rounded"
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
               disabled={tLoading}
               required
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Saldo disponible: {balances[tFrom]?.toFixed(2) ?? "0.00"}
+            <p className="text-xs text-slate-400 mt-1">
+              Saldo disponible:{" "}
+              <span className="font-medium text-slate-200">
+                {balances[tFrom]?.toFixed(2) ?? "0.00"}
+              </span>
             </p>
           </div>
 
-          <div className="flex flex-col">
-            <label className="text-sm font-medium mb-1">Fecha</label>
+          <div className="flex flex-col space-y-1">
+            <label className="text-sm font-medium text-slate-300">
+              Fecha
+            </label>
             <input
               type="date"
               value={tDate}
               onChange={(e) => setTDate(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
               disabled={tLoading}
               required
             />
           </div>
 
-          <div className="flex flex-col">
-            <label className="text-sm font-medium mb-1">
+          <div className="flex flex-col space-y-1">
+            <label className="text-sm font-medium text-slate-300">
               Descripción (opcional)
             </label>
             <input
               type="text"
               value={tDesc}
               onChange={(e) => setTDesc(e.target.value)}
-              className="border border-gray-300 p-2 rounded"
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100 placeholder:text-slate-500
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
               disabled={tLoading}
               placeholder="Ej: mover a ahorro"
             />
@@ -433,15 +521,34 @@ function Accounts({ token }) {
           <div className="flex items-center justify-end gap-2 pt-2">
             <button
               type="submit"
-              className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:brightness-110 transition disabled:opacity-60"
+              className="
+                px-4 py-2 text-sm font-semibold rounded-lg
+                bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
+                text-slate-950
+                shadow-[0_0_18px_rgba(16,185,129,0.7)]
+                hover:brightness-110
+                active:scale-95
+                transition-all
+                disabled:opacity-60 disabled:cursor-not-allowed
+              "
               disabled={tLoading}
             >
               {tLoading ? "Transfiriendo..." : "Confirmar transferencia"}
             </button>
+
             <button
               type="button"
               onClick={() => setShowTransfer(false)}
-              className="px-4 py-2 text-sm rounded border border-gray-300"
+              className="
+                px-4 py-2 text-sm font-semibold rounded-lg
+                border border-slate-600
+                bg-slate-900
+                text-slate-300
+                hover:bg-slate-800 hover:border-slate-500
+                active:scale-95
+                transition-all
+                disabled:opacity-50 disabled:cursor-not-allowed
+              "
               disabled={tLoading}
             >
               Cancelar
@@ -450,25 +557,32 @@ function Accounts({ token }) {
         </form>
       </Modal>
 
+      {/* Modal eliminar cuenta */}
       <Modal isOpen={showDelete} onClose={closeDelete} title="Eliminar cuenta">
         {(() => {
           const bal = deleteAcc ? Number(balances[deleteAcc.id] ?? 0) : 0;
-          const hasBalance = Math.abs(bal) > 0.000001; // opcional: bloquear si tiene saldo
+          const hasBalance = Math.abs(bal) > 0.000001;
 
           return (
-            <div className="space-y-4">
+            <div className="space-y-4 text-slate-200">
               <div className="text-sm">
                 <p>
                   ¿Seguro que deseas eliminar la cuenta{" "}
-                  <strong>{deleteAcc?.name}</strong>?
+                  <strong className="text-slate-50">{deleteAcc?.name}</strong>?
                 </p>
-                <p className="text-gray-500 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   Esta acción no se puede deshacer.
                 </p>
 
-                {/* Aviso opcional si hay saldo */}
                 {hasBalance && (
-                  <div className="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2">
+                  <div
+                    className="
+                      mt-3 text-xs
+                      rounded-lg px-3 py-2
+                      bg-amber-950/40 border border-amber-700/70
+                      text-amber-200
+                    "
+                  >
                     La cuenta tiene un saldo de{" "}
                     <strong>{bal.toFixed(2)}</strong>. Te recomiendo transferir
                     o ajustar el saldo antes de eliminarla.
@@ -480,20 +594,33 @@ function Accounts({ token }) {
                 <button
                   type="button"
                   onClick={confirmDelete}
-                  className={`px-4 py-2 text-sm rounded text-white transition
-              ${
-                hasBalance
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-red-600 hover:brightness-110"
-              }`}
-                  disabled={deleteLoading || hasBalance} // ← quita "|| hasBalance" si quieres permitir eliminar con saldo
+                  className={`
+                    px-4 py-2 text-sm font-semibold rounded-lg
+                    text-white
+                    transition-all
+                    ${
+                      hasBalance
+                        ? "bg-slate-700 cursor-not-allowed opacity-70"
+                        : "bg-gradient-to-r from-rose-600 via-rose-500 to-rose-400 shadow-[0_0_14px_rgba(248,113,113,0.45)] hover:brightness-110 active:scale-95"
+                    }
+                  `}
+                  disabled={deleteLoading || hasBalance}
                 >
                   {deleteLoading ? "Eliminando..." : "Eliminar"}
                 </button>
+
                 <button
                   type="button"
                   onClick={closeDelete}
-                  className="px-4 py-2 text-sm rounded border border-gray-300"
+                  className="
+                    px-4 py-2 text-sm font-semibold rounded-lg
+                    border border-slate-600
+                    bg-slate-900
+                    text-slate-300
+                    hover:bg-slate-800 hover:border-slate-500
+                    active:scale-95
+                    transition-all
+                  "
                   disabled={deleteLoading}
                 >
                   Cancelar

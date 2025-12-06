@@ -22,11 +22,11 @@ function ScenarioForm({ token, onSuccess }) {
     };
 
     if (token) fetchCategories();
-  }, [token]);
+  }, [token, api]);
 
   const addTransaction = () => {
-    setTransactions([
-      ...transactions,
+    setTransactions((prev) => [
+      ...prev,
       {
         name: "",
         amount: 0,
@@ -68,7 +68,10 @@ function ScenarioForm({ token, onSuccess }) {
       setTransactions([]);
       onSuccess();
     } catch (err) {
-      console.error("❌ Error al crear escenario:", err.response?.data || err.message);
+      console.error(
+        "❌ Error al crear escenario:",
+        err.response?.data || err.message
+      );
       alert(
         `Error: ${
           err.response?.data?.error || "No se pudo crear el escenario."
@@ -80,140 +83,306 @@ function ScenarioForm({ token, onSuccess }) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="border border-gray-200 rounded p-4 space-y-4"
+      className="
+        border border-slate-800/80 rounded-2xl
+        p-4 md:p-5
+        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900
+        shadow-[0_18px_45px_rgba(0,0,0,0.8)]
+        space-y-4
+        text-slate-200
+      "
     >
-      <h3 className="text-lg font-semibold text-gray-800">Nuevo Escenario</h3>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <input
-          type="text"
-          placeholder="Nombre del escenario"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="border p-2 rounded"
-          required
-        />
-        <input
-          type="text"
-          placeholder="Descripción (opcional)"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="border p-2 rounded"
-        />
+      <div className="flex flex-col gap-1 mb-1">
+        <h3 className="text-lg md:text-xl font-semibold text-slate-100">
+          Nuevo escenario
+        </h3>
+        <p className="text-xs md:text-sm text-slate-400">
+          Define un escenario con ingresos y gastos simulados para analizar
+          cómo se comportarían tus finanzas.
+        </p>
       </div>
 
+      {/* Nombre + descripción */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-slate-300">
+            Nombre del escenario
+          </label>
+          <input
+            type="text"
+            placeholder="Ej. Mes ajustado, Escenario pesimista..."
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="
+              w-full rounded-lg px-3 py-2 text-sm
+              bg-slate-900 border border-slate-700
+              text-slate-100 placeholder:text-slate-500
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
+            required
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-slate-300">
+            Descripción (opcional)
+          </label>
+          <input
+            type="text"
+            placeholder="Breve descripción del escenario"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="
+              w-full rounded-lg px-3 py-2 text-sm
+              bg-slate-900 border border-slate-700
+              text-slate-100 placeholder:text-slate-500
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
+          />
+        </div>
+      </div>
+
+      {/* Transacciones del escenario */}
       {transactions.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-3 mt-2">
           {transactions.map((tx, index) => (
             <div
               key={index}
-              className="p-3 border border-gray-300 rounded space-y-2 bg-gray-50"
+              className="
+                p-3 md:p-4 rounded-xl
+                bg-slate-900/70
+                border border-slate-800
+                space-y-3
+              "
             >
-              <input
-                type="text"
-                placeholder="Nombre de transacción"
-                value={tx.name}
-                onChange={(e) => updateTransaction(index, "name", e.target.value)}
-                className="border p-2 rounded w-full"
-                required
-              />
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {/* Nombre de la transacción */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-300">
+                  Nombre de transacción
+                </label>
                 <input
-                  type="number"
-                  placeholder="Monto estimado"
-                  value={tx.amount}
-                  onChange={(e) => updateTransaction(index, "amount", e.target.value)}
-                  className="border p-2 rounded"
-                />
-
-                <select
-                  value={tx.type}
-                  onChange={(e) => updateTransaction(index, "type", e.target.value)}
-                  className="border p-2 rounded"
-                >
-                  <option value="expense">Gasto</option>
-                  <option value="income">Ingreso</option>
-                </select>
-
-                <input
-                  type="date"
-                  value={tx.start_date}
+                  type="text"
+                  placeholder="Ej. Renta, Luz, Pago tarjeta..."
+                  value={tx.name}
                   onChange={(e) =>
-                    updateTransaction(index, "start_date", e.target.value)
+                    updateTransaction(index, "name", e.target.value)
                   }
-                  className="border p-2 rounded"
-                />
-                <input
-                  type="date"
-                  value={tx.end_date}
-                  onChange={(e) =>
-                    updateTransaction(index, "end_date", e.target.value)
-                  }
-                  className="border p-2 rounded"
+                  className="
+                    w-full rounded-lg px-3 py-2 text-sm
+                    bg-slate-950 border border-slate-700
+                    text-slate-100 placeholder:text-slate-500
+                    focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                    transition-colors
+                  "
+                  required
                 />
               </div>
 
-              {/* Selección de categoría opcional */}
-              <select
-                value={tx.category_id || ""}
-                onChange={(e) =>
-                  updateTransaction(index, "category_id", e.target.value || null)
-                }
-                className="border p-2 rounded w-full"
-              >
-                <option value="">Sin categoría</option>
-                {categories
-                  .filter((c) => c.type === tx.type)
-                  .map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-              </select>
+              {/* Monto / tipo / fechas */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-300">
+                    Monto estimado
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="0.00"
+                    value={tx.amount}
+                    onChange={(e) =>
+                      updateTransaction(index, "amount", e.target.value)
+                    }
+                    className="
+                      w-full rounded-lg px-3 py-2 text-sm
+                      bg-slate-950 border border-slate-700
+                      text-slate-100 placeholder:text-slate-500
+                      focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                      transition-colors
+                    "
+                  />
+                </div>
 
-              <select
-                value={tx.recurrence}
-                onChange={(e) =>
-                  updateTransaction(index, "recurrence", e.target.value)
-                }
-                className="border p-2 rounded w-full"
-              >
-                <option value="daily">Diario</option>
-                <option value="weekly">Semanal</option>
-                <option value="biweekly">Quincenal</option>
-                <option value="monthly">Mensual</option>
-              </select>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-300">
+                    Tipo
+                  </label>
+                  <select
+                    value={tx.type}
+                    onChange={(e) =>
+                      updateTransaction(index, "type", e.target.value)
+                    }
+                    className="
+                      w-full rounded-lg px-3 py-2 text-sm
+                      bg-slate-950 border border-slate-700
+                      text-slate-100
+                      focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                      transition-colors
+                    "
+                  >
+                    <option value="expense">Gasto</option>
+                    <option value="income">Ingreso</option>
+                  </select>
+                </div>
 
-              <label className="inline-flex items-center gap-2 text-sm">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-300">
+                    Fecha inicio
+                  </label>
+                  <input
+                    type="date"
+                    value={tx.start_date}
+                    onChange={(e) =>
+                      updateTransaction(index, "start_date", e.target.value)
+                    }
+                    className="
+                      w-full rounded-lg px-3 py-2 text-sm
+                      bg-slate-950 border border-slate-700
+                      text-slate-100
+                      focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                      transition-colors
+                    "
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-slate-300">
+                    Fecha fin (opcional)
+                  </label>
+                  <input
+                    type="date"
+                    value={tx.end_date}
+                    onChange={(e) =>
+                      updateTransaction(index, "end_date", e.target.value)
+                    }
+                    className="
+                      w-full rounded-lg px-3 py-2 text-sm
+                      bg-slate-950 border border-slate-700
+                      text-slate-100
+                      focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                      transition-colors
+                    "
+                  />
+                </div>
+              </div>
+
+              {/* Categoría */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-300">
+                  Categoría (opcional)
+                </label>
+                <select
+                  value={tx.category_id || ""}
+                  onChange={(e) =>
+                    updateTransaction(
+                      index,
+                      "category_id",
+                      e.target.value || null
+                    )
+                  }
+                  className="
+                    w-full rounded-lg px-3 py-2 text-sm
+                    bg-slate-950 border border-slate-700
+                    text-slate-100
+                    focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                    transition-colors
+                  "
+                >
+                  <option value="">Sin categoría</option>
+                  {categories
+                    .filter((c) => c.type === tx.type)
+                    .map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              {/* Recurrencia */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-300">
+                  Recurrencia
+                </label>
+                <select
+                  value={tx.recurrence}
+                  onChange={(e) =>
+                    updateTransaction(index, "recurrence", e.target.value)
+                  }
+                  className="
+                    w-full rounded-lg px-3 py-2 text-sm
+                    bg-slate-950 border border-slate-700
+                    text-slate-100
+                    focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                    transition-colors
+                  "
+                >
+                  <option value="daily">Diario</option>
+                  <option value="weekly">Semanal</option>
+                  <option value="biweekly">Quincenal</option>
+                  <option value="monthly">Mensual</option>
+                </select>
+              </div>
+
+              {/* Excluir fines de semana */}
+              <label className="inline-flex items-center gap-2 text-xs text-slate-300">
                 <input
                   type="checkbox"
                   checked={tx.exclude_weekends}
                   onChange={(e) =>
-                    updateTransaction(index, "exclude_weekends", e.target.checked)
+                    updateTransaction(
+                      index,
+                      "exclude_weekends",
+                      e.target.checked
+                    )
                   }
+                  className="
+                    h-4 w-4 rounded border-slate-600 bg-slate-950
+                    text-emerald-500
+                    focus:ring-emerald-500/70
+                  "
                 />
-                Excluir fines de semana
+                Excluir fines de semana en la simulación
               </label>
             </div>
           ))}
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={addTransaction}
-        className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
-      >
-        Agregar transacción 
-      </button>
+      {/* Botones de acción */}
+      <div className="flex flex-wrap gap-3 pt-2">
+        <button
+          type="button"
+          onClick={addTransaction}
+          className="
+            inline-flex items-center justify-center
+            px-4 py-2 text-sm font-semibold rounded-lg
+            border border-slate-600
+            bg-slate-900 text-slate-200
+            hover:bg-slate-800 hover:border-slate-500
+            active:scale-95
+            transition-all
+          "
+        >
+          Agregar transacción
+        </button>
 
-      <button
-        type="submit"
-        className="block mt-4 bg-green-600 text-white py-2 px-4 rounded hover:brightness-110"
-      >
-        Guardar Escenario
-      </button>
+        <button
+          type="submit"
+          className="
+            inline-flex items-center justify-center
+            px-4 py-2 text-sm font-semibold rounded-lg
+            bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
+            text-slate-950
+            shadow-[0_0_18px_rgba(16,185,129,0.7)]
+            hover:brightness-110
+            active:scale-95
+            transition-all
+          "
+        >
+          Guardar escenario
+        </button>
+      </div>
     </form>
   );
 }

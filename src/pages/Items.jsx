@@ -284,7 +284,6 @@ function Items({ token }) {
       );
       if (res.data.errors?.length) {
         console.warn("Errores de importación:", res.data.errors);
-        // aquí podrías abrir un modal con detalle si quieres
       }
 
       fetchItems();
@@ -304,15 +303,23 @@ function Items({ token }) {
   }, [token]);
 
   return (
-    <div className="bg-white rounded shadow p-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-2">Artículos</h2>
-      <p className="text-sm text-gray-500 mb-4">
+    <div
+      className="
+        rounded-2xl p-4 md:p-6
+        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900
+        border border-slate-800
+        shadow-[0_18px_45px_rgba(0,0,0,0.85)]
+        text-slate-200
+      "
+    >
+      <h2 className="text-2xl font-bold mb-2 text-[#f6e652]">Artículos</h2>
+      <p className="text-sm text-slate-400 mb-4">
         Registra productos y controla cómo varían sus precios a lo largo del
         tiempo.
       </p>
 
       <button
-        className="text-sm text-blue-600 underline mb-4"
+        className="text-sm text-emerald-300 hover:text-emerald-200 underline mb-4"
         onClick={() => setShowTaxModal(true)}
       >
         Administrar impuestos
@@ -323,31 +330,54 @@ function Items({ token }) {
         onSubmit={handleCreateItem}
         className="grid gap-4 mb-6 md:grid-cols-3"
       >
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Nombre</label>
+        <div className="flex flex-col space-y-1">
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+            Nombre
+          </label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="border border-gray-300 p-2 rounded"
+            className="
+              border border-slate-700 rounded-lg px-3 py-2 text-sm
+              bg-slate-900 text-slate-100
+              placeholder:text-slate-500
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
             required
           />
         </div>
 
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Categoría</label>
+        <div className="flex flex-col space-y-1">
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+            Categoría
+          </label>
           <input
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="border border-gray-300 p-2 rounded"
+            className="
+              border border-slate-700 rounded-lg px-3 py-2 text-sm
+              bg-slate-900 text-slate-100
+              placeholder:text-slate-500
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
           />
         </div>
 
-        <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1">Impuesto</label>
+        <div className="flex flex-col space-y-1">
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+            Impuesto
+          </label>
           <select
             value={selectedTaxId}
             onChange={(e) => setSelectedTaxId(e.target.value)}
-            className="border border-gray-300 p-2 rounded"
+            className="
+              border border-slate-700 rounded-lg px-3 py-2 text-sm
+              bg-slate-900 text-slate-100
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
           >
             <option value="">Sin impuesto</option>
             {taxes.map((tax) => (
@@ -358,18 +388,35 @@ function Items({ token }) {
           </select>
         </div>
 
-        <div className="flex flex-col md:col-span-3">
-          <label className="text-sm font-medium mb-1">Descripción</label>
+        <div className="flex flex-col md:col-span-3 space-y-1">
+          <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+            Descripción
+          </label>
           <input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="border border-gray-300 p-2 rounded"
+            className="
+              border border-slate-700 rounded-lg px-3 py-2 text-sm
+              bg-slate-900 text-slate-100
+              placeholder:text-slate-500
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
           />
         </div>
 
         <div className="md:col-span-3">
-          <button className="bg-gray-800 text-white px-4 py-2 rounded">
-            Agregar Artículo
+          <button
+            className="
+              px-4 py-2 text-sm font-semibold rounded-lg
+              bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
+              text-slate-950
+              shadow-[0_0_16px_rgba(16,185,129,0.7)]
+              hover:brightness-110 active:scale-95
+              transition-all
+            "
+          >
+            Agregar artículo
           </button>
         </div>
       </form>
@@ -380,17 +427,26 @@ function Items({ token }) {
           <input
             type="text"
             placeholder="Buscar artículo..."
-            className="border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 p-2 rounded-md w-full md:w-1/3 text-sm"
+            className="
+              border border-slate-700 rounded-lg px-3 py-2 text-sm
+              bg-slate-900 text-slate-100
+              placeholder:text-slate-500
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+              w-full md:w-1/3
+            "
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
 
           <div className="flex flex-wrap items-center gap-3 justify-between md:justify-end w-full md:w-auto text-sm">
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-slate-400">
               Total:{" "}
-              <span className="font-semibold">{filteredItems.length}</span> ·
-              Seleccionados:{" "}
-              <span className="font-semibold text-blue-600">
+              <span className="font-semibold text-slate-100">
+                {filteredItems.length}
+              </span>{" "}
+              · Seleccionados:{" "}
+              <span className="font-semibold text-emerald-300">
                 {selectedIds.length}
               </span>
             </span>
@@ -401,12 +457,12 @@ function Items({ token }) {
               onClick={toggleSelectAllFiltered}
               disabled={filteredItems.length === 0}
               className={`
-          inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm
-          border border-gray-300 bg-gray-50 text-gray-700
-          hover:bg-gray-100 hover:border-gray-400
-          disabled:opacity-40 disabled:cursor-not-allowed
-          transition-colors
-        `}
+                inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm
+                border border-slate-600 bg-slate-900 text-slate-200
+                hover:bg-slate-800 hover:border-slate-500
+                disabled:opacity-40 disabled:cursor-not-allowed
+                transition-colors
+              `}
             >
               <span className="text-xs">☑️</span>
               {allFilteredSelected ? "Desmarcar todos" : "Marcar todos"}
@@ -417,13 +473,13 @@ function Items({ token }) {
               type="button"
               onClick={handleExport}
               disabled={selectedIds.length === 0}
-              className={`
-          inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm
-          bg-blue-600 text-white shadow-sm
-          hover:bg-blue-700
-          disabled:opacity-40 disabled:cursor-not-allowed
-          transition-colors
-        `}
+              className="
+                inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm
+                bg-sky-600 text-white shadow-sm
+                hover:bg-sky-500
+                disabled:opacity-40 disabled:cursor-not-allowed
+                transition-colors
+              "
             >
               <span className="text-xs">⬇️</span>
               <span>Exportar precios</span>
@@ -431,12 +487,12 @@ function Items({ token }) {
 
             {/* Importar precios */}
             <label
-              className={`
-          inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm
-          border border-blue-600 text-blue-700 bg-white
-          hover:bg-blue-50
-          cursor-pointer transition-colors
-        `}
+              className="
+                inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm
+                border border-sky-500 text-sky-300 bg-slate-900
+                hover:bg-slate-800 hover:border-sky-400
+                cursor-pointer transition-colors
+              "
             >
               <span className="text-xs">⬆️</span>
               <span>Importar precios</span>
@@ -451,31 +507,46 @@ function Items({ token }) {
         </div>
       </div>
 
-      <ul className="space-y-4">
-        {filteredItems.map((item) => (
+      {/* Lista de artículos */}
+      <ul className="space-y-3">
+        {filteredItems.map((item, idx) => (
           <li
             key={item.id}
-            className="p-4 bg-gray-50 border border-gray-300 rounded shadow-sm"
+            className={`
+              p-4 rounded-xl border
+              ${
+                idx % 2 === 0
+                  ? "bg-slate-950/50 border-slate-800"
+                  : "bg-slate-900/70 border-slate-800"
+              }
+              shadow-[0_10px_30px_rgba(0,0,0,0.45)]
+            `}
           >
             <div className="flex justify-between items-start gap-4">
               <div className="flex-1">
                 <label className="flex items-center gap-2 mb-1">
                   <input
                     type="checkbox"
-                    className="h-4 w-4"
+                    className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500/70"
                     checked={selectedIds.includes(item.id)}
                     onChange={() => toggleItemSelection(item.id)}
                   />
-                  <span className="font-semibold text-gray-800">
+                  <span className="font-semibold text-slate-100">
                     {item.name}{" "}
-                    <span className="text-sm italic text-gray-500">
-                      ({item.category})
+                    <span className="text-sm italic text-slate-400">
+                      {item.category ? `(${item.category})` : ""}
                     </span>
                   </span>
                 </label>
 
-                <p className="text-sm text-gray-600">{item.description}</p>
-                <p className="text-sm text-gray-500 mt-1">
+                <p className="text-sm text-slate-300">
+                  {item.description || (
+                    <span className="italic text-slate-500">
+                      Sin descripción
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
                   Impuesto:{" "}
                   {item.tax_name
                     ? item.is_exempt
@@ -483,21 +554,21 @@ function Items({ token }) {
                       : `${item.tax_name} (${item.tax_rate}%)`
                     : "No asignado"}
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-slate-300 mt-1">
                   Último precio:{" "}
                   {item.latest_price !== null
                     ? formatCurrency(item.latest_price)
                     : "No registrado"}
                 </p>
               </div>
-              <div className="space-x-2 whitespace-nowrap">
+              <div className="space-x-2 whitespace-nowrap text-sm">
                 <button
                   onClick={() => {
                     setSelectedItem(item);
                     fetchPrices(item.id);
                     setShowPriceModal(true);
                   }}
-                  className="text-blue-600 text-sm underline"
+                  className="text-sky-400 hover:text-sky-300 underline"
                 >
                   Ver precios
                 </button>
@@ -512,7 +583,7 @@ function Items({ token }) {
                     });
                     setShowEditItemModal(true);
                   }}
-                  className="text-gray-600 text-sm underline"
+                  className="text-slate-300 hover:text-slate-100 underline"
                 >
                   Editar
                 </button>
@@ -521,7 +592,7 @@ function Items({ token }) {
                     setItemToDelete(item);
                     setShowDeleteModal(true);
                   }}
-                  className="text-red-600 text-sm underline"
+                  className="text-rose-400 hover:text-rose-300 underline"
                 >
                   Eliminar
                 </button>
@@ -531,6 +602,8 @@ function Items({ token }) {
         ))}
       </ul>
 
+      {/* === Modales (ya estaban en dark, los dejo igual) === */}
+
       {/* Modal edición de artículo */}
       <Modal
         isOpen={showEditItemModal}
@@ -538,48 +611,118 @@ function Items({ token }) {
         title="Editar artículo"
       >
         {itemToEdit && (
-          <form onSubmit={handleEditItem} className="space-y-3">
-            <input
-              value={itemToEdit.name}
-              onChange={(e) =>
-                setItemToEdit({ ...itemToEdit, name: e.target.value })
-              }
-              className="w-full p-2 border rounded"
-              placeholder="Nombre"
-            />
-            <input
-              value={itemToEdit.category || ""}
-              onChange={(e) =>
-                setItemToEdit({ ...itemToEdit, category: e.target.value })
-              }
-              className="w-full p-2 border rounded"
-              placeholder="Categoría"
-            />
-            <textarea
-              value={itemToEdit.description || ""}
-              onChange={(e) =>
-                setItemToEdit({ ...itemToEdit, description: e.target.value })
-              }
-              className="w-full p-2 border rounded"
-              placeholder="Descripción"
-            />
-            <select
-              value={itemToEdit.tax_id || ""}
-              onChange={(e) =>
-                setItemToEdit({ ...itemToEdit, tax_id: e.target.value })
-              }
-              className="w-full p-2 border rounded"
-            >
-              <option value="">Sin impuesto</option>
-              {taxes.map((tax) => (
-                <option key={tax.id} value={tax.id}>
-                  {tax.name} ({tax.is_exempt ? "Exento" : `${tax.rate}%`})
-                </option>
-              ))}
-            </select>
-            <button className="bg-blue-600 text-white px-4 py-2 rounded">
-              Guardar cambios
-            </button>
+          <form onSubmit={handleEditItem} className="space-y-4 text-slate-200">
+            {/* Nombre */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-300">
+                Nombre
+              </label>
+              <input
+                value={itemToEdit.name}
+                onChange={(e) =>
+                  setItemToEdit({ ...itemToEdit, name: e.target.value })
+                }
+                className="
+                  w-full rounded-lg px-3 py-2 text-sm
+                  bg-slate-900 border border-slate-700
+                  text-slate-100 placeholder:text-slate-500
+                  focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                  transition-colors
+                "
+                placeholder="Nombre del artículo"
+              />
+            </div>
+
+            {/* Categoría */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-300">
+                Categoría
+              </label>
+              <input
+                value={itemToEdit.category || ""}
+                onChange={(e) =>
+                  setItemToEdit({ ...itemToEdit, category: e.target.value })
+                }
+                className="
+                  w-full rounded-lg px-3 py-2 text-sm
+                  bg-slate-900 border border-slate-700
+                  text-slate-100 placeholder:text-slate-500
+                  focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                  transition-colors
+                "
+                placeholder="Ej. Snacks, Bebidas, Aseo..."
+              />
+            </div>
+
+            {/* Descripción */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-300">
+                Descripción
+              </label>
+              <textarea
+                value={itemToEdit.description || ""}
+                onChange={(e) =>
+                  setItemToEdit({ ...itemToEdit, description: e.target.value })
+                }
+                className="
+                  w-full rounded-lg px-3 py-2 text-sm
+                  bg-slate-900 border border-slate-700
+                  text-slate-100 placeholder:text-slate-500
+                  focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                  transition-colors
+                  resize-none
+                "
+                rows={3}
+                placeholder="Detalle opcional del artículo"
+              />
+            </div>
+
+            {/* Impuesto */}
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-300">
+                Impuesto
+              </label>
+              <select
+                value={itemToEdit.tax_id || ""}
+                onChange={(e) =>
+                  setItemToEdit({ ...itemToEdit, tax_id: e.target.value })
+                }
+                className="
+                  w-full rounded-lg px-3 py-2 text-sm
+                  bg-slate-900 border border-slate-700
+                  text-slate-100
+                  focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                  transition-colors
+                "
+              >
+                <option value="">Sin impuesto</option>
+                {taxes.map((tax) => (
+                  <option key={tax.id} value={tax.id}>
+                    {tax.name} ({tax.is_exempt ? "Exento" : `${tax.rate}%`})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Botón guardar */}
+            <div className="pt-2 flex justify-end">
+              <button
+                type="submit"
+                className="
+                  inline-flex items-center justify-center
+                  px-4 py-2 text-sm font-semibold
+                  rounded-lg
+                  bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
+                  text-slate-950
+                  shadow-[0_0_18px_rgba(16,185,129,0.7)]
+                  hover:brightness-110
+                  active:scale-95
+                  transition-all
+                "
+              >
+                Guardar cambios
+              </button>
+            </div>
           </form>
         )}
       </Modal>
@@ -590,34 +733,88 @@ function Items({ token }) {
         onClose={() => setShowPriceModal(false)}
         title={`Precios de: ${selectedItem?.name || ""}`}
       >
-        <form onSubmit={handleAddPrice} className="flex gap-2 mb-4">
-          <input
-            type="number"
-            step="0.01"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            className="border p-2 w-32"
-            placeholder="Precio"
-            required
-          />
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="border p-2"
-            required
-          />
-          <button className="bg-green-600 text-white px-4 py-2 rounded">
-            Agregar
-          </button>
+        <form
+          onSubmit={handleAddPrice}
+          className="flex flex-col sm:flex-row gap-3 mb-6 text-slate-200"
+        >
+          {/* Precio */}
+          <div className="flex-1 space-y-1">
+            <label className="text-sm font-medium text-slate-300">Precio</label>
+            <input
+              type="number"
+              step="0.01"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100 placeholder:text-slate-500
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
+              placeholder="0.00"
+              required
+            />
+          </div>
+
+          {/* Fecha */}
+          <div className="flex-1 space-y-1">
+            <label className="text-sm font-medium text-slate-300">Fecha</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
+              required
+            />
+          </div>
+
+          {/* Botón Agregar */}
+          <div className="flex items-end">
+            <button
+              type="submit"
+              className="
+                w-full sm:w-auto
+                inline-flex items-center justify-center
+                px-4 py-2 text-sm font-semibold
+                rounded-lg
+                bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
+                text-slate-950
+                shadow-[0_0_15px_rgba(16,185,129,0.5)]
+                hover:brightness-110
+                active:scale-95
+                transition-all
+              "
+            >
+              Agregar
+            </button>
+          </div>
         </form>
-        <ul className="text-sm text-gray-700 space-y-1">
+
+        {/* Historial de precios */}
+        <ul className="text-sm text-slate-300 space-y-2">
           {priceHistory.length === 0 ? (
-            <p className="text-gray-400">Sin precios aún.</p>
+            <p className="text-slate-500 italic">Sin precios aún.</p>
           ) : (
             priceHistory.map((p) => (
-              <li key={p.id}>
-                {p.date} — <strong>{formatCurrency(p.price)}</strong>
+              <li
+                key={p.id}
+                className="
+                  flex justify-between
+                  bg-slate-900/50 border border-slate-800
+                  px-3 py-2 rounded-lg
+                "
+              >
+                <span className="text-slate-400">{p.date}</span>
+                <strong className="text-emerald-300">
+                  {formatCurrency(p.price)}
+                </strong>
               </li>
             ))
           )}
@@ -630,6 +827,7 @@ function Items({ token }) {
         onClose={() => setShowTaxModal(false)}
         title="Gestión de Impuestos"
       >
+        {/* FORMULARIO NUEVO IMPUESTO */}
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -649,36 +847,96 @@ function Items({ token }) {
               toast.error("Error al guardar impuesto");
             }
           }}
-          className="space-y-2"
+          className="space-y-4 text-slate-200"
         >
-          <input
-            name="name"
-            className="w-full p-2 border"
-            placeholder="Nombre"
-          />
-          <input
-            name="rate"
-            type="number"
-            step="0.01"
-            className="w-full p-2 border"
-            placeholder="Porcentaje (ej: 18)"
-          />
-          <label className="flex items-center gap-2 text-sm">
-            <input name="exempt" type="checkbox" />
+          {/* Nombre */}
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-slate-300">Nombre</label>
+            <input
+              name="name"
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100 placeholder:text-slate-500
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
+              placeholder="Ej. ITBIS, Selectivo, etc."
+            />
+          </div>
+
+          {/* Porcentaje */}
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-slate-300">
+              Porcentaje (%)
+            </label>
+            <input
+              name="rate"
+              type="number"
+              step="0.01"
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100 placeholder:text-slate-500
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
+              placeholder="Ej. 18"
+            />
+          </div>
+
+          {/* Exento */}
+          <label className="flex items-center gap-2 text-sm text-slate-300">
+            <input
+              name="exempt"
+              type="checkbox"
+              className="
+                h-4 w-4 rounded border-slate-600 bg-slate-900
+                text-emerald-500
+                focus:ring-emerald-500/70
+              "
+            />
             Exento de impuestos
           </label>
-          <button className="bg-green-600 text-white px-4 py-2 rounded">
-            Guardar
-          </button>
+
+          {/* Botón guardar */}
+          <div className="pt-1 flex justify-end">
+            <button
+              type="submit"
+              className="
+                inline-flex items-center justify-center
+                px-4 py-2 text-sm font-semibold
+                rounded-lg
+                bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
+                text-slate-950
+                shadow-[0_0_16px_rgba(16,185,129,0.6)]
+                hover:brightness-110
+                active:scale-95
+                transition-all
+              "
+            >
+              Guardar
+            </button>
+          </div>
         </form>
-        <ul className="mt-4 space-y-1">
+
+        {/* LISTA DE IMPUESTOS EXISTENTES */}
+        <ul className="mt-5 space-y-2">
           {taxes.map((tax) => (
             <li
               key={tax.id}
-              className="flex justify-between items-center border-b pb-1"
+              className="
+                flex justify-between items-center gap-3
+                rounded-lg px-3 py-2
+                bg-slate-950/50 border border-slate-800
+              "
             >
-              <span>
-                {tax.name} — {tax.is_exempt ? "Exento" : `${tax.rate}%`}
+              <span className="text-sm text-slate-200">
+                <span className="font-semibold">{tax.name}</span>{" "}
+                <span className="text-slate-400">—</span>{" "}
+                <span className="text-slate-300">
+                  {tax.is_exempt ? "Exento" : `${tax.rate}%`}
+                </span>
               </span>
               <button
                 onClick={async () => {
@@ -692,7 +950,13 @@ function Items({ token }) {
                     toast.error("Error al eliminar impuesto");
                   }
                 }}
-                className="text-red-500 text-sm"
+                className="
+                  text-xs font-semibold
+                  text-rose-400
+                  hover:text-rose-300
+                  hover:underline
+                  transition-colors
+                "
               >
                 Eliminar
               </button>
@@ -710,14 +974,28 @@ function Items({ token }) {
         }}
         title="Eliminar artículo"
       >
-        <p className="text-sm text-gray-700 mb-6">
+        <p className="text-sm text-slate-300 mb-6 leading-relaxed">
           {itemToDelete
-            ? `¿Seguro que deseas eliminar el artículo "${itemToDelete.name}"? Esta acción no se puede deshacer.`
+            ? `¿Seguro que deseas eliminar el artículo "${itemToDelete.name}"?`
             : ""}
+          <br />
+          <span className="text-slate-500 text-xs">
+            Esta acción no se puede deshacer.
+          </span>
         </p>
-        <div className="flex justify-end gap-2">
+
+        <div className="flex justify-end gap-3">
+          {/* Botón ELIMINAR */}
           <button
-            className="px-4 py-2 rounded bg-red-600 text-white"
+            className="
+              px-4 py-2 text-sm font-semibold rounded-lg
+              bg-gradient-to-r from-rose-600 via-rose-500 to-rose-400
+              text-white
+              shadow-[0_0_12px_rgba(244,63,94,0.35)]
+              hover:brightness-110
+              active:scale-95
+              transition-all
+            "
             onClick={async () => {
               await handleDeleteItem(itemToDelete);
               setShowDeleteModal(false);
@@ -726,8 +1004,18 @@ function Items({ token }) {
           >
             Eliminar
           </button>
+
+          {/* Botón CANCELAR */}
           <button
-            className="px-4 py-2 rounded border border-gray-300 text-gray-700"
+            className="
+              px-4 py-2 text-sm font-semibold rounded-lg
+              border border-slate-600
+              bg-slate-900
+              text-slate-300
+              hover:bg-slate-800 hover:border-slate-500
+              active:scale-95
+              transition-all
+            "
             onClick={() => {
               setShowDeleteModal(false);
               setItemToDelete(null);

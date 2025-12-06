@@ -1,5 +1,5 @@
 // src/components/ScenarioManager.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import axios from "axios";
 import dayjs from "dayjs";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
@@ -11,38 +11,26 @@ import ScenarioForm from "./ScenarioForm";
 import ScenarioCalendar from "./ScenarioCalendar";
 import Modal from "./Modal";
 import TransactionForm from "./TransactionForm";
-import { useCallback } from "react";
-
 import { toast } from "react-toastify";
 
 function Sparkline({ values = [], width = 240, height = 48, padding = 6 }) {
-  // Filtra valores no finitos
   const clean = Array.isArray(values)
     ? values.filter((v) => Number.isFinite(v))
     : [];
 
-  // Si no hay datos, no renderiza
   if (clean.length === 0) return null;
 
   const max = Math.max(...clean);
   const min = Math.min(...clean);
   const range = max - min || 1;
 
-  // Si solo hay un punto, dibuja una línea plana a la mitad
   if (clean.length === 1) {
     const y = height / 2;
     const x1 = padding;
     const x2 = width - padding;
     return (
       <svg width={width} height={height} className="w-full h-12">
-        <line
-          x1={x1}
-          y1={y}
-          x2={x2}
-          y2={y}
-          stroke="currentColor"
-          strokeWidth="2"
-        />
+        <line x1={x1} y1={y} x2={x2} y2={y} stroke="currentColor" strokeWidth="2" />
       </svg>
     );
   }
@@ -59,12 +47,7 @@ function Sparkline({ values = [], width = 240, height = 48, padding = 6 }) {
 
   return (
     <svg width={width} height={height} className="w-full h-12">
-      <polyline
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        points={points}
-      />
+      <polyline fill="none" stroke="currentColor" strokeWidth="2" points={points} />
     </svg>
   );
 }
@@ -80,13 +63,16 @@ function BudgetsDiff({ aiMonth, aiBudgets, currentBudgets, categoriesById }) {
   }, [currentBudgets, aiMonth]);
 
   return (
-    <div className="mt-4">
-      <h5 className="font-semibold text-gray-800 mb-1">
+    <div className="mt-4 text-slate-200">
+      <h5 className="font-semibold text-slate-100 mb-1">
         Cambios de presupuesto
       </h5>
-      <div className="text-xs text-gray-500 mb-2">
+      <div className="text-xs text-slate-400 mb-2">
         Comparación contra presupuestos actuales del mes{" "}
-        {aiMonth || "(mes del plan)"}.
+        <span className="font-semibold text-slate-200">
+          {aiMonth || "(mes del plan)"}
+        </span>
+        .
       </div>
       <ul className="space-y-1 text-sm">
         {(aiBudgets || []).map((b, i) => {
@@ -97,11 +83,18 @@ function BudgetsDiff({ aiMonth, aiBudgets, currentBudgets, categoriesById }) {
             (b.category_id ? categoriesById.get(b.category_id) : null) ||
             "Sin categoría";
           return (
-            <li key={i} className="flex justify-between border-b py-1">
-              <span>{catName}</span>
+            <li
+              key={i}
+              className="flex justify-between border-b border-slate-800 py-1"
+            >
+              <span className="text-slate-200">{catName}</span>
               <span
                 className={
-                  diff === 0 ? "" : diff > 0 ? "text-red-600" : "text-green-600"
+                  diff === 0
+                    ? "text-slate-200"
+                    : diff > 0
+                    ? "text-rose-300"
+                    : "text-emerald-300"
                 }
               >
                 RD$ {prev.toFixed(2)} →{" "}
@@ -114,7 +107,7 @@ function BudgetsDiff({ aiMonth, aiBudgets, currentBudgets, categoriesById }) {
           );
         })}
         {(!aiBudgets || aiBudgets.length === 0) && (
-          <li className="text-gray-500 italic">
+          <li className="text-slate-500 italic">
             Sin sugerencias de presupuesto
           </li>
         )}
@@ -122,11 +115,6 @@ function BudgetsDiff({ aiMonth, aiBudgets, currentBudgets, categoriesById }) {
     </div>
   );
 }
-
-/**
- * Expande transacciones recurrentes de un plan SOLO dentro del mes target "YYYY-MM".
- * Soporta: daily, weekly, biweekly, monthly (respeta exclude_weekends).
- */
 
 function ScenarioManager({ token }) {
   const [scenarios, setScenarios] = useState([]);
@@ -156,17 +144,17 @@ function ScenarioManager({ token }) {
     end: dayjs().endOf("month").add(1, "day").format("YYYY-MM-DD"), // end exclusivo
   });
 
-  // Mes visible (tomamos el “centro” del grid para obtener el mes real)
   const visibleMonthKey = useMemo(() => {
     return dayjs(calendarRange.start).add(15, "day").format("YYYY-MM");
   }, [calendarRange]);
 
-  // Solo las transacciones del mes visible
-  const monthProjection = useMemo(() => {
-    return (projection || []).filter(
-      (tx) => dayjs(tx.date).format("YYYY-MM") === visibleMonthKey
-    );
-  }, [projection, visibleMonthKey]);
+  const monthProjection = useMemo(
+    () =>
+      (projection || []).filter(
+        (tx) => dayjs(tx.date).format("YYYY-MM") === visibleMonthKey
+      ),
+    [projection, visibleMonthKey]
+  );
 
   const stats = useMemo(() => {
     let income = 0;
@@ -217,11 +205,10 @@ function ScenarioManager({ token }) {
     };
   }, [token, api]);
 
-  // 🟢 Trae la proyección SOLO del rango visible (end es EXCLUSIVO)
   const fetchProjectionRange = async (id, start, end) => {
     try {
       const res = await axios.get(`${api}/scenarios/${id}/projection`, {
-        params: { start, end }, // FullCalendar manda end EXCLUSIVO
+        params: { start, end },
         headers: { Authorization: `Bearer ${token}` },
       });
       setProjection(res.data.data || []);
@@ -309,7 +296,6 @@ function ScenarioManager({ token }) {
         );
       }
 
-      // ✅ Refresca usando el rango visible actual (no uses fetchProjection)
       if (selectedScenario) {
         await fetchProjectionRange(
           selectedScenario.id,
@@ -335,7 +321,6 @@ function ScenarioManager({ token }) {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // ✅ Refresca con el rango visible
       if (selectedScenario) {
         await fetchProjectionRange(
           selectedScenario.id,
@@ -399,8 +384,8 @@ function ScenarioManager({ token }) {
   };
 
   const [showImportModal, setShowImportModal] = useState(false);
-  const [importPreview, setImportPreview] = useState(null); // datos del preview
-  const [importScope, setImportScope] = useState("current"); // "current" | "all"
+  const [importPreview, setImportPreview] = useState(null);
+  const [importScope, setImportScope] = useState("current");
   const [importLoading, setImportLoading] = useState(false);
   const [, setImportConflicts] = useState([]);
 
@@ -429,11 +414,12 @@ function ScenarioManager({ token }) {
   );
 
   return (
-    <div className="p-6 bg-white rounded shadow space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800 flex items-center justify-between">
+    <div className="p-6 space-y-6 text-slate-200">
+      <h2 className="text-2xl font-bold text-slate-200 flex items-center justify-between">
         Escenarios
       </h2>
 
+      {/* Formulario (ya dark) */}
       <ScenarioForm
         token={token}
         onSuccess={() => {
@@ -450,62 +436,101 @@ function ScenarioManager({ token }) {
         }}
       />
 
-      <div>
-        <h3 className="text-lg font-semibold text-gray-700 mb-2">
+      {/* Lista de escenarios */}
+      <div className="mt-4">
+        <h3 className="text-lg font-semibold text-slate-100 mb-2">
           Escenarios guardados
         </h3>
         <ul className="space-y-2">
-          {scenarios.map((sc) => (
-            <li
-              key={sc.id}
-              className={`p-3 border rounded hover:bg-gray-50 ${
-                selectedScenario?.id === sc.id ? "bg-green-50" : ""
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div
-                  className="flex-1 cursor-pointer"
-                  onClick={() => handleSelectScenario(sc)}
-                >
-                  <strong>{sc.name}</strong>
-                  <p className="text-sm text-gray-500">{sc.description}</p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    className="text-sm px-2 py-1 rounded border hover:bg-gray-100"
-                    onClick={() => {
-                      setScenarioForm({
-                        name: sc.name,
-                        description: sc.description || "",
-                      });
-                      setScenarioEditingId(sc.id);
-                      setShowEditScenario(true);
-                    }}
+          {scenarios.map((sc) => {
+            const isActive = selectedScenario?.id === sc.id;
+            return (
+              <li
+                key={sc.id}
+                className={`
+                  p-3 rounded-xl border
+                  bg-slate-900/70 border-slate-800
+                  hover:bg-slate-900 transition-colors
+                  cursor-pointer
+                  ${isActive ? "ring-1 ring-emerald-500/70" : ""}
+                `}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div
+                    className="flex-1"
+                    onClick={() => handleSelectScenario(sc)}
                   >
-                    Editar
-                  </button>
-                  <button
-                    className="text-sm px-2 py-1 rounded border border-red-300 text-red-600 hover:bg-red-50"
-                    onClick={() => handleDeleteScenario(sc.id)}
-                  >
-                    Eliminar
-                  </button>
+                    <p className="font-semibold text-slate-100">{sc.name}</p>
+                    <p className="text-xs text-slate-400">
+                      {sc.description || "Sin descripción"}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      className="
+                        text-xs px-3 py-1.5 rounded-lg
+                        border border-slate-600
+                        bg-slate-950 text-slate-200
+                        hover:bg-slate-900 hover:border-slate-500
+                        transition-colors
+                      "
+                      onClick={() => {
+                        setScenarioForm({
+                          name: sc.name,
+                          description: sc.description || "",
+                        });
+                        setScenarioEditingId(sc.id);
+                        setShowEditScenario(true);
+                      }}
+                    >
+                      Editar
+                    </button>
+                    <button
+                      className="
+                        text-xs px-3 py-1.5 rounded-lg
+                        border border-rose-600/70
+                        bg-rose-900/30 text-rose-200
+                        hover:bg-rose-900/50
+                        transition-colors
+                      "
+                      onClick={() => handleDeleteScenario(sc.id)}
+                    >
+                      Eliminar
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       </div>
 
       {selectedScenario && (
         <>
-          <div className="mt-4 bg-gray-50 p-4 rounded shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">
-              Estadísticas del escenario
-            </h3>
-            <div className="flex justify-end mt-3">
+          {/* Panel de estadísticas */}
+          <div
+            className="
+              mt-4 rounded-2xl p-4 md:p-5
+              bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900
+              border border-slate-800
+              shadow-[0_16px_40px_rgba(0,0,0,0.85)]
+            "
+          >
+            <div className="flex items-center justify-between mb-3 gap-2">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-100">
+                  Estadísticas del escenario
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Resumen del mes visible en el calendario.
+                </p>
+              </div>
               <button
-                className="bg-indigo-600 text-white px-4 py-2 mb-2 rounded hover:bg-indigo-700"
+                className="
+                  bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm
+                  hover:brightness-110 active:scale-95
+                  transition-all
+                "
                 onClick={() => {
                   setImportScope("current");
                   setShowImportModal(true);
@@ -515,38 +540,42 @@ function ScenarioManager({ token }) {
                 Importar a presupuesto
               </button>
             </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div className="p-3 border rounded bg-white">
-                <p className="text-sm text-gray-500">Balance</p>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                <p className="text-xs text-slate-400">Balance</p>
                 <p
-                  className={`text-xl font-bold ${
-                    stats.balance >= 0 ? "text-green-600" : "text-red-600"
+                  className={`text-xl font-bold mt-1 ${
+                    stats.balance >= 0 ? "text-emerald-300" : "text-rose-300"
                   }`}
                 >
                   RD$ {stats.balance.toFixed(2)}
                 </p>
               </div>
-              <div className="p-3 border rounded bg-white">
-                <p className="text-sm text-gray-500">Total ingresos</p>
-                <p className="text-xl font-bold text-green-600">
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                <p className="text-xs text-slate-400">Total ingresos</p>
+                <p className="text-xl font-bold mt-1 text-emerald-300">
                   RD$ {stats.totalIncome.toFixed(2)}
                 </p>
               </div>
-              <div className="p-3 border rounded bg-white">
-                <p className="text-sm text-gray-500">Total gastos</p>
-                <p className="text-xl font-bold text-red-600">
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                <p className="text-xs text-slate-400">Total gastos</p>
+                <p className="text-xl font-bold mt-1 text-rose-300">
                   RD$ {stats.totalExpense.toFixed(2)}
                 </p>
               </div>
             </div>
 
             <div className="mt-4">
-              <h4 className="text-md font-semibold mb-2 text-gray-700">
+              <h4 className="text-sm font-semibold mb-2 text-slate-100">
                 Gastos por categoría
               </h4>
-              <ul className="space-y-1 text-sm text-gray-700">
+              <ul className="space-y-1 text-xs md:text-sm text-slate-200">
                 {Object.entries(stats.categoryTotals).map(([cat, total]) => (
-                  <li key={cat} className="flex justify-between border-b py-1">
+                  <li
+                    key={cat}
+                    className="flex justify-between border-b border-slate-800 py-1"
+                  >
                     <span>{cat}</span>
                     <span className="text-right font-medium">
                       RD$ {total.toFixed(2)}
@@ -554,7 +583,7 @@ function ScenarioManager({ token }) {
                   </li>
                 ))}
                 {Object.keys(stats.categoryTotals).length === 0 && (
-                  <li className="text-gray-500 italic">
+                  <li className="text-slate-500 italic">
                     No hay gastos registrados
                   </li>
                 )}
@@ -562,32 +591,38 @@ function ScenarioManager({ token }) {
             </div>
           </div>
 
+          {/* Calendario */}
           <ScenarioCalendar
             projection={projection}
             onDateRangeSelect={handleDateRangeSelect}
             onEventClick={handleEventClick}
             onViewRangeChange={(start, end) => {
-              setCalendarRange({ start, end }); // guarda rango visible
+              setCalendarRange({ start, end });
               if (selectedScenario) {
-                fetchProjectionRange(selectedScenario.id, start, end); // end exclusivo
+                fetchProjectionRange(selectedScenario.id, start, end);
               }
             }}
           />
 
+          {/* Lista de transacciones proyectadas */}
           <CollapseSection title="Transacciones proyectadas">
             <ul className="space-y-3">
               {monthProjection.map((tx) => (
                 <li
                   key={`${tx.id}-${tx.date}`}
-                  className="p-3 border rounded flex flex-col sm:flex-row sm:justify-between sm:items-center bg-gray-50"
+                  className="
+                    p-3 rounded-xl
+                    bg-slate-900/70 border border-slate-800
+                    flex flex-col sm:flex-row sm:justify-between sm:items-center
+                  "
                 >
                   <div>
-                    <p className="font-medium text-gray-800">
+                    <p className="font-medium text-slate-100">
                       <span
                         className={
                           tx.type === "income"
-                            ? "text-green-600"
-                            : "text-red-600"
+                            ? "text-emerald-300"
+                            : "text-rose-300"
                         }
                       >
                         {tx.type === "income" ? "+" : "-"}RD$
@@ -595,7 +630,7 @@ function ScenarioManager({ token }) {
                       </span>{" "}
                       — {tx.name}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-xs text-slate-400 mt-0.5">
                       {tx.date} — {tx.category_name || "Sin categoría"}
                     </p>
                   </div>
@@ -640,45 +675,83 @@ function ScenarioManager({ token }) {
         }}
         title="Editar escenario"
       >
-        <div className="space-y-3">
-          <input
-            type="text"
-            className="border p-2 rounded w-full"
-            placeholder="Nombre"
-            value={scenarioForm.name}
-            onChange={(e) =>
-              setScenarioForm((f) => ({ ...f, name: e.target.value }))
-            }
-            required
-          />
-          <input
-            type="text"
-            className="border p-2 rounded w-full"
-            placeholder="Descripción"
-            value={scenarioForm.description}
-            onChange={(e) =>
-              setScenarioForm((f) => ({ ...f, description: e.target.value }))
-            }
-          />
-          <div className="flex justify-end gap-2">
+        <div className="space-y-4 text-slate-200">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-slate-300">Nombre</label>
+            <input
+              type="text"
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100 placeholder:text-slate-500
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
+              placeholder="Ej: Escenario base, Plan agresivo..."
+              value={scenarioForm.name}
+              onChange={(e) =>
+                setScenarioForm((f) => ({ ...f, name: e.target.value }))
+              }
+              required
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-slate-300">
+              Descripción
+            </label>
+            <input
+              type="text"
+              className="
+                w-full rounded-lg px-3 py-2 text-sm
+                bg-slate-900 border border-slate-700
+                text-slate-100 placeholder:text-slate-500
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                transition-colors
+              "
+              placeholder="Descripción corta del escenario (opcional)"
+              value={scenarioForm.description}
+              onChange={(e) =>
+                setScenarioForm((f) => ({ ...f, description: e.target.value }))
+              }
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
-              className="px-4 py-2 text-sm bg-gray-200 rounded"
-              onClick={() => setShowEditScenario(false)}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded"
+              className="
+                px-4 py-2 text-sm font-semibold rounded-lg
+                bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
+                text-slate-950
+                shadow-[0_0_16px_rgba(16,185,129,0.6)]
+                hover:brightness-110
+                active:scale-95
+                transition-all
+              "
               onClick={handleUpdateScenario}
             >
               Guardar
+            </button>
+            <button
+              type="button"
+              className="
+                px-4 py-2 text-sm font-semibold rounded-lg
+                border border-slate-600
+                bg-slate-900 text-slate-300
+                hover:bg-slate-800 hover:border-slate-500
+                active:scale-95
+                transition-all
+              "
+              onClick={() => setShowEditScenario(false)}
+            >
+              Cancelar
             </button>
           </div>
         </div>
       </Modal>
 
+      {/* Importación de budgets */}
       <ImportBudgetModal
         isOpen={showImportModal}
         onClose={() => {
@@ -692,7 +765,7 @@ function ScenarioManager({ token }) {
           fetchImportPreview(s);
         }}
         loading={importLoading}
-        preview={importPreview} // { scope, from, to, items[], conflicts[] }
+        preview={importPreview}
         onConfirm={async ({ strategy }) => {
           try {
             const res = await axios.post(

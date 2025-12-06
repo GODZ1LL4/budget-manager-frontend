@@ -1,41 +1,63 @@
 @import "tailwindcss";
-
-/* ======================== */
-/*  FULLCALENDAR DARK THEME */
-/* ======================== */
-
+/* === CONTENEDOR PRINCIPAL === */
 .fc {
-    --fc-page-bg-color: #020617;                 /* fondo base */
-    --fc-neutral-bg-color: #020617;
-    --fc-neutral-text-color: #e5e7eb;
-    --fc-border-color: rgba(148, 163, 184, 0.4); /* slate-400/40 */
-    --fc-today-bg-color: rgba(56, 189, 248, 0.15); /* cyan-400/15 */
-  
-    --fc-button-text-color: #e5e7eb;
-    --fc-button-bg-color: #0f172a;
-    --fc-button-border-color: #1f2937;
-    --fc-button-hover-bg-color: #1f2937;
-    --fc-button-hover-border-color: #374151;
-  
-    --fc-event-bg-color: #ef4444;
-    --fc-event-border-color: #ef4444;
-    --fc-event-text-color: #f9fafb;
-  }
-  
-  /* números de día arriba a la derecha */
-  .fc .fc-daygrid-day-number {
-    color: #e5e7eb;
-  }
-  
-  /* encabezados de columna (lun, mar, ... ) */
-  .fc .fc-col-header-cell-cushion {
-    color: #e5e7eb;
-    font-weight: 600;
-  }
-  
-  /* Título Mes - Año en el header del calendario */
-.fc .fc-toolbar-title {
-    color: #e5e7eb;      /* texto claro */
-    font-weight: 600;
-  }
-  
+  background-color: #0f172a !important; /* azul oscuro */
+}
+
+/* === HEADER DEL CALENDARIO === */
+.fc-toolbar-title {
+  color: #f1f5f9 !important; /* texto claro */
+}
+
+.fc-button {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  color: #e2e8f0 !important;
+}
+
+.fc-button:hover {
+  background: #334155 !important;
+}
+
+/* === DÍAS DE LA SEMANA (dom, lun, mar...) === */
+.fc-col-header-cell {
+  background: #0f172a !important;
+  border-color: #1e293b !important;
+}
+
+.fc-col-header-cell-cushion {
+  color: #94a3b8 !important;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+/* === CELDAS DEL CALENDARIO === */
+.fc-daygrid-day {
+  background: #1e293b !important; /* gris azulado oscuro */
+  border-color: #334155 !important;
+}
+
+/* Números del día */
+.fc-daygrid-day-number {
+  color: #cbd5e1 !important;
+}
+
+/* === DÍA ACTUAL === */
+.fc-day-today {
+  background: #475569 !important; /* resalta sin ser brillante */
+}
+
+.fc-day-today .fc-daygrid-day-number {
+  color: #facc15 !important; /* amarillo */
+  font-weight: bold;
+}
+
+/* === EVENTOS === */
+.fc-event {
+  color: #0f172a !important;
+  border: none !important;
+  font-size: 0.75rem;
+  padding: 2px 4px !important;
+  border-radius: 4px !important;
+}

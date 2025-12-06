@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 function Categories({ token }) {
   const [name, setName] = useState("");
@@ -17,12 +18,17 @@ function Categories({ token }) {
       });
       setCategories(res.data.data);
     } catch (err) {
-      alert("Error al obtener categorías");
+      toast.error("Error al obtener categorías");
     }
   };
 
   const handleCreate = async (e) => {
     e.preventDefault();
+    if (!name.trim()) {
+      toast.error("El nombre es obligatorio");
+      return;
+    }
+
     try {
       await axios.post(
         `${api}/categories`,
@@ -32,9 +38,12 @@ function Categories({ token }) {
         }
       );
       setName("");
+      setType("expense");
+      setStabilityType("variable");
       fetchCategories();
+      toast.success("Categoría creada correctamente");
     } catch (err) {
-      alert("Error al crear categoría");
+      toast.error("Error al crear categoría");
     }
   };
 
@@ -46,6 +55,11 @@ function Categories({ token }) {
   };
 
   const handleUpdate = async (id) => {
+    if (!name.trim()) {
+      toast.error("El nombre es obligatorio");
+      return;
+    }
+
     try {
       await axios.put(
         `${api}/categories/${id}`,
@@ -56,9 +70,12 @@ function Categories({ token }) {
       );
       setEditId(null);
       setName("");
+      setType("expense");
+      setStabilityType("variable");
       fetchCategories();
+      toast.success("Categoría actualizada");
     } catch (err) {
-      alert("Error al actualizar categoría");
+      toast.error("Error al actualizar categoría");
     }
   };
 
@@ -70,8 +87,9 @@ function Categories({ token }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchCategories();
+      toast.success("Categoría eliminada");
     } catch (err) {
-      alert("Error al eliminar categoría");
+      toast.error("Error al eliminar categoría");
     }
   };
 
@@ -80,133 +98,251 @@ function Categories({ token }) {
   }, [token]);
 
   return (
-    <div className="p-4 md:p-6 bg-white rounded shadow-md text-gray-800">
-      <h2 className="text-xl md:text-2xl font-bold text-[#e32119] mb-4">
+    <div
+      className="
+        p-4 md:p-6
+        rounded-2xl
+        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900
+        border border-slate-800
+        shadow-[0_18px_45px_rgba(0,0,0,0.85)]
+        text-slate-200
+      "
+    >
+      <h2 className="text-xl md:text-2xl font-bold mb-2 text-[#f6e652]">
         Categorías
       </h2>
+      <p className="text-sm text-slate-400 mb-4">
+        Define cómo se clasifican tus ingresos y gastos, y marca su tipo de
+        estabilidad para mejores análisis.
+      </p>
 
+      {/* FORMULARIO */}
       <form
         onSubmit={handleCreate}
-        className="flex flex-col sm:flex-row flex-wrap gap-2 mb-6"
+        className="flex flex-col sm:flex-row flex-wrap gap-3 mb-6"
       >
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Nombre"
-          className="border border-gray-300 p-2 rounded flex-1 min-w-[120px]"
-        />
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="border border-gray-300 p-2 rounded min-w-[120px]"
-        >
-          <option value="expense">Gasto</option>
-          <option value="income">Ingreso</option>
-        </select>
-        <select
-          value={stabilityType}
-          onChange={(e) => setStabilityType(e.target.value)}
-          className="border border-gray-300 p-2 rounded min-w-[120px]"
-        >
-          <option value="fixed">Fijo</option>
-          <option value="variable">Variable</option>
-          <option value="occasional">Ocasional</option>
-        </select>
-        <button
-          type="submit"
-          className="bg-[#e32119] text-white px-4 py-2 rounded hover:bg-red-700 transition min-w-[100px]"
-        >
-          Agregar
-        </button>
+        <div className="flex-1 min-w-[140px] flex flex-col space-y-1">
+          <label className="text-xs font-semibold tracking-wide text-slate-300 uppercase">
+            Nombre
+          </label>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ej: Supermercado, Alquiler..."
+            className="
+              border border-slate-700 rounded-lg px-3 py-2 text-sm
+              bg-slate-900 text-slate-100
+              placeholder:text-slate-500
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
+          />
+        </div>
+
+        <div className="min-w-[140px] flex flex-col space-y-1">
+          <label className="text-xs font-semibold tracking-wide text-slate-300 uppercase">
+            Tipo
+          </label>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="
+              border border-slate-700 rounded-lg px-3 py-2 text-sm
+              bg-slate-900 text-slate-100
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
+          >
+            <option value="expense">Gasto</option>
+            <option value="income">Ingreso</option>
+          </select>
+        </div>
+
+        <div className="min-w-[160px] flex flex-col space-y-1">
+          <label className="text-xs font-semibold tracking-wide text-slate-300 uppercase">
+            Estabilidad
+          </label>
+          <select
+            value={stabilityType}
+            onChange={(e) => setStabilityType(e.target.value)}
+            className="
+              border border-slate-700 rounded-lg px-3 py-2 text-sm
+              bg-slate-900 text-slate-100
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              transition-colors
+            "
+          >
+            <option value="fixed">Fijo</option>
+            <option value="variable">Variable</option>
+            <option value="occasional">Ocasional</option>
+          </select>
+        </div>
+
+        <div className="flex items-end">
+          <button
+            type="submit"
+            className="
+              px-4 py-2 text-sm font-semibold rounded-lg
+              bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
+              text-slate-950
+              shadow-[0_0_16px_rgba(16,185,129,0.7)]
+              hover:brightness-110 active:scale-95
+              transition-all
+              min-w-[120px]
+            "
+          >
+            Agregar
+          </button>
+        </div>
       </form>
 
-      {/* Agregamos scroll horizontal */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full border border-gray-300 border-collapse text-sm">
-          <thead className="bg-gray-100 text-left text-gray-700">
+      {/* TABLA */}
+      <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/40">
+        <table className="min-w-full text-sm">
+          <thead className="bg-slate-900/80 border-b border-slate-800">
             <tr>
-              <th className="p-2 border">Nombre</th>
-              <th className="p-2 border">Tipo</th>
-              <th className="p-2 border">Estabilidad</th>
-              <th className="p-2 border text-center">Acciones</th>
+              <th className="p-2 border-r border-slate-800 text-left text-xs font-semibold text-slate-300 uppercase tracking-wide">
+                Nombre
+              </th>
+              <th className="p-2 border-r border-slate-800 text-left text-xs font-semibold text-slate-300 uppercase tracking-wide">
+                Tipo
+              </th>
+              <th className="p-2 border-r border-slate-800 text-left text-xs font-semibold text-slate-300 uppercase tracking-wide">
+                Estabilidad
+              </th>
+              <th className="p-2 text-center text-xs font-semibold text-slate-300 uppercase tracking-wide">
+                Acciones
+              </th>
             </tr>
           </thead>
           <tbody>
-            {categories.map((cat) => (
-              <tr key={cat.id} className="hover:bg-gray-50">
-                {editId === cat.id ? (
-                  <>
-                    <td className="p-2 border border-gray-300">
-                      <input
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="border border-gray-300 p-1 w-full rounded"
-                      />
-                    </td>
-                    <td className="p-2 border border-gray-300">
-                      <select
-                        value={type}
-                        onChange={(e) => setType(e.target.value)}
-                        className="border border-gray-300 p-1 w-full rounded"
-                      >
-                        <option value="expense">Gasto</option>
-                        <option value="income">Ingreso</option>
-                      </select>
-                    </td>
-                    <td className="p-2 border border-gray-300">
-                      <select
-                        value={stabilityType}
-                        onChange={(e) => setStabilityType(e.target.value)}
-                        className="border border-gray-300 p-1 w-full rounded"
-                      >
-                        <option value="fixed">Fijo</option>
-                        <option value="variable">Variable</option>
-                        <option value="occasional">Ocasional</option>
-                      </select>
-                    </td>
-                    <td className="p-2 border border-gray-300 text-center space-x-2">
-                      <button
-                        onClick={() => handleUpdate(cat.id)}
-                        className="bg-yellow-400 text-black px-2 py-1 rounded text-xs"
-                      >
-                        Guardar
-                      </button>
-                      <button
-                        onClick={() => setEditId(null)}
-                        className="text-gray-500 text-xs"
-                      >
-                        Cancelar
-                      </button>
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td className="p-2 border border-gray-300">{cat.name}</td>
-                    <td className="p-2 border border-gray-300 italic text-gray-600">
-                      {cat.type}
-                    </td>
-                    <td className="p-2 border border-gray-300 italic text-gray-600">
-                      {cat.stability_type || "variable"}
-                    </td>
+            {categories.map((cat, idx) => {
+              const rowBg =
+                idx % 2 === 0
+                  ? "bg-slate-950/40 hover:bg-slate-900/80"
+                  : "bg-slate-900/70 hover:bg-slate-900";
 
-                    <td className="p-2 border border-gray-300 text-center space-x-2">
-                      <button
-                        onClick={() => startEdit(cat)}
-                        className="text-blue-600 text-xs hover:underline"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleDelete(cat.id)}
-                        className="text-red-600 text-xs hover:underline"
-                      >
-                        Eliminar
-                      </button>
-                    </td>
-                  </>
-                )}
-              </tr>
-            ))}
+              return (
+                <tr
+                  key={cat.id}
+                  className={`${rowBg} border-t border-slate-800`}
+                >
+                  {editId === cat.id ? (
+                    <>
+                      <td className="p-2 border-r border-slate-800">
+                        <input
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          className="
+                            border border-slate-700 rounded-lg px-2 py-1 text-sm
+                            w-full bg-slate-950 text-slate-100
+                            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                          "
+                        />
+                      </td>
+                      <td className="p-2 border-r border-slate-800">
+                        <select
+                          value={type}
+                          onChange={(e) => setType(e.target.value)}
+                          className="
+                            border border-slate-700 rounded-lg px-2 py-1 text-sm
+                            w-full bg-slate-950 text-slate-100
+                            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                          "
+                        >
+                          <option value="expense">Gasto</option>
+                          <option value="income">Ingreso</option>
+                        </select>
+                      </td>
+                      <td className="p-2 border-r border-slate-800">
+                        <select
+                          value={stabilityType}
+                          onChange={(e) => setStabilityType(e.target.value)}
+                          className="
+                            border border-slate-700 rounded-lg px-2 py-1 text-sm
+                            w-full bg-slate-950 text-slate-100
+                            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+                          "
+                        >
+                          <option value="fixed">Fijo</option>
+                          <option value="variable">Variable</option>
+                          <option value="occasional">Ocasional</option>
+                        </select>
+                      </td>
+                      <td className="p-2 text-center">
+                        <div className="flex justify-center gap-2 flex-wrap">
+                          <button
+                            onClick={() => handleUpdate(cat.id)}
+                            className="
+                              inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg
+                              bg-emerald-500 text-slate-950
+                              hover:brightness-110 active:scale-95
+                              transition-all
+                            "
+                          >
+                            Guardar
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditId(null);
+                              setName("");
+                              setType("expense");
+                              setStabilityType("variable");
+                            }}
+                            className="
+                              inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg
+                              bg-slate-800 text-slate-200
+                              hover:bg-slate-700 active:scale-95
+                              transition-all
+                            "
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="p-2 border-r border-slate-800 text-slate-100">
+                        {cat.name}
+                      </td>
+                      <td className="p-2 border-r border-slate-800 italic text-xs text-slate-400">
+                        {cat.type === "income" ? "Ingreso" : "Gasto"}
+                      </td>
+                      <td className="p-2 border-r border-slate-800 italic text-xs text-slate-400">
+                        {cat.stability_type || "variable"}
+                      </td>
+                      <td className="p-2 text-center">
+                        <div className="flex justify-center gap-2 flex-wrap">
+                          <button
+                            onClick={() => startEdit(cat)}
+                            className="
+                              inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg
+                              bg-sky-500 text-slate-950
+                              hover:brightness-110 active:scale-95
+                              transition-all
+                            "
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDelete(cat.id)}
+                            className="
+                              inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg
+                              bg-rose-600 text-white
+                              hover:brightness-110 active:scale-95
+                              transition-all
+                            "
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
