@@ -25,6 +25,7 @@ function CustomTooltip({ active, payload, label }) {
         padding: "10px",
         border: "1px solid #4b5563",
         borderRadius: "6px",
+        fontSize: "1rem",
       }}
     >
       <p>
@@ -59,12 +60,12 @@ function BudgetVsActualSummaryChart({ token }) {
       <BarChart data={data}>
         <XAxis
           dataKey="month"
-          tick={{ fill: "#e5e7eb", fontSize: 12 }}
+          tick={{ fill: "#e5e7eb", fontSize: 14 }}
           axisLine={{ stroke: "#64748b" }}
           tickLine={{ stroke: "#64748b" }}
         />
         <YAxis
-          tick={{ fill: "#e5e7eb", fontSize: 12 }}
+          tick={{ fill: "#e5e7eb", fontSize: 14 }}
           axisLine={{ stroke: "#64748b" }}
           tickLine={{ stroke: "#64748b" }}
         />

@@ -83,19 +83,35 @@ function CategoryVariationChart({ token, categories = [] }) {
   };
 
   return (
-    <div className="bg-white p-4 rounded shadow">
-      <h3 className="text-lg font-semibold mb-4">
-        Variación de gastos por categoría (anual)
-      </h3>
+    <div
+      className="
+        rounded-2xl p-6
+        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950
+        border border-slate-800
+        shadow-[0_16px_40px_rgba(0,0,0,0.85)]
+        space-y-4
+      "
+    >
+      <div>
+        <h3 className="text-lg md:text-xl font-semibold text-slate-100">
+          Variación de gastos por categoría (anual)
+        </h3>
+        <p className="text-sm text-slate-400 mt-1">
+          Analiza cómo varía el gasto mensual por categoría a lo largo del año
+          actual.
+        </p>
+      </div>
 
-      {/* Controles de selección (mismo estilo que ItemPriceTrendChart) */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-xs sm:text-sm text-gray-700">
+      {/* Controles de selección (alineado con ItemPriceTrendChart dark) */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-xs sm:text-sm text-slate-300">
             Máximo{" "}
-            <span className="font-semibold">{MAX_CATEGORIES}</span> categorías.
-            Seleccionadas:{" "}
-            <span className="font-semibold">
+            <span className="font-semibold text-emerald-300">
+              {MAX_CATEGORIES}
+            </span>{" "}
+            categorías. Seleccionadas:{" "}
+            <span className="font-semibold text-slate-100">
               {selectedIds.length}/{MAX_CATEGORIES}
             </span>
           </div>
@@ -104,19 +120,30 @@ function CategoryVariationChart({ token, categories = [] }) {
             type="button"
             onClick={handleClearAll}
             disabled={selectedIds.length === 0}
-            className={`text-xs sm:text-sm px-2 py-1 rounded border ${
-              selectedIds.length === 0
-                ? "text-gray-400 border-gray-200 cursor-not-allowed"
-                : "text-gray-700 border-gray-300 hover:bg-gray-100"
-            }`}
+            className={`
+              text-xs sm:text-sm px-3 py-1.5 rounded-lg border
+              transition-colors
+              ${
+                selectedIds.length === 0
+                  ? "text-slate-600 border-slate-800 bg-slate-900 cursor-not-allowed"
+                  : "text-slate-100 border-slate-600 bg-slate-900 hover:bg-slate-800"
+              }
+            `}
           >
             Desmarcar todos
           </button>
         </div>
 
-        <div className="max-h-48 overflow-y-auto border rounded p-2 space-y-1">
+        <div
+          className="
+            max-h-48 overflow-y-auto
+            border border-slate-800 rounded-xl
+            bg-slate-950/70
+            p-2 space-y-1
+          "
+        >
           {expenseCategories.length === 0 ? (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-slate-500">
               No hay categorías de gasto registradas.
             </p>
           ) : (
@@ -126,11 +153,18 @@ function CategoryVariationChart({ token, categories = [] }) {
               return (
                 <label
                   key={cat.id}
-                  className="flex items-center gap-2 text-xs sm:text-sm cursor-pointer"
+                  className="
+                    flex items-center gap-2
+                    text-xs sm:text-sm
+                    text-slate-200
+                    cursor-pointer
+                    hover:bg-slate-900/70
+                    rounded-md px-2 py-1
+                  "
                 >
                   <input
                     type="checkbox"
-                    className="form-checkbox"
+                    className="form-checkbox accent-emerald-400"
                     value={idStr}
                     checked={checked}
                     onChange={handleCheckboxChange}
@@ -145,39 +179,82 @@ function CategoryVariationChart({ token, categories = [] }) {
 
       {/* Gráfico */}
       {chartData.length === 0 || selectedIds.length === 0 ? (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-slate-400">
           Selecciona una o varias categorías de gasto (hasta {MAX_CATEGORIES}){" "}
           para ver su variación mensual en el año actual.
         </p>
       ) : (
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" />
-            <YAxis />
-            <Tooltip
-              formatter={(value) => `RD$ ${Number(value || 0).toFixed(2)}`}
-            />
-            <Legend />
-            {selectedIds.map((catId, index) => {
-              const cat = expenseCategories.find(
-                (c) => String(c.id) === String(catId)
-              );
-              return (
-                <Line
-                  key={catId}
-                  type="monotone"
-                  dataKey={catId}
-                  stroke={`hsl(${(index * 60) % 360}, 70%, 50%)`}
-                  name={cat?.name || catId}
-                  dot={false}
-                  connectNulls={true}
-                  strokeWidth={2}
-                />
-              );
-            })}
-          </LineChart>
-        </ResponsiveContainer>
+        <div className="w-full h-[300px]">
+          <ResponsiveContainer>
+            <LineChart data={chartData}>
+              <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
+              <XAxis
+                dataKey="month"
+                stroke="#94a3b8"
+                tick={{ fill: "#cbd5e1", fontSize: 14 }}
+              />
+              <YAxis
+                stroke="#94a3b8"
+                tick={{ fill: "#cbd5e1", fontSize: 14 }}
+              />
+              <Tooltip
+                formatter={(value) =>
+                  `RD$ ${Number(value || 0).toFixed(2)}`
+                }
+                contentStyle={{
+                  backgroundColor: "#020617",
+                  border: "1px solid #4b5563",
+                  color: "#e5e7eb",
+                  borderRadius: "0.5rem",
+                  boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
+                  fontSize: "1rem",
+                }}
+                itemStyle={{ color: "#e5e7eb" }}
+                labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+              />
+              <Legend
+                wrapperStyle={{ color: "#e2e8f0" }}
+                formatter={(value) => (
+                  <span className="text-slate-200 text-xs sm:text-sm">
+                    {value}
+                  </span>
+                )}
+              />
+
+              {selectedIds.map((catId, index) => {
+                const cat = expenseCategories.find(
+                  (c) => String(c.id) === String(catId)
+                );
+                const color = `hsl(${(index * 60) % 360}, 70%, 55%)`;
+
+                return (
+                  <Line
+                    key={catId}
+                    type="monotone"
+                    dataKey={catId}
+                    stroke={color}
+                    name={cat?.name || catId}
+                    connectNulls={true}
+                    strokeWidth={2}
+                    // puntos siempre visibles
+                    dot={{
+                      r: 4,
+                      strokeWidth: 1,
+                      stroke: "#020617",
+                      fill: color,
+                    }}
+                    // punto más grande al hover
+                    activeDot={{
+                      r: 7,
+                      strokeWidth: 2,
+                      stroke: "#e5e7eb",
+                    }}
+                  />
+                );
+              })}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       )}
     </div>
   );

@@ -89,7 +89,7 @@ function Goals({ token }) {
       "
     >
       <div>
-        <h2 className="text-2xl font-bold text-emerald-300 mb-1">
+        <h2 className="text-2xl font-bold text-[#f6e652] mb-1">
           Metas de Ahorro
         </h2>
         <p className="text-sm text-slate-400">

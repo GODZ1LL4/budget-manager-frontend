@@ -396,59 +396,68 @@ function Dashboard({ token }) {
         <AccountBalancesChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="4- Comparativo mensual por categoría">
-        <CategoryMonthlyComparisonTable token={token} />
+      {/* --- BLOQUE: Visión mensual y control de presupuesto --- */}
+
+      <CollapseSection title="4- Balance de Ingreso vs Gasto">
+        <MonthlyIncomeVsExpenseChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="5- Comparativo mensual por artículo">
-        <ItemMonthlyComparisonTable token={token} />
+      <CollapseSection title="5- Presupuesto vs Gasto por categoría">
+        <BudgetVsActualChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="6- Tendencia de precios por artículo">
-        <ItemPriceTrendChart token={token} />
+      <CollapseSection title="6- Top categorías con gasto excesivo">
+        <OverBudgetChart token={token} />
       </CollapseSection>
+
       <CollapseSection title="7- Ritmo de gasto del mes (Burn Rate)">
         <BurnRateChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="8- Presupuesto vs Gasto por categoría">
-        <BudgetVsActualChart token={token} />
+      {/* --- BLOQUE: Comparativos por categoría / año --- */}
+
+      <CollapseSection title="8- Comparativo mensual por categoría">
+        <CategoryMonthlyComparisonTable token={token} />
       </CollapseSection>
 
-      <CollapseSection title="9- Top categorías con gasto excesivo">
-        <OverBudgetChart token={token} />
+      <CollapseSection title="9- Comparativo mensual por artículo">
+        <ItemMonthlyComparisonTable token={token} />
       </CollapseSection>
 
-      <CollapseSection title="10- Balance de Ingreso vs Gasto">
-        <MonthlyIncomeVsExpenseChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="11- Variaciones anuales por categoría">
+      <CollapseSection title="10- Variaciones anuales por categoría">
         <CategoryVariationChart token={token} categories={categories} />
       </CollapseSection>
 
-      <CollapseSection title="12- Resumen Anual: Presupuesto vs Gasto Total">
+      <CollapseSection title="11- Resumen Anual: Presupuesto vs Gasto Total">
         <BudgetVsActualSummaryChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="13- Gastos por tipo de estabilidad">
+      {/* --- BLOQUE: Estabilidad + Proyecciones + Metas --- */}
+
+      <CollapseSection title="12- Gastos por tipo de estabilidad">
         <ExpenseByStabilityChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="14- Top categorías variables con más gasto">
-        <TopVariableCategoriesChart token={token} />
+      <CollapseSection title="13- Proyección de Gastos por Categoría y Estabilidad">
+        <ProjectedExpenseByCategoryChart token={token} />
+      </CollapseSection>
+
+      <CollapseSection title="14- Proyección de Ingresos por Categoría y Estabilidad">
+        <ProjectedIncomeByCategoryChart token={token} />
       </CollapseSection>
 
       <CollapseSection title="15- Progreso de metas de ahorro">
         <GoalsProgressChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="16- Proyección de Gastos por Categoría y Estabilidad">
-        <ProjectedExpenseByCategoryChart token={token} />
+      {/* --- BLOQUE: Análisis detallado por artículo --- */}
+
+      <CollapseSection title="16- Top categorías variables con más gasto">
+        <TopVariableCategoriesChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="17- Proyección de Ingresos por Categoría y Estabilidad">
-        <ProjectedIncomeByCategoryChart token={token} />
+      <CollapseSection title="17- Tendencia de precios por artículo">
+        <ItemPriceTrendChart token={token} />
       </CollapseSection>
 
       <CollapseSection title="18- Tendencia mensual por artículo">
@@ -462,6 +471,7 @@ function Dashboard({ token }) {
       <CollapseSection title="20- Resumen anual de artículos (mixto)">
         <ItemsAnnualSummaryTable token={token} />
       </CollapseSection>
+
     </div>
   );
 }
@@ -538,7 +548,7 @@ function MetricCard({
 
       {/* Contenido */}
       <div className="relative z-10 flex flex-col gap-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">
           {title}
         </p>
 
@@ -552,7 +562,7 @@ function MetricCard({
         </p>
 
         {subtitle && (
-          <p className="text-xs mt-1 text-slate-400 truncate">{subtitle}</p>
+          <p className="text-xs mt-1 text-slate-300 truncate">{subtitle}</p>
         )}
       </div>
     </div>
@@ -597,10 +607,10 @@ function ChromeInfoCard({ title, children }) {
       />
 
       <div className="relative z-10">
-        <h3 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300 mb-2">
+        <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-300 mb-2">
           {title}
         </h3>
-        <div className="text-xs text-slate-200 space-y-1">{children}</div>
+        <div className="text-sm text-slate-200 space-y-1">{children}</div>
       </div>
     </div>
   );
@@ -702,7 +712,7 @@ function FlipMetricCard({ summary }) {
           "
         >
           <div>
-            <p className="text-xs font-bold text-slate-200 uppercase tracking-[0.18em]">
+            <p className="text-sm font-bold text-slate-200 uppercase tracking-[0.18em]">
               Resumen anual {year}
             </p>
             <p className="text-[11px] font-semibold text-slate-400 mt-0.5">
@@ -748,7 +758,7 @@ function FlipMetricCard({ summary }) {
           "
         >
           <div className="mb-2">
-            <p className="text-xs font-bold text-slate-200 uppercase tracking-[0.18em]">
+            <p className="text-sm font-bold text-slate-200 uppercase tracking-[0.18em]">
               Detalle por estabilidad
             </p>
             <p className="text-[11px] font-semibold text-slate-400 mt-0.5">
@@ -756,7 +766,7 @@ function FlipMetricCard({ summary }) {
             </p>
           </div>
 
-          <div className="mt-1 space-y-2 text-xs overflow-y-auto">
+          <div className="mt-1 space-y-2 text-sm overflow-y-auto">
             {Object.entries(byStability || {}).map(([key, value]) => (
               <div
                 key={key}

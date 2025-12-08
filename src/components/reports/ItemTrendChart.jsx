@@ -52,7 +52,6 @@ function ItemTrendChart({ token }) {
       return;
     }
 
-    // Pedimos cada item por separado: /analytics/item-trend/:id?year=YYYY
     const requests = selectedIds.map((idStr) =>
       axios
         .get(`${api}/analytics/item-trend/${idStr}`, {
@@ -71,9 +70,8 @@ function ItemTrendChart({ token }) {
 
         results.forEach(({ item_id, rows }) => {
           rows.forEach((row) => {
-            // row tiene: { month, quantity, total } según tu backend actual
             allEntries.push({
-              ...row,
+              ...row, // { month, quantity, total }
               item_id,
             });
           });
@@ -105,7 +103,7 @@ function ItemTrendChart({ token }) {
     a.month.localeCompare(b.month)
   );
 
-  // 4) Manejo de selección múltiple (igual que ItemPriceTrendChart)
+  // 4) Manejo de selección múltiple
   const handleCheckboxChange = (e) => {
     const idStr = String(e.target.value);
     const isChecked = e.target.checked;
@@ -146,26 +144,44 @@ function ItemTrendChart({ token }) {
   };
 
   return (
-    <div className="bg-white p-4 rounded shadow">
-      <h3 className="font-semibold mb-2 text-gray-700">
-        Tendencia de consumo por artículo
-      </h3>
+    <div
+      className="
+        rounded-2xl p-6
+        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950
+        border border-slate-800
+        shadow-[0_16px_40px_rgba(0,0,0,0.85)]
+        space-y-4
+      "
+    >
+      <div>
+        <h3 className="font-semibold mb-1 text-slate-100 text-lg">
+          Tendencia de consumo por artículo
+        </h3>
+        <p className="text-sm text-slate-400">
+          Analiza la evolución mensual de consumo por artículo, ya sea por
+          cantidad o por monto total gastado.
+        </p>
+      </div>
 
       {/* Controles superiores: año + métrica */}
-      <div className="flex flex-wrap items-center gap-3 mb-4">
+      <div className="flex flex-wrap items-center gap-4 mb-2 text-sm text-slate-200">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Año:</span>
+          <span className="font-medium text-slate-300">Año:</span>
           <input
             type="number"
             value={year}
             onChange={handleYearChange}
-            className="border border-gray-300 rounded px-2 py-1 w-24 text-sm"
+            className="
+              border border-slate-700 rounded-lg px-2 py-1 w-24 text-sm
+              bg-slate-900 text-slate-100
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+            "
             min="2000"
           />
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Métrica:</span>
+          <span className="font-medium text-slate-300">Métrica:</span>
           <label className="flex items-center gap-1 text-sm">
             <input
               type="radio"
@@ -173,8 +189,9 @@ function ItemTrendChart({ token }) {
               value="quantity"
               checked={metric === "quantity"}
               onChange={() => setMetric("quantity")}
+              className="accent-emerald-400"
             />
-            <span>Cantidad</span>
+            <span className="text-slate-200">Cantidad</span>
           </label>
           <label className="flex items-center gap-1 text-sm">
             <input
@@ -183,20 +200,23 @@ function ItemTrendChart({ token }) {
               value="total"
               checked={metric === "total"}
               onChange={() => setMetric("total")}
+              className="accent-emerald-400"
             />
-            <span>Gasto total</span>
+            <span className="text-slate-200">Gasto total</span>
           </label>
         </div>
       </div>
 
       {/* Controles de selección múltiple */}
-      <div className="mb-4">
+      <div className="mb-3">
         <div className="flex items-center justify-between mb-2">
-          <div className="text-xs sm:text-sm text-gray-700">
+          <div className="text-xs sm:text-sm text-slate-300">
             Máximo{" "}
-            <span className="font-semibold">{MAX_ITEMS}</span> artículos.
-            Seleccionados:{" "}
-            <span className="font-semibold">
+            <span className="font-semibold text-emerald-300">
+              {MAX_ITEMS}
+            </span>{" "}
+            artículos. Seleccionados:{" "}
+            <span className="font-semibold text-slate-100">
               {selectedIds.length}/{MAX_ITEMS}
             </span>
           </div>
@@ -205,19 +225,30 @@ function ItemTrendChart({ token }) {
             type="button"
             onClick={handleClearAll}
             disabled={selectedIds.length === 0}
-            className={`text-xs sm:text-sm px-2 py-1 rounded border ${
-              selectedIds.length === 0
-                ? "text-gray-400 border-gray-200 cursor-not-allowed"
-                : "text-gray-700 border-gray-300 hover:bg-gray-100"
-            }`}
+            className={`
+              text-xs sm:text-sm px-3 py-1.5 rounded-lg border
+              transition-colors
+              ${
+                selectedIds.length === 0
+                  ? "text-slate-600 border-slate-800 bg-slate-900 cursor-not-allowed"
+                  : "text-slate-100 border-slate-600 bg-slate-900 hover:bg-slate-800"
+              }
+            `}
           >
             Desmarcar todos
           </button>
         </div>
 
-        <div className="max-h-48 overflow-y-auto border rounded p-2 space-y-1">
+        <div
+          className="
+            max-h-48 overflow-y-auto
+            border border-slate-800 rounded-xl
+            bg-slate-950/70
+            p-2 space-y-1
+          "
+        >
           {items.length === 0 ? (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-slate-500">
               No hay artículos registrados.
             </p>
           ) : (
@@ -227,11 +258,18 @@ function ItemTrendChart({ token }) {
               return (
                 <label
                   key={item.id}
-                  className="flex items-center gap-2 text-xs sm:text-sm cursor-pointer"
+                  className="
+                    flex items-center gap-2
+                    text-xs sm:text-sm
+                    text-slate-200
+                    cursor-pointer
+                    hover:bg-slate-900/70
+                    rounded-md px-2 py-1
+                  "
                 >
                   <input
                     type="checkbox"
-                    className="form-checkbox"
+                    className="form-checkbox accent-emerald-400"
                     value={idStr}
                     checked={checked}
                     onChange={handleCheckboxChange}
@@ -246,31 +284,74 @@ function ItemTrendChart({ token }) {
 
       {/* Gráfico */}
       {chartData.length === 0 || selectedIds.length === 0 ? (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-slate-400">
           Selecciona uno o más artículos (hasta {MAX_ITEMS}) para ver su
           tendencia de consumo.
         </p>
       ) : (
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" />
-            <YAxis />
-            <Tooltip formatter={(value) => formatTooltipValue(value)} />
-            <Legend />
-            {selectedIds.map((id, index) => (
-              <Line
-                key={id}
-                type="monotone"
-                dataKey={id}
-                stroke={`hsl(${(index * 60) % 360}, 70%, 50%)`}
-                name={itemNameMap[id] || id}
-                dot={false}
-                connectNulls={true}
+        <div className="w-full h-[300px]">
+          <ResponsiveContainer>
+            <LineChart data={chartData}>
+              <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
+              <XAxis
+                dataKey="month"
+                stroke="#94a3b8"
+                tick={{ fill: "#cbd5e1", fontSize: 12 }}
               />
-            ))}
-          </LineChart>
-        </ResponsiveContainer>
+              <YAxis
+                stroke="#94a3b8"
+                tick={{ fill: "#cbd5e1", fontSize: 12 }}
+              />
+              <Tooltip
+                formatter={(value) => formatTooltipValue(value)}
+                contentStyle={{
+                  backgroundColor: "#020617",
+                  border: "1px solid #4b5563",
+                  color: "#e5e7eb",
+                  borderRadius: "0.5rem",
+                  boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
+                  fontSize: "0.8rem",
+                }}
+                itemStyle={{ color: "#e5e7eb" }}
+                labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+              />
+              <Legend
+                wrapperStyle={{ color: "#e2e8f0" }}
+                formatter={(value) => (
+                  <span className="text-slate-200 text-xs sm:text-sm">
+                    {value}
+                  </span>
+                )}
+              />
+
+              {selectedIds.map((id, index) => {
+                const color = `hsl(${(index * 60) % 360}, 70%, 55%)`;
+                return (
+                  <Line
+                    key={id}
+                    type="monotone"
+                    dataKey={id}
+                    stroke={color}
+                    name={itemNameMap[id] || id}
+                    connectNulls={true}
+                    strokeWidth={2}
+                    dot={{
+                      r: 4,
+                      strokeWidth: 1,
+                      stroke: "#020617",
+                      fill: color,
+                    }}
+                    activeDot={{
+                      r: 7,
+                      strokeWidth: 2,
+                      stroke: "#e5e7eb",
+                    }}
+                  />
+                );
+              })}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       )}
     </div>
   );

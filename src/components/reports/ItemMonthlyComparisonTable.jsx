@@ -84,47 +84,80 @@ function ItemMonthlyComparisonTable({ token }) {
   };
 
   return (
-    <div className="bg-white p-4 rounded shadow overflow-x-auto">
+    <div
+      className="
+        rounded-2xl p-6
+        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950
+        border border-slate-800
+        shadow-[0_16px_40px_rgba(0,0,0,0.85)]
+        space-y-4
+      "
+    >
       {/* Header + filtros */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-        <h3 className="text-md font-semibold text-gray-700">
-          Comparativo mensual por artículo
-        </h3>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h3 className="text-lg md:text-xl font-semibold text-slate-100">
+            Comparativo mensual por artículo
+          </h3>
+          <p className="text-sm text-slate-400 mt-1">
+            Compara cantidades y montos por artículo entre dos meses.
+          </p>
+        </div>
 
-        <div className="flex flex-wrap items-center gap-4 text-sm">
+        <div className="flex flex-wrap items-center gap-4 text-sm text-slate-200">
           <div className="flex items-center gap-2">
-            <span className="text-gray-600">Mes 1:</span>
+            <span className="text-slate-400">Mes 1:</span>
             <input
               type="number"
               value={year1}
               onChange={handleYear1Change}
-              className="border border-gray-300 rounded px-2 py-1 w-20"
+              className="
+                w-20 rounded-lg px-2 py-1
+                bg-slate-900 border border-slate-700
+                text-slate-100 text-sm
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              "
               min="2000"
             />
             <input
               type="number"
               value={month1}
               onChange={handleMonth1Change}
-              className="border border-gray-300 rounded px-2 py-1 w-16"
+              className="
+                w-16 rounded-lg px-2 py-1
+                bg-slate-900 border border-slate-700
+                text-slate-100 text-sm
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              "
               min="1"
               max="12"
             />
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-gray-600">Mes 2:</span>
+            <span className="text-slate-400">Mes 2:</span>
             <input
               type="number"
               value={year2}
               onChange={handleYear2Change}
-              className="border border-gray-300 rounded px-2 py-1 w-20"
+              className="
+                w-20 rounded-lg px-2 py-1
+                bg-slate-900 border border-slate-700
+                text-slate-100 text-sm
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              "
               min="2000"
             />
             <input
               type="number"
               value={month2}
               onChange={handleMonth2Change}
-              className="border border-gray-300 rounded px-2 py-1 w-16"
+              className="
+                w-16 rounded-lg px-2 py-1
+                bg-slate-900 border border-slate-700
+                text-slate-100 text-sm
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+              "
               min="1"
               max="12"
             />
@@ -134,50 +167,67 @@ function ItemMonthlyComparisonTable({ token }) {
 
       {/* Meta de totales */}
       {meta && (
-        <div className="flex flex-wrap gap-4 text-xs text-gray-600 mb-3">
+        <div className="flex flex-wrap gap-4 text-xs sm:text-sm text-slate-300">
           <span>
-            Mes 1:{" "}
-            <strong>{monthLabel(meta.month1)}</strong> — Total gasto:{" "}
-            <strong>{formatCurrency(meta.month1_total_amount)}</strong>
+            <span className="text-slate-300">Mes 1:</span>{" "}
+            <strong className="text-slate-100">
+              {monthLabel(meta.month1)}
+            </strong>{" "}
+            <span className="text-slate-300">— Total gasto:</span>{" "}
+            <strong className="text-emerald-300">
+              {formatCurrency(meta.month1_total_amount)}
+            </strong>
           </span>
           <span>
-            Mes 2:{" "}
-            <strong>{monthLabel(meta.month2)}</strong> — Total gasto:{" "}
-            <strong>{formatCurrency(meta.month2_total_amount)}</strong>
+            <span className="text-slate-300">Mes 2:</span>{" "}
+            <strong className="text-slate-100">
+              {monthLabel(meta.month2)}
+            </strong>{" "}
+            <span className="text-slate-300">— Total gasto:</span>{" "}
+            <strong className="text-emerald-300">
+              {formatCurrency(meta.month2_total_amount)}
+            </strong>
           </span>
         </div>
       )}
 
       {/* Tabla / estados */}
       {loading ? (
-        <p className="text-sm text-gray-600">Cargando comparativo...</p>
+        <p className="text-sm text-slate-400">Cargando comparativo...</p>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-slate-400">
           No hay datos de gastos para los meses seleccionados.
         </p>
       ) : (
-        <div className="max-h-96 overflow-y-auto">
-          <table className="min-w-full text-sm border-collapse">
+        <div
+          className="
+            overflow-x-auto max-h-96 overflow-y-auto
+            rounded-xl
+            border border-slate-800
+            bg-slate-950/60
+          "
+        >
+          <table className="min-w-full text-sm">
             <thead>
-              <tr className="bg-gray-100 text-gray-700">
-                <th className="px-3 py-2 text-left">Artículo</th>
-                <th className="px-3 py-2 text-right">
+              <tr className="bg-slate-900/80 text-slate-300">
+                <th className="px-3 py-2 text-left font-medium">Artículo</th>
+                <th className="px-3 py-2 text-right font-medium">
                   Cant. Mes 1 ({monthLabel(meta?.month1)})
                 </th>
-                <th className="px-3 py-2 text-right">
+                <th className="px-3 py-2 text-right font-medium">
                   Monto Mes 1 ({monthLabel(meta?.month1)})
                 </th>
-                <th className="px-3 py-2 text-right">
+                <th className="px-3 py-2 text-right font-medium">
                   Cant. Mes 2 ({monthLabel(meta?.month2)})
                 </th>
-                <th className="px-3 py-2 text-right">
+                <th className="px-3 py-2 text-right font-medium">
                   Monto Mes 2 ({monthLabel(meta?.month2)})
                 </th>
-                <th className="px-3 py-2 text-right">
-                  Dif. monto (Mes2 − Mes1)
+                <th className="px-3 py-2 text-right font-medium">
+                  Dif. monto (Mes 2 − Mes 1)
                 </th>
-                <th className="px-3 py-2 text-right">
-                  Dif. cantidad (Mes2 − Mes1)
+                <th className="px-3 py-2 text-right font-medium">
+                  Dif. cantidad (Mes 2 − Mes 1)
                 </th>
               </tr>
             </thead>
@@ -188,36 +238,39 @@ function ItemMonthlyComparisonTable({ token }) {
 
                 const isUpAmount = diffAmount > 0;
                 const diffAmountColor = isUpAmount
-                  ? "text-red-600"
+                  ? "text-rose-400"
                   : diffAmount < 0
-                  ? "text-green-600"
-                  : "text-gray-700";
+                  ? "text-emerald-400"
+                  : "text-slate-300";
 
                 const qtyDiffColor =
                   diffQty > 0
-                    ? "text-red-600"
+                    ? "text-rose-400"
                     : diffQty < 0
-                    ? "text-green-600"
-                    : "text-gray-700";
+                    ? "text-emerald-400"
+                    : "text-slate-300";
 
                 return (
                   <tr
                     key={row.item_id}
-                    className="border-b last:border-0 hover:bg-gray-50"
+                    className="
+                      border-b border-slate-800 last:border-0
+                      hover:bg-slate-900/60 transition-colors
+                    "
                   >
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="px-3 py-2 whitespace-nowrap text-slate-200">
                       {row.item_name}
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-3 py-2 text-right text-slate-200">
                       {formatQty(row.month1_qty)}
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-3 py-2 text-right text-slate-200">
                       {formatCurrency(row.month1_amount)}
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-3 py-2 text-right text-slate-200">
                       {formatQty(row.month2_qty)}
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-3 py-2 text-right text-slate-200">
                       {formatCurrency(row.month2_amount)}
                     </td>
                     <td className={`px-3 py-2 text-right ${diffAmountColor}`}>
@@ -231,23 +284,25 @@ function ItemMonthlyComparisonTable({ token }) {
               })}
 
               {meta && (
-                <tr className="bg-gray-50 font-semibold">
-                  <td className="px-3 py-2 text-left">TOTAL</td>
-                  <td className="px-3 py-2 text-right">—</td>
-                  <td className="px-3 py-2 text-right">
+                <tr className="bg-slate-900/80 font-semibold">
+                  <td className="px-3 py-2 text-left text-slate-100">
+                    TOTAL
+                  </td>
+                  <td className="px-3 py-2 text-right text-slate-100">—</td>
+                  <td className="px-3 py-2 text-right text-slate-100">
                     {formatCurrency(meta.month1_total_amount)}
                   </td>
-                  <td className="px-3 py-2 text-right">—</td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-right text-slate-100">—</td>
+                  <td className="px-3 py-2 text-right text-slate-100">
                     {formatCurrency(meta.month2_total_amount)}
                   </td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-right text-slate-100">
                     {formatCurrency(
                       Number(meta.month2_total_amount || 0) -
                         Number(meta.month1_total_amount || 0)
                     )}
                   </td>
-                  <td className="px-3 py-2 text-right">—</td>
+                  <td className="px-3 py-2 text-right text-slate-100">—</td>
                 </tr>
               )}
             </tbody>
@@ -255,10 +310,9 @@ function ItemMonthlyComparisonTable({ token }) {
         </div>
       )}
 
-      <p className="text-xs text-gray-500 mt-2">
+      <p className="text-xs text-slate-300 mt-1">
         La diferencia de monto y de cantidad se calculan como Mes 2 − Mes 1.
-        Los montos incluyen ITBIS según la configuración del artículo. Usa los
-        filtros de meses para enfocar tu análisis.
+        Los montos incluyen ITBIS según la configuración del artículo.
       </p>
     </div>
   );

@@ -120,7 +120,7 @@ function Budgets({ token }) {
         space-y-4
       "
     >
-      <h2 className="text-2xl font-bold mb-1 text-slate-200">
+      <h2 className="text-2xl font-bold mb-1 text-[#f6e652]">
         Flujos Personales
       </h2>
       <p className="text-sm text-slate-400 mb-4">

@@ -51,71 +51,112 @@ function TopItemsByCategoryChart({ token, categories = [] }) {
   const selectedCategoryName =
     expenseCategories.find((c) => c.id === selectedCategoryId)?.name || "—";
 
-  // Ancho dinámico para los labels del eje Y (nombre del ítem)
-  const getLabelWidth = () => {
-    if (!data || data.length === 0) return 80;
-    const longest = Math.max(
-      ...data.map((d) => (d.item ? d.item.length : 0))
-    );
-    // Aprox 6px por carácter, acotado entre 80 y 200
-    return Math.min(200, Math.max(80, longest * 6));
-  };
-
-  // Altura dinámica según cantidad de ítems
-  const getChartHeight = () => {
-    const perBar = 28; // px por barra
-    const base = 80;   // margen extra
-    const count = data?.length || 1;
-    return Math.max(260, base + count * perBar);
-  };
-
-  const labelWidth = getLabelWidth();
-
   const formatMoney = (v, decimals = 2) => {
     const num = typeof v === "number" ? v : Number(v ?? 0);
     if (Number.isNaN(num)) return "RD$ 0.00";
     return `RD$ ${num.toFixed(decimals)}`;
   };
 
-  // Tick custom para que los nombres se lean bien
+  // Ancho dinámico para los labels del eje Y (nombre del ítem)
+  const getLabelWidth = () => {
+    if (!data || data.length === 0) return 80;
+    const longest = Math.max(
+      ...data.map((d) => (d.item ? d.item.length : 0))
+    );
+    return Math.min(220, Math.max(80, longest * 7)); // un poco más espacioso en dark
+  };
+
+  // Altura dinámica según cantidad de ítems
+  const getChartHeight = () => {
+    const perBar = 28; // px por barra
+    const base = 80; // margen extra
+    const count = data?.length || 1;
+    return Math.max(260, base + count * perBar);
+  };
+
+  const labelWidth = getLabelWidth();
+
+  // Tick custom del eje Y (izquierda)
   const CategoryTick = ({ x, y, payload }) => (
     <text
       x={x}
       y={y}
       dy={4}
       textAnchor="end"
-      fontSize={11}
-      fill="#374151"
+      fontSize={13}
+      fill="#e5e7eb"
     >
       {payload.value}
     </text>
   );
+
+  // Label custom al final de la barra (mismo patrón que TopVariableCategories)
+  const CustomRightLabel = (props) => {
+    const { x, y, width, value } = props;
+    if (value == null) return null;
+
+    const textX = x + width + 8; // fin de la barra + padding
+    const textY = y + 10; // centrado vertical aproximado
+
+    return (
+      <text
+        x={textX}
+        y={textY}
+        fill="#e5e7eb"
+        fontSize={13}
+        fontWeight={600}
+        textAnchor="start"
+        dominantBaseline="middle"
+      >
+        {formatMoney(value, 0)}
+      </text>
+    );
+  };
 
   const handleLimitChange = (e) => {
     const value = Number(e.target.value);
     if (!value || value < 1) {
       setLimit(10);
     } else {
-      setLimit(Math.min(value, 50)); // por si quieres poner un máximo razonable
+      setLimit(Math.min(value, 50));
     }
   };
 
   return (
-    <div className="bg-white p-4 rounded shadow">
-      <h3 className="font-semibold mb-3 text-gray-700 text-sm sm:text-base">
+    <div
+      className="
+        rounded-2xl p-6
+        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950
+        border border-slate-800
+        shadow-[0_16px_40px_rgba(0,0,0,0.85)]
+        space-y-4
+      "
+    >
+      <h3 className="font-semibold mb-1 text-slate-100 text-sm sm:text-base">
         Top {limit} ítems por gasto en la categoría:{" "}
-        <span className="font-bold">{selectedCategoryName}</span> ({year})
+        <span className="font-bold text-emerald-300">
+          {selectedCategoryName}
+        </span>{" "}
+        <span className="text-slate-400">({year})</span>
       </h3>
+      <p className="text-xs sm:text-sm text-slate-400 mb-2">
+        Se muestran solo categorías de tipo gasto. Los ítems se ordenan por
+        dinero gastado dentro de la categoría seleccionada y año indicado.
+      </p>
 
       {/* Controles responsivos */}
-      <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-4 sm:items-center">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 mb-3 sm:items-center text-xs sm:text-sm text-slate-200">
         {/* Categoría */}
         <div className="flex items-center gap-2">
-          <span className="text-xs sm:text-sm text-gray-700">Categoría:</span>
+          <span className="text-slate-300">Categoría:</span>
           <select
             value={selectedCategoryId}
             onChange={(e) => setSelectedCategoryId(e.target.value)}
-            className="border border-gray-300 rounded px-2 py-1 text-xs sm:text-sm"
+            className="
+              border border-slate-700 rounded-lg px-2 py-1
+              bg-slate-900 text-slate-100
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+            "
           >
             {expenseCategories.length === 0 && (
               <option value="">No hay categorías de gasto</option>
@@ -131,34 +172,42 @@ function TopItemsByCategoryChart({ token, categories = [] }) {
 
         {/* Año */}
         <div className="flex items-center gap-2">
-          <span className="text-xs sm:text-sm text-gray-700">Año:</span>
+          <span className="text-slate-300">Año:</span>
           <input
             type="number"
             value={year}
             onChange={(e) =>
               setYear(Number(e.target.value) || new Date().getFullYear())
             }
-            className="border border-gray-300 rounded px-2 py-1 w-24 text-xs sm:text-sm"
+            className="
+              border border-slate-700 rounded-lg px-2 py-1 w-24
+              bg-slate-900 text-slate-100
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+            "
             min="2000"
           />
         </div>
 
         {/* Límite (Top N) */}
         <div className="flex items-center gap-2">
-          <span className="text-xs sm:text-sm text-gray-700">Top:</span>
+          <span className="text-slate-300">Top:</span>
           <input
             type="number"
             min={1}
             max={50}
             value={limit}
             onChange={handleLimitChange}
-            className="border border-gray-300 rounded px-2 py-1 w-20 text-xs sm:text-sm"
+            className="
+              border border-slate-700 rounded-lg px-2 py-1 w-20
+              bg-slate-900 text-slate-100
+              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+            "
           />
         </div>
       </div>
 
       {data.length === 0 ? (
-        <p className="text-xs sm:text-sm text-gray-500">
+        <p className="text-xs sm:text-sm text-slate-500">
           No hay datos disponibles para esta categoría, año y límite.
         </p>
       ) : (
@@ -166,12 +215,14 @@ function TopItemsByCategoryChart({ token, categories = [] }) {
           <BarChart
             data={data}
             layout="vertical"
-            margin={{ top: 16, right: 24, bottom: 16, left: 8 }}
+            margin={{ top: 16, right: 32, bottom: 16, left: 8 }}
           >
-            <CartesianGrid strokeDasharray="3 3" />
+            <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
             <XAxis
               type="number"
-              domain={[0, (max) => max * 1.1]} // un poco de aire a la derecha
+              domain={[0, (max) => max * 1.1]}
+              stroke="#94a3b8"
+              tick={{ fill: "#cbd5e1", fontSize: 11 }}
             />
             <YAxis
               dataKey="item"
@@ -190,24 +241,23 @@ function TopItemsByCategoryChart({ token, categories = [] }) {
                 return [value, name];
               }}
               labelFormatter={(label) => `Artículo: ${label}`}
+              contentStyle={{
+                backgroundColor: "#020617",
+                border: "1px solid #4b5563",
+                color: "#e5e7eb",
+                borderRadius: "0.5rem",
+                boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
+                fontSize: "0.8rem",
+              }}
+              itemStyle={{ color: "#e5e7eb" }}
+              labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
             />
-            <Bar dataKey="total_spent" fill="#6366f1">
-              <LabelList
-                dataKey="total_spent"
-                position="right"
-                formatter={(v) => formatMoney(v, 0)}
-                style={{ fontSize: 11 }}
-              />
+            <Bar dataKey="total_spent" fill="#6366f1" radius={[4, 4, 4, 4]}>
+              <LabelList dataKey="total_spent" content={<CustomRightLabel />} />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
       )}
-
-      <p className="text-xs text-gray-500 mt-2">
-        Solo se muestran categorías de tipo gasto. El gráfico ordena los ítems
-        por dinero gastado dentro de la categoría seleccionada en el año y
-        límite indicados.
-      </p>
     </div>
   );
 }
