@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Modal from "../components/Modal"; // ajusta la ruta según tu estructura
+import ImportShoppingListModal from "../components/ImportShoppingListModal";
 
 function Transactions({ token }) {
   const [amount, setAmount] = useState("");
@@ -25,6 +26,9 @@ function Transactions({ token }) {
 
   const [recurrence, setRecurrence] = useState("");
   const [recurrenceEndDate, setRecurrenceEndDate] = useState("");
+
+  // Modal Lista de compras
+  const [showImportShoppingModal, setShowImportShoppingModal] = useState(false);
 
   // Modal de detalle de lista de compras
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -308,16 +312,50 @@ function Transactions({ token }) {
         onSubmit={handleSubmit}
         className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3"
       >
-        <div className="col-span-full">
-          <label className="inline-flex items-center gap-2 text-sm text-slate-300">
+        <div className="col-span-full space-y-3 py-3 px-4 rounded-xl bg-slate-900/40 border border-slate-800">
+          {/* Checkbox principal */}
+          <label className="inline-flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
               checked={isShoppingList}
               onChange={(e) => setIsShoppingList(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500/70"
+              className="
+        h-4 w-4 rounded 
+        border-slate-600 bg-slate-900 
+        text-emerald-500 focus:ring-emerald-500/70
+      "
             />
-            Esta transacción es una lista de compra
+            <span className="text-sm font-medium text-slate-200">
+              Esta transacción es una{" "}
+              <span className="text-emerald-300">lista de compra</span>
+            </span>
           </label>
+
+          {/* Contenido que aparece al activar */}
+          {isShoppingList && (
+            <div className="pl-7">
+              <button
+                type="button"
+                onClick={() => setShowImportShoppingModal(true)}
+                className="
+          inline-flex items-center gap-2
+          px-3 py-2 text-sm font-semibold rounded-lg
+          bg-indigo-600 text-white
+          shadow-[0_0_10px_rgba(99,102,241,0.4)]
+          hover:brightness-110 active:scale-95
+          transition-all
+        "
+              >
+                <span className="text-base">📥</span>
+                <span>Importar lista de compra desde archivo</span>
+              </button>
+
+              <p className="text-xs text-slate-400 mt-2">
+                Puedes cargar un archivo CSV con los artículos y precios para
+                generar una lista de compra automáticamente.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Monto */}
@@ -652,9 +690,7 @@ function Transactions({ token }) {
 
       {/* Filtros de transacciones */}
       <div className="mb-4 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-        <h3 className="text-sm font-semibold text-slate-200 mb-3">
-          Filtros
-        </h3>
+        <h3 className="text-sm font-semibold text-slate-200 mb-3">Filtros</h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Descripción */}
@@ -1138,6 +1174,32 @@ function Transactions({ token }) {
           </div>
         )}
       </Modal>
+
+      <ImportShoppingListModal
+        isOpen={showImportShoppingModal}
+        onClose={() => setShowImportShoppingModal(false)}
+        items={items}
+        api={api}
+        token={token}
+        meta={{
+          account_id: accountId,
+          category_id: categoryId,
+          date,
+          description,
+          discount,
+        }}
+        onImported={async (data) => {
+          // data.transaction tiene la transacción creada
+          // refrescamos la lista de transacciones y reseteamos el form
+          await fetchTransactions();
+          setAmount("");
+          setDescription("");
+          setIsShoppingList(false);
+          setArticleLines([{ item_id: "", quantity: 1 }]);
+          setDiscount(0);
+          setShowImportShoppingModal(false);
+        }}
+      />
     </div>
   );
 }

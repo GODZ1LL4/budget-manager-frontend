@@ -29,6 +29,10 @@ function Items({ token }) {
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
 
+  //Modal Confirmacion de borrado precio
+  const [showDeletePriceModal, setShowDeletePriceModal] = useState(false);
+  const [priceToDelete, setPriceToDelete] = useState(null);
+
   const api = import.meta.env.VITE_API_URL;
 
   const formatCurrency = (amount) =>
@@ -154,8 +158,19 @@ function Items({ token }) {
         prev ? { ...prev, latest_price: numericPrice } : prev
       );
       toast.success("Precio agregado correctamente");
-    } catch {
-      toast.error("Error al agregar precio");
+    } catch (err) {
+      const code = err?.response?.data?.error;
+      const message = err?.response?.data?.message;
+
+      if (code === "DUPLICATE_PRICE_FOR_DATE") {
+        toast.error(
+          message || "Ya existe un precio para este artículo en esa fecha."
+        );
+      } else if (message) {
+        toast.error(message);
+      } else {
+        toast.error("Error al agregar precio");
+      }
     }
   };
 
@@ -182,6 +197,71 @@ function Items({ token }) {
         );
       } else {
         toast.error("Error al eliminar artículo");
+      }
+    }
+  };
+
+  const handleDeletePrice = async (priceRecord) => {
+    if (!selectedItem || !priceRecord) return;
+
+    // Si quieres una confirmación rápida:
+    const ok = window.confirm(
+      `¿Seguro que deseas eliminar el precio del ${priceRecord.date}?`
+    );
+    if (!ok) return;
+
+    try {
+      await axios.delete(`${api}/item-prices/${priceRecord.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      toast.success("Precio eliminado correctamente");
+
+      // refrescamos historial y lista principal
+      await fetchPrices(selectedItem.id);
+      await fetchItems();
+    } catch (err) {
+      const code = err?.response?.data?.error;
+      const message = err?.response?.data?.message;
+
+      if (code === "PRICE_NOT_FOUND") {
+        toast.error(message || "El precio ya no existe.");
+      } else {
+        toast.error("Error al eliminar precio");
+      }
+    }
+  };
+
+  const handleAskDeletePrice = (priceRecord) => {
+    setPriceToDelete(priceRecord);
+    setShowDeletePriceModal(true);
+  };
+
+  const handleConfirmDeletePrice = async () => {
+    if (!selectedItem || !priceToDelete) return;
+
+    try {
+      await axios.delete(`${api}/item-prices/${priceToDelete.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      toast.success("Precio eliminado correctamente");
+
+      setShowDeletePriceModal(false);
+      setPriceToDelete(null);
+
+      await fetchPrices(selectedItem.id);
+      await fetchItems();
+    } catch (err) {
+      const code = err?.response?.data?.error;
+      const message = err?.response?.data?.message;
+
+      if (code === "PRICE_NOT_FOUND") {
+        toast.error(message || "El precio ya no existe.");
+      } else if (code === "FORBIDDEN") {
+        toast.error(message || "No tienes permiso para eliminar este precio.");
+      } else {
+        toast.error("Error al eliminar precio");
       }
     }
   };
@@ -565,6 +645,8 @@ function Items({ token }) {
                 <button
                   onClick={() => {
                     setSelectedItem(item);
+                    setPrice(""); // 👈 limpiamos el campo precio
+                    setDate(new Date().toISOString().split("T")[0]); // opcional, refrescar fecha
                     fetchPrices(item.id);
                     setShowPriceModal(true);
                   }}
@@ -572,6 +654,7 @@ function Items({ token }) {
                 >
                   Ver precios
                 </button>
+
                 <button
                   onClick={() => {
                     setItemToEdit({
@@ -806,15 +889,35 @@ function Items({ token }) {
               <li
                 key={p.id}
                 className="
-                  flex justify-between
-                  bg-slate-900/50 border border-slate-800
-                  px-3 py-2 rounded-lg
-                "
+          flex items-center justify-between gap-3
+          bg-slate-900/50 border border-slate-800
+          px-3 py-2 rounded-lg
+        "
               >
-                <span className="text-slate-400">{p.date}</span>
-                <strong className="text-emerald-300">
-                  {formatCurrency(p.price)}
-                </strong>
+                {/* Columna fecha */}
+                <span className="text-sm text-slate-300">{p.date}</span>
+
+                {/* Columna precio + botón eliminar */}
+                <div className="flex items-center gap-3">
+                  <strong className="text-emerald-300">
+                    {formatCurrency(p.price)}
+                  </strong>
+
+                  <button
+                    type="button"
+                    onClick={() => handleAskDeletePrice(p)}
+                    className="
+              text-xs font-semibold
+              px-3 py-1 rounded-full
+              bg-rose-600/90 text-white
+              hover:bg-rose-500
+              shadow-sm
+              transition-colors
+            "
+                  >
+                    Eliminar
+                  </button>
+                </div>
               </li>
             ))
           )}
@@ -1019,6 +1122,69 @@ function Items({ token }) {
             onClick={() => {
               setShowDeleteModal(false);
               setItemToDelete(null);
+            }}
+          >
+            Cancelar
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={showDeletePriceModal}
+        onClose={() => {
+          setShowDeletePriceModal(false);
+          setPriceToDelete(null);
+        }}
+        title="Eliminar precio"
+      >
+        <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+          {priceToDelete ? (
+            <>
+              ¿Seguro que deseas eliminar el precio del día{" "}
+              <span className="font-semibold">{priceToDelete.date}</span> por{" "}
+              <span className="font-semibold">
+                {formatCurrency(priceToDelete.price)}
+              </span>
+              ?
+            </>
+          ) : (
+            ""
+          )}
+          <br />
+          <span className="text-slate-500 text-xs">
+            Esta acción no se puede deshacer.
+          </span>
+        </p>
+
+        <div className="flex justify-end gap-3">
+          <button
+            className="
+        px-4 py-2 text-sm font-semibold rounded-lg
+        bg-gradient-to-r from-rose-600 via-rose-500 to-rose-400
+        text-white
+        shadow-[0_0_12px_rgba(244,63,94,0.35)]
+        hover:brightness-110
+        active:scale-95
+        transition-all
+      "
+            onClick={handleConfirmDeletePrice}
+          >
+            Eliminar
+          </button>
+
+          <button
+            className="
+        px-4 py-2 text-sm font-semibold rounded-lg
+        border border-slate-600
+        bg-slate-900
+        text-slate-300
+        hover:bg-slate-800 hover:border-slate-500
+        active:scale-95
+        transition-all
+      "
+            onClick={() => {
+              setShowDeletePriceModal(false);
+              setPriceToDelete(null);
             }}
           >
             Cancelar

@@ -16,13 +16,26 @@ function TransactionsCalendar({ token }) {
       })
       .then((res) => {
         const data = res.data.data || [];
-        const mapped = data.map((tx) => ({
-          title: `${tx.type === "income" ? "+" : "-"}RD$ ${tx.amount.toFixed(
-            2
-          )} — ${tx.description || "Sin descripción"}`,
-          date: tx.date,
-          color: tx.type === "income" ? "#10b981" : "#ef4444",
-        }));
+        const mapped = data.map((tx) => {
+          let color;
+        
+          if (tx.type === "income") {
+            color = "#10b981"; // verde
+          } else if (tx.type === "expense") {
+            color = "#ef4444"; // rojo
+          } else if (tx.type === "transfer") {
+            color = "#64748b"; // 🟦 gris neutral (slate-500)
+          }
+        
+          return {
+            title: `${tx.type === "income" ? "+" : tx.type === "expense" ? "-" : ""}RD$ ${tx.amount.toFixed(
+              2
+            )} — ${tx.description || "Sin descripción"}`,
+            date: tx.date,
+            color,
+          };
+        });
+        
 
         setEvents(mapped);
       })

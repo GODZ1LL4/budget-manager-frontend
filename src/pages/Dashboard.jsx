@@ -452,7 +452,7 @@ function Dashboard({ token }) {
 
       {/* --- BLOQUE: Análisis detallado por artículo --- */}
 
-      <CollapseSection title="16- Top categorías variables con más gasto">
+      <CollapseSection title="16- Top categorías con más gasto">
         <TopVariableCategoriesChart token={token} />
       </CollapseSection>
 

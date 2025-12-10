@@ -30,7 +30,14 @@ function Sparkline({ values = [], width = 240, height = 48, padding = 6 }) {
     const x2 = width - padding;
     return (
       <svg width={width} height={height} className="w-full h-12">
-        <line x1={x1} y1={y} x2={x2} y2={y} stroke="currentColor" strokeWidth="2" />
+        <line
+          x1={x1}
+          y1={y}
+          x2={x2}
+          y2={y}
+          stroke="currentColor"
+          strokeWidth="2"
+        />
       </svg>
     );
   }
@@ -47,7 +54,12 @@ function Sparkline({ values = [], width = 240, height = 48, padding = 6 }) {
 
   return (
     <svg width={width} height={height} className="w-full h-12">
-      <polyline fill="none" stroke="currentColor" strokeWidth="2" points={points} />
+      <polyline
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        points={points}
+      />
     </svg>
   );
 }
@@ -766,16 +778,23 @@ function ScenarioManager({ token }) {
         }}
         loading={importLoading}
         preview={importPreview}
-        onConfirm={async ({ strategy }) => {
+        onConfirm={async ({ selectedKeys }) => {
           try {
             const res = await axios.post(
               `${api}/scenarios/${selectedScenario.id}/import-to-budgets`,
-              { scope: importScope, strategy },
+              {
+                scope: importScope,
+                selected_keys: selectedKeys,
+              },
               { headers: { Authorization: `Bearer ${token}` } }
             );
-            const { inserted, updated, skipped } = res.data.data || {};
+
+            const { inserted, updated, skipped, selected } =
+              res.data.data || {};
             toast.success(
-              `Presupuesto importado ✅\nInsertados: ${inserted}, Actualizados: ${updated}, Omitidos: ${skipped}`,
+              `Presupuesto importado ✅
+Seleccionados: ${selected}
+Insertados: ${inserted}, Actualizados: ${updated}, Omitidos: ${skipped}`,
               { duration: 5000 }
             );
 
