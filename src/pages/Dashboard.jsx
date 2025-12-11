@@ -24,6 +24,16 @@ import TopItemsByCategoryChart from "../components/reports/TopItemsByCategoryCha
 import ItemsAnnualSummaryTable from "../components/reports/ItemsAnnualSummaryTable";
 import BurnRateChart from "../components/reports/BurnRateChart";
 
+import ExpenseByWeekdayChart from "../components/reports/ExpenseByWeekdayChart";
+
+import BudgetCoverageChart from "../components/reports/BudgetCoverageChart";
+import ProjectedVsActualExpenseByCategoryChart from "../components/reports/ProjectedVsActualExpenseByCategoryChart";
+import UnusualExpensesTable from "../components/reports/UnusualExpensesTable";
+import CategoryMonthlyHeatmap from "../components/reports/CategoryMonthlyHeatmap";
+import RecurringExpensePatternsTable from "../components/reports/RecurringExpensePatternsTable";
+import ExpenseIntervalsByCategoryTable from "../components/reports/ExpenseIntervalsByCategoryTable";
+import RecurringItemPatternsTable from "../components/reports/RecurringItemPatternsTable";
+
 function Dashboard({ token }) {
   const [data, setData] = useState(null);
   const api = import.meta.env.VITE_API_URL;
@@ -380,11 +390,19 @@ function Dashboard({ token }) {
         </ChromeInfoCard>
       </div>
 
+        {/* -------------------------------------------------- */}
+      {/* 🗓️  BLOQUE 1 — Visión General */}
+      {/* -------------------------------------------------- */}
+
       <CollapseSection title="1- Calendario financiero">
         <TransactionsCalendar token={token} />
       </CollapseSection>
 
-      <CollapseSection title="2- Distribución de gastos por categoría">
+      <CollapseSection title="2- Saldos por cuenta">
+        <AccountBalancesChart token={token} />
+      </CollapseSection>
+
+      <CollapseSection title="3- Distribución de gastos por categoría">
         <ExpenseDistributionByCategoryChart
           expensesByCategory={data.expensesByCategory}
           categoryNameMap={data.categoryNameMap}
@@ -392,83 +410,119 @@ function Dashboard({ token }) {
         />
       </CollapseSection>
 
-      <CollapseSection title="3- Comparativa de saldos por cuenta">
-        <AccountBalancesChart token={token} />
+      <CollapseSection title="4- Hábitos de gasto por día de la semana">
+        <ExpenseByWeekdayChart token={token} />
       </CollapseSection>
 
-      {/* --- BLOQUE: Visión mensual y control de presupuesto --- */}
+      {/* -------------------------------------------------- */}
+      {/* 📆 BLOQUE 2 — Presupuesto y desempeño mensual */}
+      {/* -------------------------------------------------- */}
 
-      <CollapseSection title="4- Balance de Ingreso vs Gasto">
+      <CollapseSection title="5- Balance de Ingreso vs Gasto (mensual)">
         <MonthlyIncomeVsExpenseChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="5- Presupuesto vs Gasto por categoría">
-        <BudgetVsActualChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="6- Top categorías con gasto excesivo">
-        <OverBudgetChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="7- Ritmo de gasto del mes (Burn Rate)">
+      <CollapseSection title="6- Ritmo de gasto del mes (Burn Rate)">
         <BurnRateChart token={token} />
       </CollapseSection>
 
-      {/* --- BLOQUE: Comparativos por categoría / año --- */}
+      <CollapseSection title="7- Presupuesto vs Gasto por categoría (mes actual)">
+        <BudgetVsActualChart token={token} />
+      </CollapseSection>
 
-      <CollapseSection title="8- Comparativo mensual por categoría">
+      <CollapseSection title="8- Top categorías con gasto excesivo">
+        <OverBudgetChart token={token} />
+      </CollapseSection>
+
+      <CollapseSection title="9- Calidad de presupuestos (cobertura)">
+        <BudgetCoverageChart token={token} />
+      </CollapseSection>
+
+      <CollapseSection title="10- Proyección vs realidad por categoría">
+        <ProjectedVsActualExpenseByCategoryChart token={token} />
+      </CollapseSection>
+
+      {/* -------------------------------------------------- */}
+      {/* 📊 BLOQUE 3 — Comparativos históricos y vista anual */}
+      {/* -------------------------------------------------- */}
+
+      <CollapseSection title="11- Heatmap de gasto por categoría y mes">
+        <CategoryMonthlyHeatmap token={token} />
+      </CollapseSection>
+
+      <CollapseSection title="12- Comparativo mensual por categoría">
         <CategoryMonthlyComparisonTable token={token} />
       </CollapseSection>
 
-      <CollapseSection title="9- Comparativo mensual por artículo">
+      <CollapseSection title="13- Comparativo mensual por artículo">
         <ItemMonthlyComparisonTable token={token} />
       </CollapseSection>
 
-      <CollapseSection title="10- Variaciones anuales por categoría">
+      <CollapseSection title="14- Variaciones anuales por categoría">
         <CategoryVariationChart token={token} categories={categories} />
       </CollapseSection>
 
-      <CollapseSection title="11- Resumen Anual: Presupuesto vs Gasto Total">
+      <CollapseSection title="15- Resumen anual: Presupuesto vs Gasto Total">
         <BudgetVsActualSummaryChart token={token} />
       </CollapseSection>
 
-      {/* --- BLOQUE: Estabilidad + Proyecciones + Metas --- */}
+      {/* -------------------------------------------------- */}
+      {/* ⚖️ BLOQUE 4 — Estabilidad, patrones y anomalías */}
+      {/* -------------------------------------------------- */}
 
-      <CollapseSection title="12- Gastos por tipo de estabilidad">
+      <CollapseSection title="16- Gastos por tipo de estabilidad">
         <ExpenseByStabilityChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="13- Proyección de Gastos por Categoría y Estabilidad">
+      <CollapseSection title="17- Intervalo entre gastos por categoría">
+        <ExpenseIntervalsByCategoryTable token={token} />
+      </CollapseSection>
+
+      <CollapseSection title="18- Patrones de gasto recurrente no marcados">
+        <RecurringExpensePatternsTable token={token} />
+      </CollapseSection>
+
+      <CollapseSection title="19- Proyección de Gastos por Categoría y Estabilidad">
         <ProjectedExpenseByCategoryChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="14- Proyección de Ingresos por Categoría y Estabilidad">
+      <CollapseSection title="20- Proyección de Ingresos por Categoría y Estabilidad">
         <ProjectedIncomeByCategoryChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="15- Progreso de metas de ahorro">
+      <CollapseSection title="21- Gastos atípicos del mes">
+        <UnusualExpensesTable token={token} />
+      </CollapseSection>
+
+      <CollapseSection title="22- Progreso de metas de ahorro">
         <GoalsProgressChart token={token} />
       </CollapseSection>
 
-      {/* --- BLOQUE: Análisis detallado por artículo --- */}
+      {/* -------------------------------------------------- */}
+      {/* 🛒 BLOQUE 5 — Detalle por categorías variables e ítems */}
+      {/* -------------------------------------------------- */}
 
-      <CollapseSection title="16- Top categorías con más gasto">
+      <CollapseSection title="23- Top categorías con más gasto (variables)">
         <TopVariableCategoriesChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="17- Tendencia de precios por artículo">
+      <CollapseSection title="24- Tendencia de precios por artículo">
         <ItemPriceTrendChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="18- Tendencia mensual por artículo">
+      <CollapseSection title="25- Tendencia mensual por artículo">
         <ItemTrendChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="19- Top ítems por categoría (anual)">
+      <CollapseSection title="26- Patrones de compra por artículo">
+        <RecurringItemPatternsTable token={token} />
+      </CollapseSection>
+
+      <CollapseSection title="27- Top ítems por categoría (anual)">
         <TopItemsByCategoryChart token={token} categories={categories} />
       </CollapseSection>
 
-      <CollapseSection title="20- Resumen anual de artículos (mixto)">
+      <CollapseSection title="28- Resumen anual de artículos (mixto)">
         <ItemsAnnualSummaryTable token={token} />
       </CollapseSection>
 

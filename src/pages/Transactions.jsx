@@ -59,6 +59,18 @@ function Transactions({ token }) {
     return `${year}-${month}-${day}`;
   });
 
+  //Editar
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState(null);
+  const [editForm, setEditForm] = useState({
+    amount: "",
+    type: "expense",
+    account_id: "",
+    category_id: "",
+    description: "",
+    date: "",
+  });
+
   const api = import.meta.env.VITE_API_URL;
 
   const fetchTransactions = async (customFilters) => {
@@ -85,8 +97,6 @@ function Transactions({ token }) {
       if (categoryId) params.category_id = categoryId;
       if (dateFrom) params.date_from = dateFrom;
       if (dateTo) params.date_to = dateTo;
-
-      console.log("➡️ Filtros enviados a /transactions:", params);
 
       const res = await axios.get(`${api}/transactions`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -286,6 +296,85 @@ function Transactions({ token }) {
       setFilterCategoryId("");
     }
   }, [filterType, categories, filterCategoryId]);
+
+  //editar tranx
+  const openEdit = (tx) => {
+    setEditingTx(tx);
+    setIsEditOpen(true);
+  };
+
+  const closeEdit = () => {
+    setIsEditOpen(false);
+    setEditingTx(null);
+  };
+
+  const handleEditChange = (field, value) => {
+    setEditForm((prev) => {
+      const next = { ...prev, [field]: value };
+
+      // 💡 Si cambió el tipo, verificamos si la categoría sigue siendo válida
+      if (field === "type") {
+        const currentCategory = categories.find(
+          (c) => c.id === prev.category_id
+        );
+
+        // Si la categoría actual existe y su type NO coincide con el nuevo tipo → la limpiamos
+        if (currentCategory && currentCategory.type !== value) {
+          next.category_id = "";
+        }
+      }
+
+      return next;
+    });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingTx) return;
+
+    try {
+      const isShoppingListTx = editingTx.is_shopping_list === true;
+
+      const payload = {
+        // siempre podemos cambiar estos:
+        account_id: editForm.account_id,
+        category_id: editForm.category_id,
+        description: editForm.description,
+        date: editForm.date,
+        recurrence: editingTx.recurrence || null,
+        recurrence_end_date: editingTx.recurrence_end_date || null,
+      };
+
+      // solo si NO es lista de compras permitimos editar monto y tipo
+      if (!isShoppingListTx) {
+        payload.amount = parseFloat(editForm.amount || 0);
+        payload.type = editForm.type;
+      }
+
+      await axios.put(`${api}/transactions/${editingTx.id}`, payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      await fetchTransactions();
+      closeEdit();
+    } catch (err) {
+      console.error("Error al actualizar transacción:", err);
+      alert("Error al actualizar transacción");
+    }
+  };
+
+  useEffect(() => {
+    if (editingTx) {
+      setEditForm({
+        amount: Number(editingTx.amount || 0).toFixed(2),
+        type: editingTx.type,
+        account_id: editingTx.account_id || "",
+        category_id: editingTx.category_id || "",
+        description: editingTx.description || "",
+        date: editingTx.date || new Date().toISOString().split("T")[0],
+      });
+    }
+  }, [editingTx]);
 
   return (
     <div
@@ -968,16 +1057,31 @@ function Transactions({ token }) {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => handleDelete(tx.id)}
-                  className="
-                    text-sm  font-semibold
-                    text-rose-400 hover:text-rose-300
-                    hover:underline transition-colors
-                  "
-                >
-                  Eliminar
-                </button>
+                <div className="flex gap-3">
+                  {tx.type !== "transfer" && (
+                    <button
+                      onClick={() => openEdit(tx)}
+                      className="
+      text-sm font-semibold
+      text-blue-400 hover:text-blue-300
+      hover:underline transition-colors
+    "
+                    >
+                      Editar
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => handleDelete(tx.id)}
+                    className="
+        text-sm font-semibold
+        text-rose-400 hover:text-rose-300
+        hover:underline transition-colors
+      "
+                  >
+                    Eliminar
+                  </button>
+                </div>
               </li>
             );
           })}
@@ -1200,6 +1304,216 @@ function Transactions({ token }) {
           setShowImportShoppingModal(false);
         }}
       />
+
+      {/* Modal de edición de transacción */}
+      <Modal
+        isOpen={isEditOpen}
+        onClose={closeEdit}
+        title={
+          editingTx
+            ? `Editar transacción — ${editingTx.date}`
+            : "Editar transacción"
+        }
+        size="md"
+      >
+        {!editingTx ? (
+          <p className="text-sm text-slate-300">Cargando...</p>
+        ) : (
+          <form onSubmit={handleEditSubmit} className="space-y-4 text-sm">
+            {editingTx.is_shopping_list && (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                🛒 Esta transacción es una <strong>lista de compra</strong>. El
+                monto total proviene del detalle de artículos y{" "}
+                <strong>no se puede editar aquí</strong>.
+              </div>
+            )}
+
+            {/* Monto */}
+            <div className="flex flex-col space-y-1">
+              <label className="text-sm font-medium text-slate-300">
+                Monto
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={editForm.amount}
+                onChange={(e) => handleEditChange("amount", e.target.value)}
+                readOnly={editingTx.is_shopping_list === true}
+                className={`
+            w-full rounded-lg px-3 py-2 text-sm border
+            ${
+              editingTx.is_shopping_list
+                ? "bg-slate-900/70 border-slate-800 text-slate-500 cursor-not-allowed"
+                : "bg-slate-900 border-slate-700 text-slate-100"
+            }
+            placeholder:text-slate-500
+            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+            transition-colors
+          `}
+              />
+            </div>
+
+            {/* Tipo */}
+            <div className="flex flex-col space-y-1">
+              <label className="text-sm font-medium text-slate-300">Tipo</label>
+              <select
+                value={editForm.type}
+                onChange={(e) => handleEditChange("type", e.target.value)}
+                disabled={editingTx.is_shopping_list === true}
+                className={`
+            w-full rounded-lg px-3 py-2 text-sm
+            ${
+              editingTx.is_shopping_list
+                ? "bg-slate-900/70 border-slate-800 text-slate-500 cursor-not-allowed"
+                : "bg-slate-900 border-slate-700 text-slate-100"
+            }
+            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+            transition-colors
+          `}
+              >
+                {/* 👇 Solo gasto / ingreso, sin transferencia */}
+                <option value="expense">Gasto</option>
+                <option value="income">Ingreso</option>
+              </select>
+            </div>
+
+            {/* Fecha */}
+            <div className="flex flex-col space-y-1">
+              <label className="text-sm font-medium text-slate-300">
+                Fecha
+              </label>
+              <input
+                type="date"
+                value={editForm.date}
+                onChange={(e) => handleEditChange("date", e.target.value)}
+                className="
+            w-full rounded-lg px-3 py-2 text-sm
+            bg-slate-900 border border-slate-700
+            text-slate-100
+            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+            transition-colors
+          "
+                required
+              />
+            </div>
+
+            {/* Cuenta */}
+            <div className="flex flex-col space-y-1">
+              <label className="text-sm font-medium text-slate-300">
+                Cuenta
+              </label>
+              <select
+                value={editForm.account_id}
+                onChange={(e) => handleEditChange("account_id", e.target.value)}
+                className="
+            w-full rounded-lg px-3 py-2 text-sm
+            bg-slate-900 border border-slate-700
+            text-slate-100
+            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+            transition-colors
+          "
+                required
+              >
+                <option value="">Selecciona una cuenta</option>
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Categoría */}
+            <div className="flex flex-col space-y-1">
+              <label className="text-sm font-medium text-slate-300">
+                Categoría
+              </label>
+              <select
+                value={editForm.category_id}
+                onChange={(e) =>
+                  handleEditChange("category_id", e.target.value)
+                }
+                className="
+            w-full rounded-lg px-3 py-2 text-sm
+            bg-slate-900 border border-slate-700
+            text-slate-100
+            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+            transition-colors
+          "
+                required
+              >
+                <option value="">Selecciona una categoría</option>
+                {categories
+                  .filter((cat) => {
+                    // 👇 Ahora filtra según el tipo seleccionado en el modal
+                    if (!editForm.type) return true;
+                    return cat.type === editForm.type;
+                  })
+                  .map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Descripción */}
+            <div className="flex flex-col space-y-1">
+              <label className="text-sm font-medium text-slate-300">
+                Descripción
+              </label>
+              <input
+                type="text"
+                value={editForm.description}
+                onChange={(e) =>
+                  handleEditChange("description", e.target.value)
+                }
+                className="
+            w-full rounded-lg px-3 py-2 text-sm
+            bg-slate-900 border border-slate-700
+            text-slate-100 placeholder:text-slate-500
+            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+            transition-colors
+          "
+                placeholder="Ejemplo: compra supermercado"
+              />
+            </div>
+
+            {/* Botones */}
+            <div className="flex justify-end gap-2 pt-2">
+              {/* ✅ Guardar primero */}
+              <button
+                type="submit"
+                className="
+            px-4 py-2 text-sm font-semibold rounded-lg
+            bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
+            text-slate-950
+            shadow-[0_0_14px_rgba(16,185,129,0.7)]
+            hover:brightness-110 active:scale-95
+            transition-all
+          "
+              >
+                Guardar cambios
+              </button>
+
+              <button
+                type="button"
+                onClick={closeEdit}
+                className="
+            px-4 py-2 text-sm font-semibold rounded-lg
+            border border-slate-600
+            bg-slate-900 text-slate-100
+            hover:bg-slate-800 hover:border-slate-500
+            active:scale-95
+            transition-all
+          "
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
     </div>
   );
 }
