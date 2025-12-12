@@ -13,13 +13,10 @@ function formatCurrencyDOP(value) {
 
 function formatDate(dateStr) {
   if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString("es-DO", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
+  const [y, m, d] = String(dateStr).split("-");
+  if (!y || !m || !d) return dateStr;
+  // dd/mm/yyyy
+  return `${d}/${m}/${y}`;
 }
 
 function ExpenseIntervalsByCategoryTable({ token }) {
