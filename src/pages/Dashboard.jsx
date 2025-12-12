@@ -510,7 +510,7 @@ function Dashboard({ token }) {
         <ItemPriceTrendChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="25- Tendencia mensual por artículo">
+      <CollapseSection title="25- Tendencia de consumo mensual por artículo">
         <ItemTrendChart token={token} />
       </CollapseSection>
 
