@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import Modal from "../components/Modal"; // ajusta el case si tu archivo es 'modal.jsx'
+import Modal from "../components/Modal";
 
 // 🔔 react-toastify
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 function Accounts({ token }) {
+  const api = import.meta.env.VITE_API_URL;
+
   const [name, setName] = useState("");
   const [accounts, setAccounts] = useState([]);
   const [editId, setEditId] = useState(null);
+
+  // balances map: { [accountId]: { current, reserved, available } }
   const [balances, setBalances] = useState({});
 
   const [showTransfer, setShowTransfer] = useState(false);
@@ -17,12 +21,10 @@ function Accounts({ token }) {
   const [tFromName, setTFromName] = useState("");
   const [tTo, setTTo] = useState("");
   const [tAmount, setTAmount] = useState("");
-  const [tDate, setTDate] = useState(
-    () => new Date().toISOString().split("T")[0]
-  );
+  const [tDate, setTDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [tDesc, setTDesc] = useState("");
   const [tLoading, setTLoading] = useState(false);
-  const [tError, setTError] = useState(""); // solo para errores del server (en el modal)
+  const [tError, setTError] = useState("");
 
   // Estados para el modal de eliminar
   const [showDelete, setShowDelete] = useState(false);
@@ -33,6 +35,7 @@ function Accounts({ token }) {
     setDeleteAcc(acc);
     setShowDelete(true);
   };
+
   const closeDelete = () => {
     if (!deleteLoading) {
       setShowDelete(false);
@@ -40,14 +43,12 @@ function Accounts({ token }) {
     }
   };
 
-  const api = import.meta.env.VITE_API_URL;
-
   const fetchAccounts = async () => {
     try {
       const res = await axios.get(`${api}/accounts`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setAccounts(res.data.data);
+      setAccounts(res.data.data || []);
     } catch {
       toast.error("Error al obtener cuentas");
     }
@@ -58,9 +59,20 @@ function Accounts({ token }) {
       const res = await axios.get(`${api}/accounts/balances`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setBalances(res.data.data);
-    } catch {
-      console.error("No se pudo cargar balances");
+
+      // res.data.data = array [{id, name, current_balance, reserved_total, available_balance}, ...]
+      const map = {};
+      for (const a of res.data.data || []) {
+        map[a.id] = {
+          current: Number(a.current_balance ?? 0),
+          reserved: Number(a.reserved_total ?? 0),
+          available: Number(a.available_balance ?? 0),
+        };
+      }
+      setBalances(map);
+    } catch (err) {
+      console.error("No se pudo cargar balances", err);
+      toast.error("Error al cargar saldos");
     }
   };
 
@@ -74,6 +86,7 @@ function Accounts({ token }) {
       toast.error("El nombre de la cuenta es obligatorio");
       return;
     }
+
     try {
       await axios.post(
         `${api}/accounts`,
@@ -83,8 +96,8 @@ function Accounts({ token }) {
       setName("");
       await reload();
       toast.success("Cuenta creada correctamente");
-    } catch {
-      toast.error("Error al crear cuenta");
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Error al crear cuenta");
     }
   };
 
@@ -93,6 +106,7 @@ function Accounts({ token }) {
       toast.error("El nombre de la cuenta es obligatorio");
       return;
     }
+
     try {
       await axios.put(
         `${api}/accounts/${id}`,
@@ -103,14 +117,15 @@ function Accounts({ token }) {
       setName("");
       await reload();
       toast.success("Cuenta actualizada");
-    } catch {
-      toast.error("Error al actualizar cuenta");
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Error al actualizar cuenta");
     }
   };
 
   const confirmDelete = async () => {
     if (!deleteAcc) return;
     setDeleteLoading(true);
+
     try {
       await axios.delete(`${api}/accounts/${deleteAcc.id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -131,9 +146,7 @@ function Accounts({ token }) {
   };
 
   useEffect(() => {
-    if (token) {
-      reload();
-    }
+    if (token) reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
@@ -147,12 +160,8 @@ function Accounts({ token }) {
     }
 
     const amountNum = Number(tAmount);
-    if (Number.isNaN(amountNum)) {
+    if (Number.isNaN(amountNum) || amountNum <= 0) {
       toast.error("Monto inválido.");
-      return;
-    }
-    if (amountNum <= 0) {
-      toast.error("El monto debe ser mayor que 0.");
       return;
     }
 
@@ -161,7 +170,10 @@ function Accounts({ token }) {
       return;
     }
 
-    const fromBalance = balances[tFrom] ?? 0;
+    // ✅ Decide regla: para transferir, valida contra saldo REAL (current)
+    // Si quieres validar contra disponible (por metas), cambia a `.available`
+    const fromBalance = balances[tFrom]?.current ?? 0;
+
     if (fromBalance < amountNum) {
       toast.error("Saldo insuficiente en la cuenta origen.");
       return;
@@ -169,6 +181,7 @@ function Accounts({ token }) {
 
     try {
       setTLoading(true);
+
       await axios.post(
         `${api}/accounts/transfer`,
         {
@@ -181,12 +194,9 @@ function Accounts({ token }) {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      const toName =
-        accounts.find((a) => a.id === tTo)?.name || "cuenta destino";
+      const toName = accounts.find((a) => a.id === tTo)?.name || "cuenta destino";
       toast.success(
-        `Transferencia realizada: ${amountNum.toFixed(
-          2
-        )} DOP de ${tFromName} a ${toName}`
+        `Transferencia realizada: ${amountNum.toFixed(2)} DOP de ${tFromName} a ${toName}`
       );
 
       setShowTransfer(false);
@@ -197,14 +207,15 @@ function Accounts({ token }) {
       await reload();
     } catch (err) {
       console.error(err);
-      const msg =
-        err?.response?.data?.error || "No se pudo realizar la transferencia.";
+      const msg = err?.response?.data?.error || "No se pudo realizar la transferencia.";
       setTError(msg);
       toast.error(msg);
     } finally {
       setTLoading(false);
     }
   };
+
+  const fmt = (n) => Number(n ?? 0).toFixed(2);
 
   return (
     <div
@@ -217,21 +228,18 @@ function Accounts({ token }) {
         space-y-4
       "
     >
+      <ToastContainer position="top-right" autoClose={2500} />
+
       <h2 className="text-2xl font-bold mb-1 text-[#f6e652]">Cuentas</h2>
       <p className="text-sm text-slate-400 mb-4">
-        Gestioná tus cuentas personales o bancarias. El saldo se calcula
-        automáticamente a partir de tus transacciones.
+        Gestioná tus cuentas. El saldo se calcula automáticamente a partir de tus transacciones.
+        Las metas reservan fondos y afectan el disponible.
       </p>
 
       {/* Formulario crear / editar nombre */}
-      <form
-        onSubmit={handleCreate}
-        className="flex flex-wrap gap-3 mb-6 items-end"
-      >
+      <form onSubmit={handleCreate} className="flex flex-wrap gap-3 mb-6 items-end">
         <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1 text-slate-300">
-            Nombre de la cuenta
-          </label>
+          <label className="text-sm font-medium mb-1 text-slate-300">Nombre de la cuenta</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -245,6 +253,7 @@ function Accounts({ token }) {
             "
           />
         </div>
+
         <button
           type="submit"
           className="
@@ -265,136 +274,148 @@ function Accounts({ token }) {
             <tr>
               <th className="p-2 border-b border-slate-800">Nombre</th>
               <th className="p-2 border-b border-slate-800">Saldo</th>
-              <th className="p-2 border-b border-slate-800 text-center">
-                Acciones
-              </th>
+              <th className="p-2 border-b border-slate-800 text-center">Acciones</th>
             </tr>
           </thead>
+
           <tbody>
-            {accounts.map((acc, rowIdx) => (
-              <tr
-                key={acc.id}
-                className={
-                  rowIdx % 2 === 0
-                    ? "bg-slate-950/40 hover:bg-slate-900/80"
-                    : "bg-slate-900/60 hover:bg-slate-900"
-                }
-              >
-                {editId === acc.id ? (
-                  <>
-                    <td className="p-2 border-t border-slate-800 align-middle">
-                      <input
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="
-                          border border-slate-700 bg-slate-900
-                          text-slate-100 px-2 py-1 text-sm rounded-lg
-                          w-full focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                        "
-                      />
-                    </td>
-                    <td className="p-2 border-t border-slate-800 italic text-slate-400">
-                      {balances[acc.id]?.toFixed(2) ?? "0.00"}
-                    </td>
-                    <td className="p-2 border-t border-slate-800">
-                      <div className="flex justify-center flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleUpdate(acc.id)}
-                          className="
-                            inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
-                            bg-emerald-600 text-white hover:brightness-110
-                            focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-1 focus:ring-offset-slate-950
-                            transition
-                          "
-                        >
-                          Guardar
-                        </button>
+            {accounts.map((acc, rowIdx) => {
+              const bal = balances[acc.id] || { current: 0, reserved: 0, available: 0 };
 
-                        <button
-                          type="button"
-                          onClick={() => setEditId(null)}
+              return (
+                <tr
+                  key={acc.id}
+                  className={
+                    rowIdx % 2 === 0
+                      ? "bg-slate-950/40 hover:bg-slate-900/80"
+                      : "bg-slate-900/60 hover:bg-slate-900"
+                  }
+                >
+                  {editId === acc.id ? (
+                    <>
+                      <td className="p-2 border-t border-slate-800 align-middle">
+                        <input
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
                           className="
-                            inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
-                            bg-slate-800 text-slate-200 border border-slate-600
-                            hover:bg-slate-700
-                            focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-1 focus:ring-offset-slate-950
-                            transition
+                            border border-slate-700 bg-slate-900
+                            text-slate-100 px-2 py-1 text-sm rounded-lg
+                            w-full focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
                           "
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td className="p-2 border-t border-slate-800 text-slate-100">
-                      {acc.name}
-                    </td>
-                    <td className="p-2 border-t border-slate-800 text-slate-200">
-                      {balances[acc.id]?.toFixed(2) ?? "0.00"}
-                    </td>
-                    <td className="p-2 border-t border-slate-800">
-                      <div className="flex justify-center flex-wrap gap-2">
-                        {/* Transferir (azul) */}
-                        <button
-                          onClick={() => {
-                            setTFrom(acc.id);
-                            setTFromName(acc.name);
-                            setTTo("");
-                            setTAmount("");
-                            setTDate(
-                              new Date().toISOString().split("T")[0]
-                            );
-                            setTDesc("");
-                            setTError("");
-                            setShowTransfer(true);
-                          }}
-                          className="
-                            inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
-                            bg-indigo-600 text-white hover:brightness-110
-                            focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1 focus:ring-offset-slate-950
-                            transition
-                          "
-                          type="button"
-                        >
-                          Transferir
-                        </button>
+                        />
+                      </td>
 
-                        {/* Editar (ámbar) */}
-                        <button
-                          onClick={() => startEdit(acc)}
-                          className="
-                            inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
-                            bg-amber-400 text-black hover:brightness-110
-                            focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-1 focus:ring-offset-slate-950
-                            transition
-                          "
-                          type="button"
-                        >
-                          Editar
-                        </button>
+                      <td className="p-2 border-t border-slate-800">
+                        <div className="text-xl text-slate-100">{fmt(bal.current)} DOP</div>
+                        <div className="text-xs text-slate-300">
+                          Reservado: {fmt(bal.reserved)} • Disponible: {fmt(bal.available)}
+                        </div>
+                      </td>
 
-                        {/* Eliminar (rojo) */}
-                        <button
-                          onClick={() => openDelete(acc)}
-                          className="
-                            inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
-                            bg-rose-600 text-white hover:brightness-110
-                            focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-1 focus:ring-offset-slate-950
-                            transition
-                          "
-                          type="button"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </>
-                )}
-              </tr>
-            ))}
+                      <td className="p-2 border-t border-slate-800">
+                        <div className="flex justify-center flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdate(acc.id)}
+                            className="
+                              inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
+                              bg-emerald-600 text-white hover:brightness-110
+                              focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-1 focus:ring-offset-slate-950
+                              transition
+                            "
+                          >
+                            Guardar
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditId(null);
+                              setName("");
+                            }}
+                            className="
+                              inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
+                              bg-slate-800 text-slate-200 border border-slate-600
+                              hover:bg-slate-700
+                              focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-1 focus:ring-offset-slate-950
+                              transition
+                            "
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="p-2 border-t border-slate-800 text-slate-100">{acc.name}</td>
+
+                      <td className="p-2 border-t border-slate-800">
+                        <div className="text-ms text-slate-100">{fmt(bal.current)} DOP</div>
+                        <div className="text-xs text-slate-300">
+                          Reservado: {fmt(bal.reserved)} • Disponible: {fmt(bal.available)}
+                        </div>
+                      </td>
+
+                      <td className="p-2 border-t border-slate-800">
+                        <div className="flex justify-center flex-wrap gap-2">
+                          {/* Transferir (azul) */}
+                          <button
+                            onClick={() => {
+                              setTFrom(acc.id);
+                              setTFromName(acc.name);
+                              setTTo("");
+                              setTAmount("");
+                              setTDate(new Date().toISOString().split("T")[0]);
+                              setTDesc("");
+                              setTError("");
+                              setShowTransfer(true);
+                            }}
+                            className="
+                              inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
+                              bg-indigo-600 text-white hover:brightness-110
+                              focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-1 focus:ring-offset-slate-950
+                              transition
+                            "
+                            type="button"
+                          >
+                            Transferir
+                          </button>
+
+                          {/* Editar (ámbar) */}
+                          <button
+                            onClick={() => startEdit(acc)}
+                            className="
+                              inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
+                              bg-amber-400 text-black hover:brightness-110
+                              focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-1 focus:ring-offset-slate-950
+                              transition
+                            "
+                            type="button"
+                          >
+                            Editar
+                          </button>
+
+                          {/* Eliminar (rojo) */}
+                          <button
+                            onClick={() => openDelete(acc)}
+                            className="
+                              inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md
+                              bg-rose-600 text-white hover:brightness-110
+                              focus:outline-none focus:ring-2 focus:ring-rose-400 focus:ring-offset-1 focus:ring-offset-slate-950
+                              transition
+                            "
+                            type="button"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -419,9 +440,7 @@ function Accounts({ token }) {
           )}
 
           <div className="flex flex-col space-y-1">
-            <label className="text-sm font-medium text-slate-300">
-              Hacia
-            </label>
+            <label className="text-sm font-medium text-slate-300">Hacia</label>
             <select
               value={tTo}
               onChange={(e) => setTTo(e.target.value)}
@@ -445,9 +464,7 @@ function Accounts({ token }) {
           </div>
 
           <div className="flex flex-col space-y-1">
-            <label className="text-sm font-medium text-slate-300">
-              Monto
-            </label>
+            <label className="text-sm font-medium text-slate-300">Monto</label>
             <input
               type="number"
               inputMode="decimal"
@@ -470,18 +487,21 @@ function Accounts({ token }) {
               disabled={tLoading}
               required
             />
-            <p className="text-xs text-slate-400 mt-1">
-              Saldo disponible:{" "}
+
+            <p className="text-sm text-slate-300 mt-1">
+              Saldo real:{" "}
               <span className="font-medium text-slate-200">
-                {balances[tFrom]?.toFixed(2) ?? "0.00"}
+                {fmt(balances[tFrom]?.current)}
+              </span>{" "}
+              • Disponible:{" "}
+              <span className="font-medium text-slate-200">
+                {fmt(balances[tFrom]?.available)}
               </span>
             </p>
           </div>
 
           <div className="flex flex-col space-y-1">
-            <label className="text-sm font-medium text-slate-300">
-              Fecha
-            </label>
+            <label className="text-sm font-medium text-slate-300">Fecha</label>
             <input
               type="date"
               value={tDate}
@@ -560,8 +580,9 @@ function Accounts({ token }) {
       {/* Modal eliminar cuenta */}
       <Modal isOpen={showDelete} onClose={closeDelete} title="Eliminar cuenta">
         {(() => {
-          const bal = deleteAcc ? Number(balances[deleteAcc.id] ?? 0) : 0;
-          const hasBalance = Math.abs(bal) > 0.000001;
+          const bal = deleteAcc ? balances[deleteAcc.id] : null;
+          const current = Number(bal?.current ?? 0);
+          const hasBalance = Math.abs(current) > 0.000001;
 
           return (
             <div className="space-y-4 text-slate-200">
@@ -570,9 +591,7 @@ function Accounts({ token }) {
                   ¿Seguro que deseas eliminar la cuenta{" "}
                   <strong className="text-slate-50">{deleteAcc?.name}</strong>?
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Esta acción no se puede deshacer.
-                </p>
+                <p className="text-xs text-slate-500 mt-1">Esta acción no se puede deshacer.</p>
 
                 {hasBalance && (
                   <div
@@ -583,9 +602,8 @@ function Accounts({ token }) {
                       text-amber-200
                     "
                   >
-                    La cuenta tiene un saldo de{" "}
-                    <strong>{bal.toFixed(2)}</strong>. Te recomiendo transferir
-                    o ajustar el saldo antes de eliminarla.
+                    La cuenta tiene un saldo real de <strong>{fmt(current)}</strong>. Te recomiendo
+                    transferir o ajustar el saldo antes de eliminarla.
                   </div>
                 )}
               </div>
@@ -596,8 +614,7 @@ function Accounts({ token }) {
                   onClick={confirmDelete}
                   className={`
                     px-4 py-2 text-sm font-semibold rounded-lg
-                    text-white
-                    transition-all
+                    text-white transition-all
                     ${
                       hasBalance
                         ? "bg-slate-700 cursor-not-allowed opacity-70"
@@ -614,12 +631,9 @@ function Accounts({ token }) {
                   onClick={closeDelete}
                   className="
                     px-4 py-2 text-sm font-semibold rounded-lg
-                    border border-slate-600
-                    bg-slate-900
-                    text-slate-300
+                    border border-slate-600 bg-slate-900 text-slate-300
                     hover:bg-slate-800 hover:border-slate-500
-                    active:scale-95
-                    transition-all
+                    active:scale-95 transition-all
                   "
                   disabled={deleteLoading}
                 >
