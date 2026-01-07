@@ -38,17 +38,30 @@ export default function ImportBudgetModal({
 
   const [selectedKeys, setSelectedKeys] = useState([]);
 
-  // Al cambiar el preview, seleccionamos por defecto SOLO los que NO tienen budget existente
+  // ✅ FIX: Al cambiar preview, selecciona por defecto SOLO los que NO tienen budget existente
+  // Sin loop: no dependemos de conflictMap y solo seteamos si realmente cambia.
   useEffect(() => {
     if (!items.length) {
-      setSelectedKeys([]);
+      setSelectedKeys((prev) => (prev.length ? [] : prev));
       return;
     }
+
     const initial = items
       .filter((r) => !conflictMap.has(`${r.month}::${r.category_id}`))
       .map((r) => `${r.month}::${r.category_id}`);
-    setSelectedKeys(initial);
-  }, [items, conflictMap]);
+
+    setSelectedKeys((prev) => {
+      if (prev.length !== initial.length) return initial;
+
+      const s = new Set(prev);
+      for (const k of initial) {
+        if (!s.has(k)) return initial;
+      }
+      return prev;
+    });
+    // ⚠️ deps: usamos arrays base (items/conflicts) para evitar dependencia "conflictMap" inestable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, conflicts]);
 
   const allChecked =
     allKeys.length > 0 && selectedKeys.length === allKeys.length;
@@ -103,6 +116,7 @@ export default function ImportBudgetModal({
             `}
             onClick={() => setScope("current")}
             disabled={loading}
+            type="button"
           >
             Mes actual
           </button>
@@ -119,6 +133,7 @@ export default function ImportBudgetModal({
             `}
             onClick={() => setScope("all")}
             disabled={loading}
+            type="button"
           >
             Todo el escenario (hasta 31 dic)
           </button>
@@ -141,8 +156,7 @@ export default function ImportBudgetModal({
           "
         >
           <span>
-            Detectados:{" "}
-            <span className="font-semibold">{items.length}</span>
+            Detectados: <span className="font-semibold">{items.length}</span>
           </span>
           <span>
             Con budget existente:{" "}
@@ -158,9 +172,7 @@ export default function ImportBudgetModal({
 
         {/* Tabla de importación con checkboxes */}
         <div className="border border-slate-800 rounded-lg p-2 bg-slate-950/40 max-h-60 overflow-auto">
-          {loading && (
-            <div className="text-sm text-slate-400">Cargando…</div>
-          )}
+          {loading && <div className="text-sm text-slate-400">Cargando…</div>}
 
           {!loading && !hasItems && (
             <div className="text-sm text-slate-400 italic">
@@ -193,6 +205,7 @@ export default function ImportBudgetModal({
                   const key = `${r.month}::${r.category_id}`;
                   const checked = selectedKeys.includes(key);
                   const hasConflict = conflictMap.has(key);
+
                   return (
                     <tr
                       key={key}
@@ -243,10 +256,9 @@ export default function ImportBudgetModal({
           ) : (
             <div className="text-sm text-slate-300 space-y-1">
               <p>
-                Ya existen presupuestos para algunos <em>mes–categoría</em>.
-                Por defecto solo se seleccionan los que no tienen presupuesto;
-                puedes marcar también los que tienen presupuesto para
-                reemplazarlos.
+                Ya existen presupuestos para algunos <em>mes–categoría</em>. Por
+                defecto solo se seleccionan los que no tienen presupuesto; puedes
+                marcar también los que tienen presupuesto para reemplazarlos.
               </p>
               <ul className="list-disc ml-5 mt-1 space-y-1">
                 {conflicts.map((c, i) => (
@@ -274,7 +286,6 @@ export default function ImportBudgetModal({
           </div>
 
           <div className="flex gap-2">
-            {/* Cancelar */}
             <button
               className="
                 px-3 py-2 rounded-lg text-sm font-semibold
@@ -284,11 +295,11 @@ export default function ImportBudgetModal({
                 transition-all
               "
               onClick={onClose}
+              type="button"
             >
               Cancelar
             </button>
 
-            {/* Importar seleccionados */}
             <button
               className={`
                 px-3 py-2 rounded-lg text-sm font-semibold
@@ -301,6 +312,7 @@ export default function ImportBudgetModal({
               `}
               onClick={handleConfirm}
               disabled={loading || !hasItems || selectedKeys.length === 0}
+              type="button"
             >
               Importar seleccionados
             </button>
