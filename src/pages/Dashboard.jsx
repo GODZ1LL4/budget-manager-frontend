@@ -34,6 +34,7 @@ import RecurringExpensePatternsTable from "../components/reports/RecurringExpens
 import ExpenseIntervalsByCategoryTable from "../components/reports/ExpenseIntervalsByCategoryTable";
 import RecurringItemPatternsTable from "../components/reports/RecurringItemPatternsTable";
 import ExpenseForecastChart from "../components/reports/ExpenseForecastChart";
+import AdvancedBurnRateChart from "../components/reports/AdvancedBurnRateChart";
 
 function Dashboard({ token }) {
   const [data, setData] = useState(null);
@@ -425,6 +426,9 @@ function Dashboard({ token }) {
 
       <CollapseSection title="6- Ritmo de gasto del mes (Burn Rate)">
         <BurnRateChart token={token} />
+      </CollapseSection>
+      <CollapseSection title="6.1- Ritmo de gasto del mes (Burn Rate Avanzado)">
+        <AdvancedBurnRateChart token={token} />
       </CollapseSection>
 
       <CollapseSection title="7- Presupuesto vs Gasto por categoría (mes actual)">
