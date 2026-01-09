@@ -33,6 +33,7 @@ import CategoryMonthlyHeatmap from "../components/reports/CategoryMonthlyHeatmap
 import RecurringExpensePatternsTable from "../components/reports/RecurringExpensePatternsTable";
 import ExpenseIntervalsByCategoryTable from "../components/reports/ExpenseIntervalsByCategoryTable";
 import RecurringItemPatternsTable from "../components/reports/RecurringItemPatternsTable";
+import ExpenseForecastChart from "../components/reports/ExpenseForecastChart";
 
 function Dashboard({ token }) {
   const [data, setData] = useState(null);
@@ -390,7 +391,7 @@ function Dashboard({ token }) {
         </ChromeInfoCard>
       </div>
 
-        {/* -------------------------------------------------- */}
+      {/* -------------------------------------------------- */}
       {/* 🗓️  BLOQUE 1 — Visión General */}
       {/* -------------------------------------------------- */}
 
@@ -525,7 +526,9 @@ function Dashboard({ token }) {
       <CollapseSection title="28- Resumen anual de artículos (mixto)">
         <ItemsAnnualSummaryTable token={token} />
       </CollapseSection>
-
+      <CollapseSection title="29- Proyección de gasto por periodo">
+        <ExpenseForecastChart token={token} />
+      </CollapseSection>
     </div>
   );
 }
