@@ -470,8 +470,7 @@ function Transactions({ token }) {
               </div>
 
               <p className="text-xs text-slate-400">
-                Puedes crear la lista desde el modal o importar
-                desde CSV. 
+                Puedes crear la lista desde el modal o importar desde CSV.
               </p>
             </div>
           )}
@@ -487,20 +486,44 @@ function Transactions({ token }) {
             onChange={(e) => setAmount(e.target.value)}
             readOnly={isShoppingList}
             className={`
-              w-full rounded-lg px-3 py-2 text-sm
-              border
-              ${
-                isShoppingList
-                  ? "bg-slate-900/70 border-slate-800 text-slate-500"
-                  : "bg-slate-900 border-slate-700 text-slate-100"
-              }
-              placeholder:text-slate-500
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            `}
+      w-full rounded-lg px-3 py-2 text-sm border
+      ${
+        isShoppingList
+          ? "bg-slate-900/70 border-slate-800 text-slate-500"
+          : "bg-slate-900 border-slate-700 text-slate-100"
+      }
+      placeholder:text-slate-500
+      focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+      transition-colors
+    `}
             required
           />
         </div>
+
+        {/* Descuento (solo si es lista de compra) */}
+        {isShoppingList && (
+          <div className="flex flex-col space-y-1">
+            <label className="text-sm font-medium text-slate-300">
+              Descuento (%)
+            </label>
+            <input
+              type="number"
+              value={discount}
+              min="0"
+              max="100"
+              step="0.01"
+              onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+              className="
+        w-full rounded-lg px-3 py-2 text-sm
+        bg-slate-900 border border-slate-700
+        text-slate-100 placeholder:text-slate-500
+        focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
+        transition-colors
+      "
+              placeholder="Ej. 5"
+            />
+          </div>
+        )}
 
         {/* Tipo */}
         <div className="flex flex-col space-y-1">
