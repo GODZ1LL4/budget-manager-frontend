@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import Modal from "../components/Modal"; // ajusta la ruta según tu estructura
 import ImportShoppingListModal from "../components/ImportShoppingListModal";
+import ShoppingListQuickModal from "../components/ShoppingListQuickModal";
 
 function Transactions({ token }) {
   const [amount, setAmount] = useState("");
@@ -70,6 +71,8 @@ function Transactions({ token }) {
     description: "",
     date: "",
   });
+
+  const [showQuickShoppingModal, setShowQuickShoppingModal] = useState(false);
 
   const api = import.meta.env.VITE_API_URL;
 
@@ -225,6 +228,14 @@ function Transactions({ token }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (isShoppingList) {
+      alert(
+        "Para listas de compra usa el botón 'Agregar artículos (modal)' o importa desde archivo."
+      );
+      return;
+    }
+
     if (!amount || !accountId || !categoryId || !date) {
       alert("Completa todos los campos");
       return;
@@ -421,27 +432,46 @@ function Transactions({ token }) {
           </label>
 
           {/* Contenido que aparece al activar */}
+          {/* Lista de compra */}
           {isShoppingList && (
-            <div className="pl-7">
-              <button
-                type="button"
-                onClick={() => setShowImportShoppingModal(true)}
-                className="
+            <div className="pl-7 space-y-2">
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickShoppingModal(true)}
+                  className="
           inline-flex items-center gap-2
           px-3 py-2 text-sm font-semibold rounded-lg
-          bg-indigo-600 text-white
+          bg-emerald-600 text-slate-100
+          shadow-[0_0_10px_rgba(16,185,129,0.4)]
+          hover:brightness-110 active:scale-95
+          transition-all
+        "
+                >
+                  <span className="text-base">🛒</span>
+                  <span>Crear lista de compra</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowImportShoppingModal(true)}
+                  className="
+          inline-flex items-center gap-2
+          px-3 py-2 text-sm font-semibold rounded-lg
+          bg-indigo-600 text-slate-100
           shadow-[0_0_10px_rgba(99,102,241,0.4)]
           hover:brightness-110 active:scale-95
           transition-all
         "
-              >
-                <span className="text-base">📥</span>
-                <span>Importar lista de compra desde archivo</span>
-              </button>
+                >
+                  <span className="text-base">📥</span>
+                  <span>Importar lista de compra desde archivo</span>
+                </button>
+              </div>
 
-              <p className="text-xs text-slate-400 mt-2">
-                Puedes cargar un archivo CSV con los artículos y precios para
-                generar una lista de compra automáticamente.
+              <p className="text-xs text-slate-400">
+                Puedes crear la lista desde el modal o importar
+                desde CSV. 
               </p>
             </div>
           )}
@@ -621,142 +651,6 @@ function Transactions({ token }) {
             "
           />
         </div>
-
-        {/* Lista de compra */}
-        {isShoppingList && (
-          <div className="md:col-span-3 mt-2">
-            <h4 className="font-semibold text-slate-100 mb-2">
-              Artículos comprados
-            </h4>
-
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
-              <label className="text-sm font-medium text-slate-300">
-                Descuento (%)
-              </label>
-              <input
-                type="number"
-                value={discount}
-                min="0"
-                max="100"
-                step="0.01"
-                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                className="
-                  w-full sm:w-24 rounded-lg px-3 py-1.5 text-sm
-                  bg-slate-900 border border-slate-700
-                  text-slate-100 placeholder:text-slate-500
-                  focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                  transition-colors
-                "
-                placeholder="Ej. 5"
-              />
-            </div>
-
-            {articleLines.map((line, idx) => {
-              const item = items.find((i) => i.id === line.item_id);
-              const price = item?.latest_price || 0;
-              const taxRate = item?.is_exempt
-                ? 0
-                : parseFloat(item?.tax_rate || 0);
-              const taxLabel = item?.is_exempt ? "Exento" : `${taxRate}%`;
-
-              return (
-                <div
-                  key={idx}
-                  className="
-                    mb-4 rounded-xl border border-slate-800 bg-slate-950/50
-                    p-3 space-y-2
-                  "
-                >
-                  <div className="grid grid-cols-1 sm:grid-cols-6 gap-2">
-                    <select
-                      value={line.item_id}
-                      onChange={(e) =>
-                        updateLine(idx, "item_id", e.target.value)
-                      }
-                      className="
-                        w-full rounded-lg px-3 py-2 text-sm
-                        bg-slate-900 border border-slate-700
-                        text-slate-100
-                        focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                        transition-colors sm:col-span-2
-                      "
-                    >
-                      <option value="">Selecciona artículo</option>
-                      {items.map((it) => (
-                        <option key={it.id} value={it.id}>
-                          {it.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    <input
-                      type="number"
-                      placeholder="Cantidad"
-                      className="
-                        w-full rounded-lg px-3 py-2 text-sm
-                        bg-slate-900 border border-slate-700
-                        text-slate-100 placeholder:text-slate-500
-                        focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                        transition-colors sm:col-span-1
-                      "
-                      value={line.quantity}
-                      onChange={(e) =>
-                        updateLine(idx, "quantity", e.target.value)
-                      }
-                    />
-
-                    <div className="text-sm  text-slate-300 sm:col-span-2">
-                      <p>
-                        Precio:{" "}
-                        <strong className="text-emerald-300">
-                          {price.toFixed(2)} DOP
-                        </strong>
-                      </p>
-                      <p>
-                        ITBIS:{" "}
-                        <strong className="text-slate-100">{taxLabel}</strong>
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-start">
-                    <button
-                      type="button"
-                      onClick={() => removeLine(idx)}
-                      className="
-                        w-full sm:w-auto
-                        px-4 py-2 text-sm  font-semibold rounded-lg
-                        bg-gradient-to-r from-rose-600 via-rose-500 to-rose-400
-                        text-white
-                        shadow-[0_0_12px_rgba(248,113,113,0.45)]
-                        hover:brightness-110 active:scale-95
-                        transition-all
-                      "
-                    >
-                      Quitar artículo
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-
-            <div className="flex justify-start mb-4">
-              <button
-                type="button"
-                onClick={addLine}
-                className="
-                  w-full sm:w-auto
-                  px-4 py-2 text-sm font-semibold rounded-lg
-                  bg-blue-600 text-white
-                  shadow-sm hover:brightness-110 active:scale-95
-                  transition-all
-                "
-              >
-                Agregar artículo
-              </button>
-            </div>
-          </div>
-        )}
 
         <div className="md:col-span-3 mt-2">
           <button
@@ -1514,6 +1408,28 @@ function Transactions({ token }) {
           </form>
         )}
       </Modal>
+      <ShoppingListQuickModal
+        isOpen={showQuickShoppingModal}
+        onClose={() => setShowQuickShoppingModal(false)}
+        api={api}
+        token={token}
+        items={items}
+        meta={{
+          account_id: accountId,
+          category_id: categoryId,
+          date,
+          description,
+          discount,
+        }}
+        onCreated={async () => {
+          await fetchTransactions();
+          setAmount("");
+          setDescription("");
+          setIsShoppingList(false);
+          setDiscount(0);
+          setShowQuickShoppingModal(false);
+        }}
+      />
     </div>
   );
 }
