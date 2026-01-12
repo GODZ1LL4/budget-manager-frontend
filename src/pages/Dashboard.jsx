@@ -35,6 +35,7 @@ import ExpenseIntervalsByCategoryTable from "../components/reports/ExpenseInterv
 import RecurringItemPatternsTable from "../components/reports/RecurringItemPatternsTable";
 import ExpenseForecastChart from "../components/reports/ExpenseForecastChart";
 import AdvancedBurnRateChart from "../components/reports/AdvancedBurnRateChart";
+import MonthlyIncomeVsExpenseLineChart from "../components/reports/MonthlyIncomeVsExpenseLineChart";
 
 function Dashboard({ token }) {
   const [data, setData] = useState(null);
@@ -532,6 +533,9 @@ function Dashboard({ token }) {
       </CollapseSection>
       <CollapseSection title="29- Proyección de gasto por periodo">
         <ExpenseForecastChart token={token} />
+      </CollapseSection>
+      <CollapseSection title="30- Ingresos vs Gastos">
+        <MonthlyIncomeVsExpenseLineChart token={token} />
       </CollapseSection>
     </div>
   );

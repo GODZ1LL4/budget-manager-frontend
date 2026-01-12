@@ -1,20 +1,46 @@
+// src/components/reports/GoalsProgressChart.jsx
 import { useEffect, useState } from "react";
 import axios from "axios";
 
+function formatCurrencyDOP(value) {
+  const num = Number(value);
+  const safe = Number.isFinite(num) ? num : 0;
+
+  return new Intl.NumberFormat("es-DO", {
+    style: "currency",
+    currency: "DOP",
+    minimumFractionDigits: 2,
+  }).format(safe);
+}
+
 function GoalsProgressChart({ token }) {
   const [goals, setGoals] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const api = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     if (!token) return;
 
+    setLoading(true);
+    setError("");
+
     axios
       .get(`${api}/analytics/goals-progress`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      .then((res) => setGoals(res.data.data))
-      .catch(() => alert("Error al cargar progreso de metas"));
-  }, [token]);
+      .then((res) => {
+        const arr = Array.isArray(res.data?.data) ? res.data.data : [];
+        setGoals(arr);
+      })
+      .catch((err) => {
+        console.error("Error al cargar progreso de metas:", err);
+        setError(
+          err.response?.data?.error || "Error al cargar progreso de metas"
+        );
+      })
+      .finally(() => setLoading(false));
+  }, [token, api]);
 
   return (
     <div
@@ -35,29 +61,58 @@ function GoalsProgressChart({ token }) {
         </p>
       </div>
 
-      {goals.length === 0 ? (
-        <p className="text-sm text-slate-500 italic">
-          No hay metas definidas.
+      {/* Estados */}
+      {loading && (
+        <p className="text-sm text-slate-400 italic">
+          Cargando progreso de metas…
         </p>
-      ) : (
+      )}
+
+      {!loading && error && (
+        <p className="text-sm text-rose-400">{error}</p>
+      )}
+
+      {!loading && !error && goals.length === 0 && (
+        <p className="text-sm text-slate-500 italic">No hay metas definidas.</p>
+      )}
+
+      {/* Lista */}
+      {!loading && !error && goals.length > 0 && (
         <div className="space-y-5">
-          {goals.map((g, idx) => {
-            const safeProgress = Math.min(g.progress, 100);
-            const completed = g.progress >= 100;
+          {goals.map((g) => {
+            const name = g?.name || "Meta";
+
+            const current = Number(g?.current);
+            const safeCurrent = Number.isFinite(current) ? current : 0;
+
+            const target = Number(g?.target);
+            const safeTarget = Number.isFinite(target) ? target : 0;
+
+            const progress = Number(g?.progress);
+            const safeProgressRaw = Number.isFinite(progress) ? progress : 0;
+
+            const safeProgress = Math.min(Math.max(safeProgressRaw, 0), 100);
+            const completed = safeProgressRaw >= 100;
 
             return (
-              <div key={idx} className="space-y-1.5">
+              <div key={g?.id || name} className="space-y-1.5">
                 {/* Título y porcentaje */}
-                <div className="flex justify-between text-sm">
+                <div className="flex justify-between text-sm gap-3">
                   <span className="font-medium text-slate-200 truncate">
-                    {g.name}
+                    {name}
                   </span>
+
                   <span
-                    className={`font-semibold ${
+                    className={`font-semibold whitespace-nowrap ${
                       completed ? "text-emerald-400" : "text-slate-300"
                     }`}
+                    title={
+                      safeTarget > 0
+                        ? `${safeProgressRaw.toFixed(1)}%`
+                        : "Meta sin objetivo (target 0)"
+                    }
                   >
-                    {g.progress.toFixed(1)}%
+                    {safeProgressRaw.toFixed(1)}%
                   </span>
                 </div>
 
@@ -75,7 +130,7 @@ function GoalsProgressChart({ token }) {
 
                 {/* Cantidad acumulada */}
                 <p className="text-xs text-slate-400">
-                  RD$ {g.current.toFixed(2)} / {g.target.toFixed(2)}
+                  {formatCurrencyDOP(safeCurrent)} / {formatCurrencyDOP(safeTarget)}
                 </p>
               </div>
             );
