@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   BarChart,
@@ -50,20 +50,32 @@ function CustomTooltip({ active, payload, label }) {
 
 function MonthlyIncomeVsExpenseChart({ token }) {
   const [data, setData] = useState([]);
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [loading, setLoading] = useState(false);
+
   const api = import.meta.env.VITE_API_URL;
+
+  const currentYear = new Date().getFullYear();
+  const yearOptions = useMemo(
+    () => Array.from({ length: 6 }, (_, i) => currentYear - i),
+    [currentYear]
+  );
 
   useEffect(() => {
     if (!token) return;
 
+    setLoading(true);
     axios
       .get(`${api}/analytics/monthly-income-expense-avg`, {
         headers: { Authorization: `Bearer ${token}` },
+        params: { year },
       })
       .then((res) => setData(res?.data?.data || []))
-      .catch((err) => console.error("Error al cargar datos:", err));
-  }, [token, api]);
+      .catch((err) => console.error("Error al cargar datos:", err))
+      .finally(() => setLoading(false));
+  }, [token, api, year]);
 
-  // 🔢 KPI: Balance acumulado del año
+  // KPI: Balance acumulado del año
   const yearlyBalance = data.reduce(
     (acc, row) => acc + (Number(row.balance ?? 0) || 0),
     0
@@ -71,6 +83,8 @@ function MonthlyIncomeVsExpenseChart({ token }) {
 
   const yearlyBalanceColor =
     yearlyBalance >= 0 ? "text-emerald-400" : "text-rose-400";
+
+  const monthLabel = (m) => (typeof m === "string" ? m.slice(5, 7) : m);
 
   return (
     <div
@@ -82,16 +96,50 @@ function MonthlyIncomeVsExpenseChart({ token }) {
         space-y-4
       "
     >
-      <div className="flex flex-col md:flex-row md:items-baseline md:justify-between gap-2">
+      {/* ✅ Header ajustado */}
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+        {/* Título */}
         <h3 className="text-lg md:text-xl font-semibold text-slate-100">
           Balance de Ingreso vs Gasto
         </h3>
 
-        {/* KPI de balance acumulado */}
-        <p className={`text-sm font-medium ${yearlyBalanceColor}`}>
-          Balance acumulado del año:{" "}
-          <span className="font-semibold">{formatMoney(yearlyBalance)}</span>
-        </p>
+        {/* Controles + KPI (derecha) */}
+        <div className="flex flex-col items-end gap-1">
+          {/* Selector año */}
+          <div className="flex flex-col items-end">
+            <label className="text-[11px] uppercase tracking-[0.18em] text-slate-300">
+              Año
+            </label>
+            <select
+              value={year}
+              onChange={(e) => setYear(parseInt(e.target.value, 10))}
+              className="
+                mt-1
+                bg-slate-900 border border-slate-700
+                text-slate-200
+                rounded-lg px-3 py-1.5 text-sm
+                focus:outline-none focus:ring-2 focus:ring-emerald-500/60
+              "
+            >
+              {yearOptions.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* KPI balance acumulado */}
+          <p className={`text-sm font-medium ${yearlyBalanceColor}`}>
+            Balance acumulado del año:{" "}
+            <span className="font-semibold">{formatMoney(yearlyBalance)}</span>
+            {loading ? (
+              <span className="text-slate-400 ml-2 text-xs">
+                Actualizando…
+              </span>
+            ) : null}
+          </p>
+        </div>
       </div>
 
       {data.length === 0 ? (
@@ -105,6 +153,7 @@ function MonthlyIncomeVsExpenseChart({ token }) {
               <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
               <XAxis
                 dataKey="month"
+                tickFormatter={monthLabel}
                 stroke="#94a3b8"
                 tick={{ fill: "#cbd5e1", fontSize: 14 }}
               />

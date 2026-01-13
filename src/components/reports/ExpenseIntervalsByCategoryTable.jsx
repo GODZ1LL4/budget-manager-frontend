@@ -21,7 +21,7 @@ function formatDate(dateStr) {
 
 function ExpenseIntervalsByCategoryTable({ token }) {
   const [data, setData] = useState([]);
-  const [months, setMonths] = useState(12);
+  const [months, setMonths] = useState(6);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const api = import.meta.env.VITE_API_URL;

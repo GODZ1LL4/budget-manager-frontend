@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   BarChart,
@@ -9,20 +9,53 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  ReferenceLine,
 } from "recharts";
+
+const formatCurrency = (v) =>
+  new Intl.NumberFormat("es-DO", {
+    style: "currency",
+    currency: "DOP",
+    minimumFractionDigits: 2,
+  }).format(Number.isFinite(Number(v)) ? Number(v) : 0);
 
 function AccountBalancesChart({ token }) {
   const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
   const api = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
+    if (!token) return;
+
+    setLoading(true);
     axios
       .get(`${api}/analytics/account-balances`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      .then((res) => setData(res.data.data))
-      .catch((err) => console.error(err));
-  }, [token]);
+      .then((res) => setData(res?.data?.data || []))
+      .catch((err) => console.error("Error cargando saldos por cuenta:", err))
+      .finally(() => setLoading(false));
+  }, [token, api]);
+
+  const kpis = useMemo(() => {
+    const total = (data || []).reduce(
+      (acc, r) => acc + (Number(r.balance) || 0),
+      0
+    );
+    const positive = (data || []).reduce(
+      (acc, r) => acc + ((Number(r.balance) || 0) > 0 ? Number(r.balance) || 0 : 0),
+      0
+    );
+    const negative = (data || []).reduce(
+      (acc, r) => acc + ((Number(r.balance) || 0) < 0 ? Number(r.balance) || 0 : 0),
+      0
+    );
+    const negativeCount = (data || []).filter((r) => (Number(r.balance) || 0) < 0).length;
+
+    return { total, positive, negative, negativeCount };
+  }, [data]);
+
+  const totalColor = kpis.total >= 0 ? "text-emerald-300" : "text-rose-300";
 
   return (
     <div
@@ -34,42 +67,87 @@ function AccountBalancesChart({ token }) {
         space-y-4
       "
     >
-      <div>
-        <h3 className="text-xl font-semibold text-slate-100">
-          Saldos por Cuenta
-        </h3>
-        <p className="text-sm text-slate-400 mt-1">
-          Visualiza el saldo actual de todas tus cuentas registradas.
-        </p>
+      {/* Header + KPI */}
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+        <div>
+          <h3 className="text-xl font-semibold text-slate-100">Saldos por Cuenta</h3>
+          <p className="text-sm text-slate-300 mt-1">
+            Visualiza el saldo actual de todas tus cuentas registradas.
+          </p>
+        </div>
+
+        <div className="flex flex-col items-end gap-2">
+          {/* KPI principal (más grande) */}
+          <p className={`text-base font-medium ${totalColor}`}>
+            Total en cuentas:{" "}
+            <span className="font-semibold">{formatCurrency(kpis.total)}</span>
+            {loading ? (
+              <span className="text-slate-300 ml-2 text-sm">Actualizando…</span>
+            ) : null}
+          </p>
+
+          {/* KPI secundario (labels menos opacos + fuente mayor) */}
+          <p className="text-sm text-slate-300">
+            <span className="text-slate-200 font-medium">Positivo:</span>{" "}
+            <span className="text-emerald-300 font-semibold">
+              {formatCurrency(kpis.positive)}
+            </span>
+
+            <span className="mx-2 text-slate-500">·</span>
+
+            <span className="text-slate-200 font-medium">Negativo:</span>{" "}
+            <span className="text-rose-300 font-semibold">
+              {formatCurrency(kpis.negative)}
+            </span>
+
+            {kpis.negativeCount > 0 && (
+              <>
+                <span className="mx-2 text-slate-500">·</span>
+                <span className="text-slate-200 font-medium">
+                  {kpis.negativeCount} en negativo
+                </span>
+              </>
+            )}
+          </p>
+        </div>
       </div>
 
-      {data.length === 0 ? (
+      {/* Estados */}
+      {loading && data.length === 0 ? (
+        <p className="text-sm text-slate-500 italic">Cargando cuentas…</p>
+      ) : data.length === 0 ? (
         <p className="text-sm text-slate-500 italic">
-          No hay movimientos registrados.
+          No hay cuentas registradas aún.
         </p>
       ) : (
-        <div className="w-full h-[300px]">
+        <div className="w-full h-[320px]">
           <ResponsiveContainer>
-            <BarChart data={data}>
-              {/* Grid tenue */}
+            <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
               <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
 
-              {/* Eje X */}
               <XAxis
-                dataKey="name"
+                type="number"
                 stroke="#94a3b8"
                 tick={{ fill: "#cbd5e1", fontSize: 12 }}
+                tickFormatter={(v) => {
+                  const n = Number(v);
+                  if (!Number.isFinite(n)) return "";
+                  return new Intl.NumberFormat("es-DO", { notation: "compact" }).format(n);
+                }}
               />
 
-              {/* Eje Y */}
               <YAxis
+                type="category"
+                dataKey="name"
+                width={150}
                 stroke="#94a3b8"
                 tick={{ fill: "#cbd5e1", fontSize: 12 }}
               />
 
-              {/* Tooltip oscuro */}
+              <ReferenceLine x={0} stroke="#64748b" strokeDasharray="6 6" />
+
               <Tooltip
-                formatter={(val) => `RD$ ${val.toFixed(2)}`}
+                formatter={(val) => formatCurrency(val)}
                 contentStyle={{
                   backgroundColor: "#020617",
                   border: "1px solid #4b5563",
@@ -81,7 +159,6 @@ function AccountBalancesChart({ token }) {
                 labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
               />
 
-              {/* Leyenda */}
               <Legend
                 wrapperStyle={{ color: "#e2e8f0" }}
                 formatter={(value) => (
@@ -89,10 +166,18 @@ function AccountBalancesChart({ token }) {
                 )}
               />
 
-              {/* Barra principal */}
-              <Bar dataKey="balance" fill="#10b981" name="Saldo actual" />
+              <Bar
+                dataKey="balance"
+                fill="#10b981"
+                name="Saldo actual"
+                radius={[6, 6, 6, 6]}
+              />
             </BarChart>
           </ResponsiveContainer>
+
+          <p className="text-sm text-slate-300 mt-2">
+            Tip: si una cuenta cruza la línea 0, significa que está en negativo.
+          </p>
         </div>
       )}
     </div>
