@@ -308,7 +308,7 @@ function BudgetCoverageRobustChart({ token }) {
 
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">
-              Meses con más no cubierto (exceso + sin presupuesto)
+              top meses no cubierto (exceso + sin presupuesto)
             </h4>
             {topUncoveredMonths?.length ? (
               <ul className="space-y-1">
