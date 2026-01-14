@@ -1,4 +1,3 @@
-// FRONTEND
 // BudgetCoverageChart.jsx (con click en mes -> modal detalle)
 // Requiere tu Modal.jsx en components/Modal (ajusta el path según tu proyecto)
 
@@ -164,6 +163,7 @@ function BudgetCoverageChart({ token }) {
             </p>
           </div>
 
+          {/* ✅ Se movió “Cobertura anual ...” aquí (igual patrón del reporte robusto) */}
           <div className="flex flex-col items-end">
             <label className="text-[11px] uppercase tracking-[0.18em] text-slate-300">
               Año
@@ -179,6 +179,17 @@ function BudgetCoverageChart({ token }) {
                 </option>
               ))}
             </select>
+
+            <p className="text-xs text-slate-300 mt-2 text-right">
+              Cobertura anual:{" "}
+              <span className="font-semibold text-emerald-300">
+                {Number.isFinite(Number(totals.coverage_pct))
+                  ? Number(totals.coverage_pct).toFixed(2)
+                  : "0.00"}
+                %
+              </span>
+            </p>
+
             {loading ? (
               <span className="text-[11px] text-slate-400 mt-1">
                 Actualizando…
@@ -214,8 +225,9 @@ function BudgetCoverageChart({ token }) {
 
           {hasUncategorized ? (
             <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-              ⚠️ Hay gastos <span className="font-semibold">sin categoría</span>. Eso
-              siempre contará como <span className="font-semibold">sin presupuesto</span>.
+              ⚠️ Hay gastos <span className="font-semibold">sin categoría</span>.
+              Eso siempre contará como{" "}
+              <span className="font-semibold">sin presupuesto</span>.
             </div>
           ) : null}
         </div>
@@ -226,7 +238,7 @@ function BudgetCoverageChart({ token }) {
             <div className="text-[11px] uppercase tracking-[0.18em] text-slate-300">
               Gasto total
             </div>
-            <div className="text-xl font-semibold text-slate-50 mt-1 drop-shadow-[0_0_10px_rgba(255,255,255,0.10)]">
+            <div className="text-xl font-extrabold text-slate-100 mt-1 drop-shadow-[0_0_10px_rgba(255,255,255,0.10)]">
               {formatCurrency(totals.total_expense)}
             </div>
           </div>
@@ -235,7 +247,7 @@ function BudgetCoverageChart({ token }) {
             <div className="text-[11px] uppercase tracking-[0.18em] text-slate-300">
               Cubierto
             </div>
-            <div className="text-xl font-semibold text-emerald-300 mt-1 drop-shadow-[0_0_10px_rgba(16,185,129,0.18)]">
+            <div className="text-xl font-extrabold text-emerald-300 mt-1 drop-shadow-[0_0_10px_rgba(16,185,129,0.18)]">
               {formatCurrency(totals.covered)}
             </div>
           </div>
@@ -244,7 +256,7 @@ function BudgetCoverageChart({ token }) {
             <div className="text-[11px] uppercase tracking-[0.18em] text-slate-300">
               Sin presupuesto
             </div>
-            <div className="text-xl font-semibold text-orange-300 mt-1 drop-shadow-[0_0_10px_rgba(249,115,22,0.18)]">
+            <div className="text-xl font-extrabold text-orange-300 mt-1 drop-shadow-[0_0_10px_rgba(249,115,22,0.18)]">
               {formatCurrency(totals.uncovered)}
             </div>
           </div>
@@ -307,16 +319,9 @@ function BudgetCoverageChart({ token }) {
               </BarChart>
             </ResponsiveContainer>
 
-            <p className="text-xs text-slate-200 mt-3">
-              Cobertura anual:{" "}
-              <span className="font-semibold text-emerald-300">
-                {Number.isFinite(Number(totals.coverage_pct))
-                  ? Number(totals.coverage_pct).toFixed(2)
-                  : "0.00"}
-                %
-              </span>{" "}
-              del gasto tuvo presupuesto en su mes.{" "}
-              <span className="text-slate-400">(Click en un mes para ver detalle)</span>
+            {/* ✅ Texto corto debajo del chart (sin desbordes) */}
+            <p className="text-xs text-slate-400 mt-2">
+              Click en un mes para ver detalle.
             </p>
           </div>
 
@@ -402,9 +407,7 @@ function BudgetCoverageChart({ token }) {
         {detailLoading ? (
           <div className="text-sm text-slate-300">Cargando detalle del mes…</div>
         ) : !detail ? (
-          <div className="text-sm text-slate-300">
-            No se pudo cargar el detalle.
-          </div>
+          <div className="text-sm text-slate-300">No se pudo cargar el detalle.</div>
         ) : (
           <div className="space-y-4">
             {/* Totales del mes */}
@@ -516,7 +519,9 @@ function BudgetCoverageChart({ token }) {
                             {tx.date}
                           </td>
                           <td className="p-3 text-slate-100">
-                            {tx.description || <span className="text-slate-500 italic">—</span>}
+                            {tx.description || (
+                              <span className="text-slate-500 italic">—</span>
+                            )}
                           </td>
                           <td className="p-3 text-slate-200">{tx.category_name}</td>
                           <td className="p-3 text-right font-semibold text-orange-300 whitespace-nowrap">
@@ -530,8 +535,9 @@ function BudgetCoverageChart({ token }) {
               )}
 
               <div className="text-[11px] text-slate-400 mt-2">
-                Consejo: usa este detalle para crear presupuestos mínimos por categoría en ese mes,
-                o detectar gastos “sin categoría” y corregir el flujo de captura.
+                Consejo: usa este detalle para crear presupuestos mínimos por categoría
+                en ese mes, o detectar gastos “sin categoría” y corregir el flujo de
+                captura.
               </div>
             </div>
           </div>

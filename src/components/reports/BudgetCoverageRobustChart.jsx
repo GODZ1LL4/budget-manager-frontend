@@ -126,7 +126,7 @@ function BudgetCoverageRobustChart({ token }) {
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
         <div>
           <h3 className="text-xl font-semibold text-slate-100">
-            Cobertura real de presupuestos (con exceso)
+            Cobertura real de presupuestos 
           </h3>
           <p className="text-sm text-slate-300 mt-1">
             Un gasto solo cuenta como cubierto hasta el límite del presupuesto.
@@ -308,7 +308,7 @@ function BudgetCoverageRobustChart({ token }) {
 
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400 mb-2">
-              top meses no cubierto (exceso + sin presupuesto)
+              Top meses no cubierto (exceso + sin presupuesto)
             </h4>
             {topUncoveredMonths?.length ? (
               <ul className="space-y-1">
