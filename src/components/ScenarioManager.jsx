@@ -12,6 +12,7 @@ import ScenarioCalendar from "./ScenarioCalendar";
 import Modal from "./Modal";
 import TransactionForm from "./TransactionForm";
 import { toast } from "react-toastify";
+import ConfirmModal from "./ConfirmModal";
 
 function Sparkline({ values = [], width = 240, height = 48, padding = 6 }) {
   const clean = Array.isArray(values)
@@ -30,7 +31,14 @@ function Sparkline({ values = [], width = 240, height = 48, padding = 6 }) {
     const x2 = width - padding;
     return (
       <svg width={width} height={height} className="w-full h-12">
-        <line x1={x1} y1={y} x2={x2} y2={y} stroke="currentColor" strokeWidth="2" />
+        <line
+          x1={x1}
+          y1={y}
+          x2={x2}
+          y2={y}
+          stroke="currentColor"
+          strokeWidth="2"
+        />
       </svg>
     );
   }
@@ -47,7 +55,12 @@ function Sparkline({ values = [], width = 240, height = 48, padding = 6 }) {
 
   return (
     <svg width={width} height={height} className="w-full h-12">
-      <polyline fill="none" stroke="currentColor" strokeWidth="2" points={points} />
+      <polyline
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        points={points}
+      />
     </svg>
   );
 }
@@ -64,10 +77,15 @@ function BudgetsDiff({ aiMonth, aiBudgets, currentBudgets, categoriesById }) {
 
   return (
     <div className="mt-4 text-slate-200">
-      <h5 className="font-semibold text-slate-100 mb-1">Cambios de presupuesto</h5>
+      <h5 className="font-semibold text-slate-100 mb-1">
+        Cambios de presupuesto
+      </h5>
       <div className="text-xs text-slate-400 mb-2">
         Comparación contra presupuestos actuales del mes{" "}
-        <span className="font-semibold text-slate-200">{aiMonth || "(mes del plan)"}</span>.
+        <span className="font-semibold text-slate-200">
+          {aiMonth || "(mes del plan)"}
+        </span>
+        .
       </div>
       <ul className="space-y-1 text-sm">
         {(aiBudgets || []).map((b, i) => {
@@ -78,7 +96,10 @@ function BudgetsDiff({ aiMonth, aiBudgets, currentBudgets, categoriesById }) {
             (b.category_id ? categoriesById.get(b.category_id) : null) ||
             "Sin categoría";
           return (
-            <li key={i} className="flex justify-between border-b border-slate-800 py-1">
+            <li
+              key={i}
+              className="flex justify-between border-b border-slate-800 py-1"
+            >
               <span className="text-slate-200">{catName}</span>
               <span
                 className={
@@ -89,14 +110,19 @@ function BudgetsDiff({ aiMonth, aiBudgets, currentBudgets, categoriesById }) {
                     : "text-emerald-300"
                 }
               >
-                RD$ {prev.toFixed(2)} → <strong>RD$ {Number(b.amount).toFixed(2)}</strong>
-                {diff !== 0 ? ` (${diff > 0 ? "+" : ""}${diff.toFixed(2)})` : ""}
+                RD$ {prev.toFixed(2)} →{" "}
+                <strong>RD$ {Number(b.amount).toFixed(2)}</strong>
+                {diff !== 0
+                  ? ` (${diff > 0 ? "+" : ""}${diff.toFixed(2)})`
+                  : ""}
               </span>
             </li>
           );
         })}
         {(!aiBudgets || aiBudgets.length === 0) && (
-          <li className="text-slate-500 italic">Sin sugerencias de presupuesto</li>
+          <li className="text-slate-500 italic">
+            Sin sugerencias de presupuesto
+          </li>
         )}
       </ul>
     </div>
@@ -151,6 +177,11 @@ function ScenarioManager({ token }) {
     end: dayjs().endOf("month").add(1, "day").format("YYYY-MM-DD"), // end exclusivo
   });
 
+  const [confirmDeleteScenarioOpen, setConfirmDeleteScenarioOpen] =
+    useState(false);
+  const [scenarioToDelete, setScenarioToDelete] = useState(null);
+  const [deleteScenarioLoading, setDeleteScenarioLoading] = useState(false);
+
   // ✅ NUEVO: merge de eventos (lo que pinta el calendario)
   const mergedProjection = useMemo(() => {
     if (!advEnabled) return projection || [];
@@ -189,6 +220,15 @@ function ScenarioManager({ token }) {
       categoryTotals,
     };
   }, [monthProjection]);
+
+  const [focusedMonthStart, setFocusedMonthStart] = useState(
+    dayjs().startOf("month").format("YYYY-MM-DD")
+  );
+
+  const [confirmDeleteTxOpen, setConfirmDeleteTxOpen] = useState(false);
+  const [deleteTxLoading, setDeleteTxLoading] = useState(false);
+  const [txToDelete, setTxToDelete] = useState(null);
+  // opcional: guarda info para mostrar en el modal (nombre/fecha/monto)
 
   const api = import.meta.env.VITE_API_URL;
 
@@ -288,16 +328,17 @@ function ScenarioManager({ token }) {
     try {
       setAdvLoading(true);
 
-      // OJO: tu calendarRange.end es exclusivo, para backend register enviamos end inclusivo
-      const endInclusive = dayjs(calendarRange.end)
-        .subtract(1, "day")
+      const mStart = dayjs(focusedMonthStart)
+        .startOf("month")
         .format("YYYY-MM-DD");
+      const mEnd = dayjs(focusedMonthStart).endOf("month").format("YYYY-MM-DD"); // inclusivo
 
       const res = await axios.post(
         `${api}/scenarios/${selectedScenario.id}/advanced-forecast/register`,
         {
-          start: calendarRange.start,
-          end: endInclusive,
+          focused: focusedMonthStart, // 👈 recomendado
+          start: mStart, // opcional, por compat
+          end: mEnd, // inclusivo
           params: advParams,
           mode: "replace",
         },
@@ -305,7 +346,9 @@ function ScenarioManager({ token }) {
       );
 
       toast.success(
-        `✅ Registradas ${res.data.inserted || 0} transacciones simuladas (predicción avanzada).`
+        `✅ Registradas ${
+          res.data.inserted || 0
+        } transacciones simuladas (predicción avanzada).`
       );
 
       // refrescar proyección real del escenario (ya incluye lo registrado)
@@ -321,7 +364,10 @@ function ScenarioManager({ token }) {
       setAdvEnabled(false);
     } catch (err) {
       console.error("❌ Error register advanced forecast:", err);
-      toast.error(err.response?.data?.error || "No se pudo registrar la predicción avanzada.");
+      toast.error(
+        err.response?.data?.error ||
+          "No se pudo registrar la predicción avanzada."
+      );
     } finally {
       setAdvLoading(false);
     }
@@ -331,7 +377,10 @@ function ScenarioManager({ token }) {
     setSelectedScenario(scenario);
 
     const start = dayjs().startOf("month").format("YYYY-MM-DD");
-    const endExclusive = dayjs().endOf("month").add(1, "day").format("YYYY-MM-DD");
+    const endExclusive = dayjs()
+      .endOf("month")
+      .add(1, "day")
+      .format("YYYY-MM-DD");
 
     setCalendarRange({ start, end: endExclusive });
 
@@ -358,7 +407,9 @@ function ScenarioManager({ token }) {
     const src = info.event.extendedProps?.source;
     if (!realId) {
       if (src === "advanced_forecast") {
-        toast.info("Esto es un preview de predicción avanzada. Regístralo para editarlo.");
+        toast.info(
+          "Esto es un preview de predicción avanzada. Regístralo para editarlo."
+        );
       }
       return;
     }
@@ -428,7 +479,11 @@ function ScenarioManager({ token }) {
 
         // si preview está encendido, refrescarlo también
         if (advEnabled) {
-          await fetchAdvancedPreview(selectedScenario.id, calendarRange.start, calendarRange.end);
+          await fetchAdvancedPreview(
+            selectedScenario.id,
+            calendarRange.start,
+            calendarRange.end
+          );
         }
       }
 
@@ -443,9 +498,13 @@ function ScenarioManager({ token }) {
   };
 
   const handleDeleteTransaction = async () => {
-    if (!editId || !confirm("¿Eliminar esta transacción?")) return;
+    const id = txToDelete?.id || editId;
+    if (!id) return;
+
     try {
-      await axios.delete(`${api}/scenarios/scenario_transactions/${editId}`, {
+      setDeleteTxLoading(true);
+
+      await axios.delete(`${api}/scenarios/scenario_transactions/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -455,17 +514,30 @@ function ScenarioManager({ token }) {
           calendarRange.start,
           calendarRange.end
         );
+
         if (advEnabled) {
-          await fetchAdvancedPreview(selectedScenario.id, calendarRange.start, calendarRange.end);
+          await fetchAdvancedPreview(
+            selectedScenario.id,
+            calendarRange.start,
+            calendarRange.end
+          );
         }
       }
 
+      toast.success("Transacción eliminada ✅");
+
+      // cerrar todo
       setShowModal(false);
       setEditMode(false);
       setEditId(null);
+
+      setConfirmDeleteTxOpen(false);
+      setTxToDelete(null);
     } catch (err) {
       console.error("❌ Error al eliminar transacción:", err);
-      alert("No se pudo eliminar la transacción.");
+      toast.error("No se pudo eliminar la transacción.");
+    } finally {
+      setDeleteTxLoading(false);
     }
   };
 
@@ -493,12 +565,15 @@ function ScenarioManager({ token }) {
   };
 
   const handleDeleteScenario = async (id) => {
-    if (!confirm("¿Eliminar este escenario? Se borrarán sus transacciones simuladas.")) return;
     try {
+      setDeleteScenarioLoading(true);
+
       await axios.delete(`${api}/scenarios/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
       setScenarios((prev) => prev.filter((s) => s.id !== id));
+
       if (selectedScenario?.id === id) {
         setSelectedScenario(null);
         setProjection([]);
@@ -506,9 +581,17 @@ function ScenarioManager({ token }) {
         setAdvMeta(null);
         setAdvEnabled(false);
       }
+
+      toast.success("Escenario eliminado ✅");
     } catch (err) {
       console.error("❌ Error al eliminar escenario:", err);
-      alert(err.response?.data?.error || "No se pudo eliminar el escenario.");
+      toast.error(
+        err.response?.data?.error || "No se pudo eliminar el escenario."
+      );
+    } finally {
+      setDeleteScenarioLoading(false);
+      setConfirmDeleteScenarioOpen(false);
+      setScenarioToDelete(null);
     }
   };
 
@@ -557,14 +640,20 @@ function ScenarioManager({ token }) {
           setAdvMeta(null);
           setAdvEnabled(false);
           axios
-            .get(`${api}/scenarios`, { headers: { Authorization: `Bearer ${token}` } })
+            .get(`${api}/scenarios`, {
+              headers: { Authorization: `Bearer ${token}` },
+            })
             .then((res) => setScenarios(res.data.data || []))
-            .catch((err) => console.error("❌ Error recargando escenarios:", err));
+            .catch((err) =>
+              console.error("❌ Error recargando escenarios:", err)
+            );
         }}
       />
 
       <div className="mt-4">
-        <h3 className="text-lg font-semibold text-slate-100 mb-2">Escenarios guardados</h3>
+        <h3 className="text-lg font-semibold text-slate-100 mb-2">
+          Escenarios guardados
+        </h3>
         <ul className="space-y-2">
           {scenarios.map((sc) => {
             const isActive = selectedScenario?.id === sc.id;
@@ -580,9 +669,14 @@ function ScenarioManager({ token }) {
                 `}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1" onClick={() => handleSelectScenario(sc)}>
+                  <div
+                    className="flex-1"
+                    onClick={() => handleSelectScenario(sc)}
+                  >
                     <p className="font-semibold text-slate-100">{sc.name}</p>
-                    <p className="text-xs text-slate-400">{sc.description || "Sin descripción"}</p>
+                    <p className="text-xs text-slate-400">
+                      {sc.description || "Sin descripción"}
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -594,7 +688,10 @@ function ScenarioManager({ token }) {
                         transition-colors
                       "
                       onClick={() => {
-                        setScenarioForm({ name: sc.name, description: sc.description || "" });
+                        setScenarioForm({
+                          name: sc.name,
+                          description: sc.description || "",
+                        });
                         setScenarioEditingId(sc.id);
                         setShowEditScenario(true);
                       }}
@@ -609,7 +706,10 @@ function ScenarioManager({ token }) {
                         hover:bg-rose-900/50
                         transition-colors
                       "
-                      onClick={() => handleDeleteScenario(sc.id)}
+                      onClick={() => {
+                        setScenarioToDelete(sc);
+                        setConfirmDeleteScenarioOpen(true);
+                      }}
                     >
                       Eliminar
                     </button>
@@ -631,12 +731,19 @@ function ScenarioManager({ token }) {
                   Predicción avanzada (preview → registrar)
                 </h3>
                 <p className="text-xs text-slate-400">
-                  Ajusta parámetros, previsualiza en el calendario y luego registra para importar a presupuesto.
+                  Ajusta parámetros, previsualiza en el calendario y luego
+                  registra para importar a presupuesto.
                 </p>
                 {advMeta?.history_from && (
                   <p className="text-xs text-slate-500 mt-1">
-                    Histórico usado: <span className="text-slate-200 font-semibold">{advMeta.history_from}</span>{" "}
-                    → <span className="text-slate-200 font-semibold">{advMeta.history_to}</span>
+                    Histórico usado:{" "}
+                    <span className="text-slate-200 font-semibold">
+                      {advMeta.history_from}
+                    </span>{" "}
+                    →{" "}
+                    <span className="text-slate-200 font-semibold">
+                      {advMeta.history_to}
+                    </span>
                   </p>
                 )}
               </div>
@@ -652,7 +759,11 @@ function ScenarioManager({ token }) {
                     setAdvMeta(null);
 
                     if (on) {
-                      await fetchAdvancedPreview(selectedScenario.id, calendarRange.start, calendarRange.end);
+                      await fetchAdvancedPreview(
+                        selectedScenario.id,
+                        calendarRange.start,
+                        calendarRange.end
+                      );
                     }
                   }}
                 />
@@ -674,21 +785,27 @@ function ScenarioManager({ token }) {
                 value={advParams.min_occurrences}
                 min={2}
                 max={50}
-                onChange={(v) => setAdvParams((p) => ({ ...p, min_occurrences: v }))}
+                onChange={(v) =>
+                  setAdvParams((p) => ({ ...p, min_occurrences: v }))
+                }
               />
               <FieldNumber
                 label="Min intervalo"
                 value={advParams.min_interval_days}
                 min={1}
                 max={365}
-                onChange={(v) => setAdvParams((p) => ({ ...p, min_interval_days: v }))}
+                onChange={(v) =>
+                  setAdvParams((p) => ({ ...p, min_interval_days: v }))
+                }
               />
               <FieldNumber
                 label="Max intervalo"
                 value={advParams.max_interval_days}
                 min={1}
                 max={3650}
-                onChange={(v) => setAdvParams((p) => ({ ...p, max_interval_days: v }))}
+                onChange={(v) =>
+                  setAdvParams((p) => ({ ...p, max_interval_days: v }))
+                }
               />
               <FieldNumber
                 label="Coef var máx"
@@ -696,7 +813,9 @@ function ScenarioManager({ token }) {
                 step={0.05}
                 min={0.05}
                 max={2}
-                onChange={(v) => setAdvParams((p) => ({ ...p, max_coef_variation: v }))}
+                onChange={(v) =>
+                  setAdvParams((p) => ({ ...p, max_coef_variation: v }))
+                }
               />
 
               <div className="flex flex-col gap-2 justify-end">
@@ -705,7 +824,10 @@ function ScenarioManager({ token }) {
                     type="checkbox"
                     checked={advParams.include_noise}
                     onChange={(e) =>
-                      setAdvParams((p) => ({ ...p, include_noise: e.target.checked }))
+                      setAdvParams((p) => ({
+                        ...p,
+                        include_noise: e.target.checked,
+                      }))
                     }
                   />
                   Incluir eventuales
@@ -715,7 +837,10 @@ function ScenarioManager({ token }) {
                     type="checkbox"
                     checked={advParams.include_occasional}
                     onChange={(e) =>
-                      setAdvParams((p) => ({ ...p, include_occasional: e.target.checked }))
+                      setAdvParams((p) => ({
+                        ...p,
+                        include_occasional: e.target.checked,
+                      }))
                     }
                   />
                   Incluir ocasionales
@@ -732,7 +857,11 @@ function ScenarioManager({ token }) {
                 "
                 disabled={!advEnabled || advLoading}
                 onClick={() =>
-                  fetchAdvancedPreview(selectedScenario.id, calendarRange.start, calendarRange.end)
+                  fetchAdvancedPreview(
+                    selectedScenario.id,
+                    calendarRange.start,
+                    calendarRange.end
+                  )
                 }
               >
                 {advLoading ? "Cargando..." : "Preview"}
@@ -745,7 +874,9 @@ function ScenarioManager({ token }) {
                   hover:brightness-110 active:scale-95 transition-all
                   disabled:opacity-50
                 "
-                disabled={advLoading || !advEnabled || (advPreview?.length || 0) === 0}
+                disabled={
+                  advLoading || !advEnabled || (advPreview?.length || 0) === 0
+                }
                 onClick={registerAdvancedForecast}
               >
                 Registrar en escenario
@@ -754,7 +885,8 @@ function ScenarioManager({ token }) {
 
             {advEnabled && (
               <div className="mt-2 text-xs text-slate-400">
-                Preview actual: <strong className="text-slate-200">{advPreview.length}</strong>{" "}
+                Preview actual:{" "}
+                <strong className="text-slate-200">{advPreview.length}</strong>{" "}
                 eventos simulados.
               </div>
             )}
@@ -825,13 +957,20 @@ function ScenarioManager({ token }) {
               </h4>
               <ul className="space-y-1 text-xs md:text-sm text-slate-200">
                 {Object.entries(stats.categoryTotals).map(([cat, total]) => (
-                  <li key={cat} className="flex justify-between border-b border-slate-800 py-1">
+                  <li
+                    key={cat}
+                    className="flex justify-between border-b border-slate-800 py-1"
+                  >
                     <span>{cat}</span>
-                    <span className="text-right font-medium">RD$ {total.toFixed(2)}</span>
+                    <span className="text-right font-medium">
+                      RD$ {total.toFixed(2)}
+                    </span>
                   </li>
                 ))}
                 {Object.keys(stats.categoryTotals).length === 0 && (
-                  <li className="text-slate-500 italic">No hay gastos registrados</li>
+                  <li className="text-slate-500 italic">
+                    No hay gastos registrados
+                  </li>
                 )}
               </ul>
             </div>
@@ -842,12 +981,32 @@ function ScenarioManager({ token }) {
             projection={mergedProjection} // ✅ aquí usamos el merge
             onDateRangeSelect={handleDateRangeSelect}
             onEventClick={handleEventClick}
-            onViewRangeChange={async (start, end) => {
-              setCalendarRange({ start, end });
+            onViewRangeChange={async (gridStart, gridEnd, monthStart) => {
+              setCalendarRange({ start: gridStart, end: gridEnd });
+              setFocusedMonthStart(monthStart);
+
               if (selectedScenario) {
-                await fetchProjectionRange(selectedScenario.id, start, end);
+                // 1) projection: usa el grid para pintar bien
+                await fetchProjectionRange(
+                  selectedScenario.id,
+                  gridStart,
+                  gridEnd
+                );
+
+                // 2) advanced preview: usa SOLO el mes
                 if (advEnabled) {
-                  await fetchAdvancedPreview(selectedScenario.id, start, end);
+                  const mStart = dayjs(focusedMonthStart)
+                    .startOf("month")
+                    .format("YYYY-MM-DD");
+                  const mEndExcl = dayjs(focusedMonthStart)
+                    .endOf("month")
+                    .add(1, "day")
+                    .format("YYYY-MM-DD");
+                  await fetchAdvancedPreview(
+                    selectedScenario.id,
+                    mStart,
+                    mEndExcl
+                  );
                 }
               }
             }}
@@ -869,7 +1028,9 @@ function ScenarioManager({ token }) {
                     <p className="font-medium text-slate-100">
                       <span
                         className={
-                          tx.type === "income" ? "text-emerald-300" : "text-rose-300"
+                          tx.type === "income"
+                            ? "text-emerald-300"
+                            : "text-rose-300"
                         }
                       >
                         {tx.type === "income" ? "+" : "-"}RD$
@@ -913,10 +1074,78 @@ function ScenarioManager({ token }) {
           categories={categories}
           onCancel={() => setShowModal(false)}
           onSave={handleSaveTransaction}
-          onDelete={editMode ? handleDeleteTransaction : null}
+          onDelete={
+            editMode
+              ? () => {
+                  // arma “payload” para mostrar en modal
+                  setTxToDelete({
+                    id: editId,
+                    name: formData?.name,
+                    amount: formData?.amount,
+                    type: formData?.type,
+                    start: selectedDate?.start,
+                    end: selectedDate?.end,
+                  });
+                  setConfirmDeleteTxOpen(true);
+                }
+              : null
+          }
           isEditing={editMode}
         />
       </Modal>
+      {/* Modal: eliminar transaccion simulada */}
+      <ConfirmModal
+        isOpen={confirmDeleteTxOpen}
+        onClose={() => {
+          if (deleteTxLoading) return;
+          setConfirmDeleteTxOpen(false);
+          setTxToDelete(null);
+        }}
+        onConfirm={handleDeleteTransaction}
+        title="Eliminar transacción"
+        message="Esta acción no se puede deshacer."
+        details={
+          <div className="space-y-1">
+            <div>
+              Vas a eliminar{" "}
+              <span className="font-semibold text-slate-100">
+                {txToDelete?.name || "esta transacción"}
+              </span>
+              .
+            </div>
+
+            <div className="text-slate-300">
+
+              {txToDelete?.type === "income" ? "Ingreso" : "Gasto"} ·{" "}
+              <span className="text-slate-200 font-semibold">
+                RD$ {Number(txToDelete?.amount || 0).toFixed(2)}
+              </span>
+            </div>
+
+            {txToDelete?.start && (
+              <div className="text-slate-400">
+                Fecha:{" "}
+                <span className="text-slate-200 font-semibold">
+                  {txToDelete.start}
+                </span>
+                {txToDelete?.end && txToDelete.end !== txToDelete.start ? (
+                  <>
+                    {" "}
+                    →{" "}
+                    <span className="text-slate-200 font-semibold">
+                      {txToDelete.end}
+                    </span>
+                  </>
+                ) : null}
+              </div>
+            )}
+          </div>
+        }
+        confirmText="Sí, eliminar"
+        cancelText="Cancelar"
+        danger
+        loading={deleteTxLoading}
+      />
 
       {/* Modal: editar escenario */}
       <Modal
@@ -941,13 +1170,17 @@ function ScenarioManager({ token }) {
               "
               placeholder="Ej: Escenario base, Plan agresivo..."
               value={scenarioForm.name}
-              onChange={(e) => setScenarioForm((f) => ({ ...f, name: e.target.value }))}
+              onChange={(e) =>
+                setScenarioForm((f) => ({ ...f, name: e.target.value }))
+              }
               required
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-300">Descripción</label>
+            <label className="text-sm font-medium text-slate-300">
+              Descripción
+            </label>
             <input
               type="text"
               className="
@@ -999,6 +1232,38 @@ function ScenarioManager({ token }) {
         </div>
       </Modal>
 
+      {/* Modal eliminar escenario */}
+      <ConfirmModal
+        isOpen={confirmDeleteScenarioOpen}
+        onClose={() => {
+          if (deleteScenarioLoading) return;
+          setConfirmDeleteScenarioOpen(false);
+          setScenarioToDelete(null);
+        }}
+        onConfirm={() => handleDeleteScenario(scenarioToDelete?.id)}
+        title="Eliminar escenario"
+        message="Esta acción no se puede deshacer."
+        details={
+          <div className="space-y-1">
+            <div>
+              Vas a eliminar{" "}
+              <span className="font-semibold text-slate-100">
+                {scenarioToDelete?.name}
+              </span>
+              .
+            </div>
+            <div className="text-slate-400">
+              Se borrarán también sus transacciones simuladas y los presupuestos
+              importados desde este escenario.
+            </div>
+          </div>
+        }
+        confirmText="Sí, eliminar"
+        cancelText="Cancelar"
+        danger
+        loading={deleteScenarioLoading}
+      />
+
       {/* Importación de budgets */}
       <ImportBudgetModal
         isOpen={showImportModal}
@@ -1022,7 +1287,8 @@ function ScenarioManager({ token }) {
               { headers: { Authorization: `Bearer ${token}` } }
             );
 
-            const { inserted, updated, skipped, selected } = res.data.data || {};
+            const { inserted, updated, skipped, selected } =
+              res.data.data || {};
             toast.success(
               `Presupuesto importado ✅
 Seleccionados: ${selected}
@@ -1035,7 +1301,9 @@ Insertados: ${inserted}, Actualizados: ${updated}, Omitidos: ${skipped}`,
             setImportConflicts([]);
           } catch (err) {
             console.error("❌ Error al importar a budgets:", err);
-            toast.error(err.response?.data?.error || "No se pudo importar a presupuesto.");
+            toast.error(
+              err.response?.data?.error || "No se pudo importar a presupuesto."
+            );
           }
         }}
       />

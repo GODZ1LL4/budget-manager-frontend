@@ -18,7 +18,9 @@ function ScenarioCalendar({
 
     // Si es AI preview, lo diferenciamos visualmente (borde + fondo más suave)
     const backgroundColor = isAI
-      ? (isIncome ? "rgba(16,185,129,0.18)" : "rgba(239,68,68,0.18)")
+      ? isIncome
+        ? "rgba(16,185,129,0.18)"
+        : "rgba(239,68,68,0.18)"
       : baseColor;
 
     const borderColor = isAI ? "#f59e0b" : baseColor; // ámbar para AI
@@ -40,7 +42,7 @@ function ScenarioCalendar({
 
       // ✅ Importante: solo pasar realId si NO es AI preview
       extendedProps: {
-        realId: isAI ? null : tx.id,
+        realId: isAI ? null : tx.real_id || tx.rule_id,
         source: isAI ? "advanced_forecast" : "scenario_projection",
         isProjected,
         category_name: tx.category_name || null,
@@ -72,13 +74,21 @@ function ScenarioCalendar({
           height="auto"
           locale="es"
           selectable={true}
-          select={({ startStr, endStr }) => onDateRangeSelect?.(startStr, endStr)}
+          select={({ startStr, endStr }) =>
+            onDateRangeSelect?.(startStr, endStr)
+          }
           eventClick={onEventClick}
           datesSet={(info) => {
-            // info.start, info.end son Date; end es EXCLUSIVO
-            const startStr = info.startStr || info.start.toISOString().slice(0, 10);
-            const endStr = info.endStr || info.end.toISOString().slice(0, 10);
-            onViewRangeChange?.(startStr, endStr);
+            const gridStart =
+              info.startStr || info.start.toISOString().slice(0, 10);
+            const gridEnd = info.endStr || info.end.toISOString().slice(0, 10);
+
+            const d = info.view.currentStart;
+            const monthStart = `${d.getFullYear()}-${String(
+              d.getMonth() + 1
+            ).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+            onViewRangeChange?.(gridStart, gridEnd, monthStart);
           }}
           className="fc-theme-dark text-xs sm:text-sm"
         />

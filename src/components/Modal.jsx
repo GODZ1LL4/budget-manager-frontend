@@ -60,13 +60,15 @@ function Modal({ isOpen, onClose, title, children, size = "md" }) {
 
                   {/* Título */}
                   {title && (
-                    <Dialog.Title className="relative text-base sm:text-lg font-semibold text-slate-100 mb-4">
+                    <Dialog.Title className="relative text-lg sm:text-xl font-semibold text-slate-100 mb-4">
+
                       {title}
                     </Dialog.Title>
                   )}
 
                   {/* Contenido */}
-                  <div className="relative">{children}</div>
+                  <div className="relative text-base text-slate-200">{children}</div>
+
                 </div>
               </Dialog.Panel>
             </Transition.Child>

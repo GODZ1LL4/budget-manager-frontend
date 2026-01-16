@@ -614,7 +614,7 @@ function Dashboard({ token }) {
       </CollapseSection>
 
       {/* 🔮 BLOQUE 9 — Mirada al futuro */}
-      <CollapseSection title="26- Proyección de gasto por periodo">
+      <CollapseSection title="26- Proyección de flujo por período">
         <ExpenseForecastChart token={token} />
       </CollapseSection>
 
