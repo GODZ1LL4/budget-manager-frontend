@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import axios from "axios";
 import Modal from "./Modal";
 
@@ -12,6 +13,70 @@ function toNum(x, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function normalize(s) {
+  return String(s || "")
+    .toLowerCase()
+    .trim();
+}
+
+/**
+ * Dropdown renderizado en document.body (portal) para evitar que se recorte
+ * por overflow del modal / contenedores.
+ */
+function TypeaheadDropdown({ anchorEl, open, onClose, children }) {
+  const [style, setStyle] = useState(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const update = () => {
+      if (!anchorEl) return;
+      const rect = anchorEl.getBoundingClientRect();
+
+      const top = rect.bottom + 6;
+      const maxH = Math.max(140, window.innerHeight - top - 12);
+
+      setStyle({
+        position: "fixed",
+        top,
+        left: rect.left,
+        width: rect.width,
+        maxHeight: Math.min(260, maxH),
+        zIndex: 9999,
+      });
+    };
+
+    update();
+    window.addEventListener("resize", update);
+    // true => captura scroll dentro de contenedores (incluye el modal)
+    window.addEventListener("scroll", update, true);
+
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open, anchorEl]);
+
+  if (!open || !style) return null;
+
+  return createPortal(
+    <>
+      {/* Click afuera para cerrar */}
+      <button
+        type="button"
+        onClick={onClose}
+        className="fixed inset-0 z-[9998] cursor-default"
+        aria-label="close"
+        tabIndex={-1}
+      />
+      <div style={style} className="z-[9999]">
+        {children}
+      </div>
+    </>,
+    document.body
+  );
+}
+
 export default function ShoppingListQuickModal({
   isOpen,
   onClose,
@@ -21,11 +86,18 @@ export default function ShoppingListQuickModal({
   meta, // { account_id, category_id, date, description, discount }
   onCreated, // callback(data)
 }) {
-  const [rows, setRows] = useState([{ item_id: "", quantity: 1, gross_total: "" }]);
+  const [rows, setRows] = useState([
+    { item_id: "", quantity: 1, gross_total: "" },
+  ]);
   const [preview, setPreview] = useState(null);
   const [error, setError] = useState("");
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [loadingCreate, setLoadingCreate] = useState(false);
+
+  // Typeahead states
+  const [itemQueries, setItemQueries] = useState([""]);
+  const [openDropdownIdx, setOpenDropdownIdx] = useState(null);
+  const itemInputRefs = useRef([]); // refs por fila
 
   // Reset modal when open/close changes
   useEffect(() => {
@@ -35,17 +107,69 @@ export default function ShoppingListQuickModal({
     setError("");
     setLoadingPreview(false);
     setLoadingCreate(false);
+
+    setItemQueries([""]);
+    setOpenDropdownIdx(null);
+    itemInputRefs.current = [];
   }, [isOpen]);
+
+  // Mantener itemQueries sincronizado con rows (add/remove)
+  useEffect(() => {
+    setItemQueries((prev) => {
+      const next = [...prev];
+      while (next.length < rows.length) next.push("");
+      while (next.length > rows.length) next.pop();
+      return next;
+    });
+  }, [rows.length]);
+
+  // Si una fila ya tiene item_id y el input está vacío, rellenar con el nombre
+  useEffect(() => {
+    setItemQueries((prev) => {
+      let changed = false;
+      const next = [...prev];
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row?.item_id) continue;
+
+        const it = items?.find((x) => x.id === row.item_id);
+        if (!it) continue;
+
+        if (!next[i] || normalize(next[i]) === "") {
+          next[i] = it.name;
+          changed = true;
+        }
+      }
+
+      return changed ? next : prev;
+    });
+  }, [rows, items]);
 
   const canPreview = useMemo(() => {
     if (!meta?.date) return false;
-    const valid = rows.some((r) => r.item_id && toNum(r.quantity, 0) > 0 && toNum(r.gross_total, 0) > 0);
+    const valid = rows.some(
+      (r) =>
+        r.item_id && toNum(r.quantity, 0) > 0 && toNum(r.gross_total, 0) > 0
+    );
     return valid;
   }, [rows, meta?.date]);
 
-  const addRow = () => setRows((prev) => [...prev, { item_id: "", quantity: 1, gross_total: "" }]);
+  const addRow = () =>
+    setRows((prev) => [...prev, { item_id: "", quantity: 1, gross_total: "" }]);
 
-  const removeRow = (idx) => setRows((prev) => prev.filter((_, i) => i !== idx));
+  const removeRow = (idx) => {
+    setRows((prev) => prev.filter((_, i) => i !== idx));
+    setItemQueries((prev) => prev.filter((_, i) => i !== idx));
+    itemInputRefs.current = itemInputRefs.current.filter((_, i) => i !== idx);
+
+    setOpenDropdownIdx((cur) => {
+      if (cur == null) return cur;
+      if (cur === idx) return null;
+      // si quitas una fila antes, desplaza el índice
+      return cur > idx ? cur - 1 : cur;
+    });
+  };
 
   const updateRow = (idx, field, value) => {
     setRows((prev) => {
@@ -57,13 +181,32 @@ export default function ShoppingListQuickModal({
 
   const buildPreviewLines = () =>
     rows
-      .filter((r) => r.item_id && toNum(r.quantity, 0) > 0 && toNum(r.gross_total, 0) > 0)
+      .filter(
+        (r) =>
+          r.item_id && toNum(r.quantity, 0) > 0 && toNum(r.gross_total, 0) > 0
+      )
       .map((r) => ({
         item_id: r.item_id,
         quantity: toNum(r.quantity, 1),
         price_input_mode: "gross",
         gross_total: toNum(r.gross_total, 0),
       }));
+
+  const filteredItemsForRow = (idx) => {
+    const q = normalize(itemQueries[idx]);
+    if (!q) return items;
+    return items.filter((it) => normalize(it.name).includes(q));
+  };
+
+  const selectItemForRow = (idx, it) => {
+    updateRow(idx, "item_id", it.id);
+    setItemQueries((prev) => {
+      const copy = [...prev];
+      copy[idx] = it.name;
+      return copy;
+    });
+    setOpenDropdownIdx(null);
+  };
 
   const handlePreview = async () => {
     if (!meta?.date) {
@@ -88,8 +231,8 @@ export default function ShoppingListQuickModal({
       const data = res.data?.data;
       const lines = data?.lines || [];
 
-      // Enriquecer preview con una resolución por defecto:
-      // - conflict => use_existing (como pediste)
+      // resolución por defecto:
+      // - conflict => use_existing
       // - same_as_existing => use_existing
       // - insert_new => insert_new
       const normalized = lines.map((l) => {
@@ -106,7 +249,9 @@ export default function ShoppingListQuickModal({
       });
     } catch (e) {
       console.error("❌ Preview error:", e);
-      setError(e.response?.data?.error || e.message || "Error generando preview");
+      setError(
+        e.response?.data?.error || e.message || "Error generando preview"
+      );
     } finally {
       setLoadingPreview(false);
     }
@@ -120,7 +265,8 @@ export default function ShoppingListQuickModal({
         if (l.item_id !== item_id) return l;
         if (l.price_status !== "conflict") return l;
 
-        const next = l.resolution === "use_existing" ? "update_existing" : "use_existing";
+        const next =
+          l.resolution === "use_existing" ? "update_existing" : "use_existing";
         return { ...l, resolution: next };
       });
       return { ...prev, lines };
@@ -130,7 +276,9 @@ export default function ShoppingListQuickModal({
   const hasUnresolvedConflicts = useMemo(() => {
     if (!preview?.lines?.length) return false;
     return preview.lines.some(
-      (l) => l.price_status === "conflict" && !["use_existing", "update_existing"].includes(l.resolution)
+      (l) =>
+        l.price_status === "conflict" &&
+        !["use_existing", "update_existing"].includes(l.resolution)
     );
   }, [preview]);
 
@@ -152,20 +300,13 @@ export default function ShoppingListQuickModal({
     setError("");
 
     try {
-      // Construimos las líneas a enviar al backend a partir del preview
-      // (porque ahí ya está el computed.unit_price_net y el estado)
-      const submitLines = preview.lines.map((l) => {
-        // Para el backend, reenviamos el input original gross_total y quantity (recalcula server-side)
-        // y la resolución.
-        // NOTA: el preview ya incluye input.gross_total
-        return {
-          item_id: l.item_id,
-          quantity: l.quantity,
-          price_input_mode: "gross",
-          gross_total: l.input?.gross_total ?? l.computed?.line_total_gross ?? 0,
-          resolution: l.resolution,
-        };
-      });
+      const submitLines = preview.lines.map((l) => ({
+        item_id: l.item_id,
+        quantity: l.quantity,
+        price_input_mode: "gross",
+        gross_total: l.input?.gross_total ?? l.computed?.line_total_gross ?? 0,
+        resolution: l.resolution,
+      }));
 
       const res = await axios.post(
         `${api}/transactions/shopping-list`,
@@ -198,9 +339,6 @@ export default function ShoppingListQuickModal({
   const previewTotals = useMemo(() => {
     if (!preview?.lines?.length) return null;
 
-    // Recalcular en UI basado en resolución:
-    // - use_existing => net = existing_price_on_date
-    // - update_existing / insert_new => net = computed.unit_price_net
     let totalBefore = 0;
 
     for (const l of preview.lines) {
@@ -228,11 +366,17 @@ export default function ShoppingListQuickModal({
   }, [preview]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Lista de compra rápida" size="xl">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Lista de compra rápida"
+      size="xl"
+    >
       <div className="space-y-4 text-slate-200">
         {!meta?.date && (
           <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-            ⚠️ Selecciona una <strong>fecha</strong> en el formulario antes de abrir el preview.
+            ⚠️ Selecciona una <strong>fecha</strong> en el formulario antes de
+            abrir el preview.
           </div>
         )}
 
@@ -241,28 +385,102 @@ export default function ShoppingListQuickModal({
         {/* Editor de filas */}
         <div className="border border-slate-800 rounded-xl bg-slate-950/40 p-3 space-y-2">
           <div className="text-xs text-slate-400">
-            Escribe el <strong>total pagado (con ITBIS)</strong> por línea. La app calcula el neto.
+            Escribe el <strong>total pagado (con ITBIS)</strong> por línea. La
+            app calcula el neto.
           </div>
 
           {rows.map((r, idx) => {
             const item = items.find((it) => it.id === r.item_id);
+            const anchorEl = itemInputRefs.current[idx] || null;
+
             return (
               <div
                 key={idx}
                 className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center border-t border-slate-800 pt-2"
               >
-                <select
-                  value={r.item_id}
-                  onChange={(e) => updateRow(idx, "item_id", e.target.value)}
-                  className="sm:col-span-5 w-full rounded-lg px-3 py-2 text-sm bg-slate-900 border border-slate-700 text-slate-100"
-                >
-                  <option value="">Selecciona artículo</option>
-                  {items.map((it) => (
-                    <option key={it.id} value={it.id}>
-                      {it.name}
-                    </option>
-                  ))}
-                </select>
+                {/* Typeahead input (buscable) */}
+                <div className="sm:col-span-5 w-full">
+                  <input
+                    ref={(el) => (itemInputRefs.current[idx] = el)}
+                    value={itemQueries[idx] ?? ""}
+                    onChange={(e) => {
+                      const v = e.target.value;
+
+                      setItemQueries((prev) => {
+                        const copy = [...prev];
+                        copy[idx] = v;
+                        return copy;
+                      });
+
+                      setOpenDropdownIdx(idx);
+
+                      // si borra, limpiamos selección real
+                      if (!v) updateRow(idx, "item_id", "");
+                    }}
+                    onFocus={() => setOpenDropdownIdx(idx)}
+                    placeholder="Escribe para buscar artículo..."
+                    className="w-full rounded-lg px-3 py-2 text-sm bg-slate-900 border border-slate-700 text-slate-100"
+                  />
+
+                  {/* Dropdown en portal (NO se corta por el modal) */}
+                  <TypeaheadDropdown
+                    anchorEl={anchorEl}
+                    open={openDropdownIdx === idx}
+                    onClose={() => setOpenDropdownIdx(null)}
+                  >
+                    <div
+                      className="
+                      w-full
+                      max-h-[240px]
+                      overflow-y-auto
+                      overscroll-contain
+                      rounded-lg
+                      border
+                      border-slate-700
+                      bg-slate-950
+                      shadow-xl
+                    "
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateRow(idx, "item_id", "");
+                          setItemQueries((prev) => {
+                            const copy = [...prev];
+                            copy[idx] = "";
+                            return copy;
+                          });
+                          setOpenDropdownIdx(null);
+                        }}
+                        className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800/60 border-b border-slate-800"
+                      >
+                        — Limpiar selección —
+                      </button>
+
+                      {filteredItemsForRow(idx)
+                        .slice(0, 50)
+                        .map((it) => (
+                          <button
+                            key={it.id}
+                            type="button"
+                            onClick={() => selectItemForRow(idx, it)}
+                            className="w-full text-left px-3 py-2 text-sm text-slate-100 hover:bg-slate-800/60"
+                          >
+                            {it.name}
+                            <span className="ml-2 text-xs text-slate-400">
+                              ({currency(it.latest_price)})
+                            </span>
+                          </button>
+                        ))}
+
+                      {filteredItemsForRow(idx).length === 0 && (
+                        <div className="px-3 py-2 text-xs text-slate-400">
+                          No hay resultados.
+                        </div>
+                      )}
+                    </div>
+                  </TypeaheadDropdown>
+                </div>
 
                 <input
                   type="number"
@@ -277,7 +495,9 @@ export default function ShoppingListQuickModal({
                   type="number"
                   step="0.01"
                   value={r.gross_total}
-                  onChange={(e) => updateRow(idx, "gross_total", e.target.value)}
+                  onChange={(e) =>
+                    updateRow(idx, "gross_total", e.target.value)
+                  }
                   placeholder="Total pagado"
                   className="sm:col-span-3 w-full rounded-lg px-3 py-2 text-sm bg-slate-900 border border-slate-700 text-slate-100"
                 />
@@ -292,10 +512,15 @@ export default function ShoppingListQuickModal({
 
                 {item && (
                   <div className="sm:col-span-12 text-[11px] text-slate-400">
-                    latest_price: <span className="text-emerald-300 font-semibold">{currency(item.latest_price)}</span>{" "}
+                    latest_price:{" "}
+                    <span className="text-emerald-300 font-semibold">
+                      {currency(item.latest_price)}
+                    </span>{" "}
                     • ITBIS:{" "}
                     <span className="text-slate-200 font-semibold">
-                      {item.is_exempt ? "Exento" : `${Number(item.tax_rate || 0)}%`}
+                      {item.is_exempt
+                        ? "Exento"
+                        : `${Number(item.tax_rate || 0)}%`}
                     </span>
                   </div>
                 )}
@@ -335,17 +560,22 @@ export default function ShoppingListQuickModal({
                 Fecha: <span className="font-semibold">{preview.date}</span>
               </span>
               <span>
-                Descuento: <span className="font-semibold">{preview.discount || 0}%</span>
+                Descuento:{" "}
+                <span className="font-semibold">{preview.discount || 0}%</span>
               </span>
               {previewTotals && (
                 <>
                   <span>
                     Total (antes):{" "}
-                    <span className="font-semibold text-emerald-300">{currency(previewTotals.totalBeforeDiscount)}</span>
+                    <span className="font-semibold text-emerald-300">
+                      {currency(previewTotals.totalBeforeDiscount)}
+                    </span>
                   </span>
                   <span>
                     Total (con desc):{" "}
-                    <span className="font-semibold text-emerald-300">{currency(previewTotals.totalAfterDiscount)}</span>
+                    <span className="font-semibold text-emerald-300">
+                      {currency(previewTotals.totalAfterDiscount)}
+                    </span>
                   </span>
                 </>
               )}
@@ -356,36 +586,52 @@ export default function ShoppingListQuickModal({
                 <thead>
                   <tr className="text-left bg-slate-900/80 border-b border-slate-800">
                     <th className="py-1 px-2 text-slate-300">Artículo</th>
-                    <th className="py-1 px-2 text-right text-slate-300">Cant</th>
-                    <th className="py-1 px-2 text-right text-slate-300">Neto calc</th>
-                    <th className="py-1 px-2 text-right text-slate-300">Existente día</th>
-                    <th className="py-1 px-2 text-right text-slate-300">Acción</th>
+                    <th className="py-1 px-2 text-right text-slate-300">
+                      Cant
+                    </th>
+                    <th className="py-1 px-2 text-right text-slate-300">
+                      Neto calc
+                    </th>
+                    <th className="py-1 px-2 text-right text-slate-300">
+                      Existente día
+                    </th>
+                    <th className="py-1 px-2 text-right text-slate-300">
+                      Acción
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {preview.lines.map((l, i) => {
-                    const item = items.find((it) => it.id === l.item_id);
+                    const it = items.find((x) => x.id === l.item_id);
                     const isConflict = l.price_status === "conflict";
                     const hasExisting = l.existing_price_on_date != null;
 
                     return (
                       <tr
                         key={`${l.item_id}-${i}`}
-                        className={i % 2 === 0 ? "bg-slate-950/40" : "bg-slate-900/50"}
+                        className={
+                          i % 2 === 0 ? "bg-slate-950/40" : "bg-slate-900/50"
+                        }
                       >
                         <td className="py-1 px-2 text-slate-100">
-                          {item?.name || l.item_id}
+                          {it?.name || l.item_id}
                           <div className="text-[10px] text-slate-400">
                             latest: {currency(l.latest_price)} • ITBIS:{" "}
-                            {l.is_exempt ? "Exento" : `${Number(l.tax_rate || 0)}%`}
+                            {l.is_exempt
+                              ? "Exento"
+                              : `${Number(l.tax_rate || 0)}%`}
                           </div>
                         </td>
-                        <td className="py-1 px-2 text-right text-slate-100">{l.quantity}</td>
+                        <td className="py-1 px-2 text-right text-slate-100">
+                          {l.quantity}
+                        </td>
                         <td className="py-1 px-2 text-right text-emerald-300 font-semibold">
                           {currency(l.computed?.unit_price_net)}
                         </td>
                         <td className="py-1 px-2 text-right text-sky-300 font-semibold">
-                          {hasExisting ? currency(l.existing_price_on_date) : "—"}
+                          {hasExisting
+                            ? currency(l.existing_price_on_date)
+                            : "—"}
                         </td>
                         <td className="py-1 px-2 text-right">
                           {isConflict ? (
@@ -398,7 +644,9 @@ export default function ShoppingListQuickModal({
                                   : "border-sky-500/70 bg-sky-500/10 text-sky-300"
                               }`}
                             >
-                              {l.resolution === "update_existing" ? "Actualizar" : "Usar existente"}
+                              {l.resolution === "update_existing"
+                                ? "Actualizar"
+                                : "Usar existente"}
                             </button>
                           ) : (
                             <span className="text-[11px] text-slate-400">
