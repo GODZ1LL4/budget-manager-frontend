@@ -212,20 +212,6 @@ function Transactions({ token }) {
     }
   }, [articleLines, isShoppingList, items, discount]);
 
-  const addLine = () => {
-    setArticleLines([...articleLines, { item_id: "", quantity: 1 }]);
-  };
-
-  const updateLine = (index, field, value) => {
-    const updated = [...articleLines];
-    updated[index][field] = value;
-    setArticleLines(updated);
-  };
-
-  const removeLine = (index) => {
-    setArticleLines(articleLines.filter((_, i) => i !== index));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -386,6 +372,50 @@ function Transactions({ token }) {
       });
     }
   }, [editingTx]);
+
+  const handleExport = async () => {
+    try {
+      // construimos params igual que fetchTransactions (sin nulls)
+      const params = {};
+      if (filterDescription.trim())
+        params.description = filterDescription.trim();
+      if (filterType && filterType !== "all") params.type = filterType;
+      if (filterAccountId) params.account_id = filterAccountId;
+      if (filterCategoryId) params.category_id = filterCategoryId;
+
+      // IMPORTANTE: tus defaults SIEMPRE tienen valor → se mandan
+      if (filterDateFrom) params.date_from = filterDateFrom;
+      if (filterDateTo) params.date_to = filterDateTo;
+
+      const res = await axios.get(`${api}/transactions/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params,
+        responseType: "blob",
+      });
+
+      // descargar blob
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+
+      const name = `transacciones_${filterDateFrom || "all"}_a_${
+        filterDateTo || "all"
+      }.xlsx`;
+      a.download = name;
+
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error exportando:", err);
+      alert("No se pudo exportar el archivo");
+    }
+  };
 
   return (
     <div
@@ -893,6 +923,20 @@ function Transactions({ token }) {
             "
           >
             Limpiar filtros
+          </button>
+          <button
+            type="button"
+            onClick={handleExport}
+            className="
+    w-full sm:w-auto
+    inline-flex items-center justify-center
+    px-4 py-2 text-sm font-semibold rounded-lg
+    bg-emerald-600 text-white
+    hover:brightness-110 active:scale-95
+    transition-all
+  "
+          >
+            Exportar Excel
           </button>
         </div>
       </div>
