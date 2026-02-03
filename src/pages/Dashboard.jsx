@@ -545,7 +545,7 @@ function Dashboard({ token }) {
         <BudgetCoverageChart token={token} />
       </CollapseSection>
 
-      <CollapseSection title="10.1- Calidad de presupuestos (cobertura extendida)">
+      <CollapseSection title="10.1- Calidad de presupuestos (cobertura detallada)">
         <BudgetCoverageRobustChart token={token} />
       </CollapseSection>
 
@@ -589,7 +589,7 @@ function Dashboard({ token }) {
       </CollapseSection>
 
       {/* 🛒 BLOQUE 8 — Detalle por categorías e ítems */}
-      <CollapseSection title="20- Top categorías variables con más gasto">
+      <CollapseSection title="20- Gastos por categoría - estabilidad">
         <TopVariableCategoriesChart token={token} />
       </CollapseSection>
 

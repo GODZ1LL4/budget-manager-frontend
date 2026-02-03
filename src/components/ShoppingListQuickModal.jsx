@@ -19,9 +19,27 @@ function normalize(s) {
     .trim();
 }
 
+function round2(n) {
+  return Math.round((Number(n || 0) + Number.EPSILON) * 100) / 100;
+}
+
+function computeGrossFromLatest(item, qty) {
+  if (!item) return "";
+  const q = toNum(qty, 0);
+  if (q <= 0) return "";
+  const netUnit = toNum(item.latest_price, 0);
+  const taxRate = item.is_exempt ? 0 : toNum(item.tax_rate, 0);
+  const subtotal = netUnit * q;
+  const tax = subtotal * (taxRate / 100);
+  const gross = subtotal + tax;
+  return String(round2(gross));
+}
+
 /**
  * Dropdown renderizado en document.body (portal) para evitar que se recorte
  * por overflow del modal / contenedores.
+ *
+ * Mejora: si no hay espacio abajo, se abre arriba del input.
  */
 function TypeaheadDropdown({ anchorEl, open, onClose, children }) {
   const [style, setStyle] = useState(null);
@@ -33,22 +51,37 @@ function TypeaheadDropdown({ anchorEl, open, onClose, children }) {
       if (!anchorEl) return;
       const rect = anchorEl.getBoundingClientRect();
 
-      const top = rect.bottom + 6;
-      const maxH = Math.max(140, window.innerHeight - top - 12);
+      const gap = 6;
+      const padding = 12;
+      const desired = 320; // un poco más alto
+      const minH = 160;
+
+      const spaceBelow = window.innerHeight - rect.bottom - gap - padding;
+      const spaceAbove = rect.top - gap - padding;
+
+      const shouldOpenUp = spaceBelow < 220 && spaceAbove > spaceBelow;
+
+      const maxH = Math.max(
+        minH,
+        Math.min(desired, shouldOpenUp ? spaceAbove : spaceBelow)
+      );
+
+      const top = shouldOpenUp
+        ? Math.max(padding, rect.top - gap - maxH)
+        : rect.bottom + gap;
 
       setStyle({
         position: "fixed",
         top,
         left: rect.left,
         width: rect.width,
-        maxHeight: Math.min(260, maxH),
+        maxHeight: maxH,
         zIndex: 9999,
       });
     };
 
     update();
     window.addEventListener("resize", update);
-    // true => captura scroll dentro de contenedores (incluye el modal)
     window.addEventListener("scroll", update, true);
 
     return () => {
@@ -61,7 +94,6 @@ function TypeaheadDropdown({ anchorEl, open, onClose, children }) {
 
   return createPortal(
     <>
-      {/* Click afuera para cerrar */}
       <button
         type="button"
         onClick={onClose}
@@ -69,7 +101,11 @@ function TypeaheadDropdown({ anchorEl, open, onClose, children }) {
         aria-label="close"
         tabIndex={-1}
       />
-      <div style={style} className="z-[9999]">
+      {/* IMPORTANTE: este contenedor ES el que scrollea */}
+      <div
+        style={style}
+        className="z-[9999] overflow-y-auto overscroll-contain rounded-lg border border-slate-700 bg-slate-950 shadow-xl"
+      >
         {children}
       </div>
     </>,
@@ -87,7 +123,7 @@ export default function ShoppingListQuickModal({
   onCreated, // callback(data)
 }) {
   const [rows, setRows] = useState([
-    { item_id: "", quantity: 1, gross_total: "" },
+    { item_id: "", quantity: 1, gross_total: "", gross_touched: false },
   ]);
   const [preview, setPreview] = useState(null);
   const [error, setError] = useState("");
@@ -102,7 +138,9 @@ export default function ShoppingListQuickModal({
   // Reset modal when open/close changes
   useEffect(() => {
     if (!isOpen) return;
-    setRows([{ item_id: "", quantity: 1, gross_total: "" }]);
+    setRows([
+      { item_id: "", quantity: 1, gross_total: "", gross_touched: false },
+    ]);
     setPreview(null);
     setError("");
     setLoadingPreview(false);
@@ -156,7 +194,10 @@ export default function ShoppingListQuickModal({
   }, [rows, meta?.date]);
 
   const addRow = () =>
-    setRows((prev) => [...prev, { item_id: "", quantity: 1, gross_total: "" }]);
+    setRows((prev) => [
+      ...prev,
+      { item_id: "", quantity: 1, gross_total: "", gross_touched: false },
+    ]);
 
   const removeRow = (idx) => {
     setRows((prev) => prev.filter((_, i) => i !== idx));
@@ -199,13 +240,89 @@ export default function ShoppingListQuickModal({
   };
 
   const selectItemForRow = (idx, it) => {
-    updateRow(idx, "item_id", it.id);
+    // Al seleccionar: set item_id y AUTOCALCULAR gross_total (con ITBIS) usando latest_price
+    setRows((prev) => {
+      const copy = [...prev];
+      const current = copy[idx] || {
+        item_id: "",
+        quantity: 1,
+        gross_total: "",
+        gross_touched: false,
+      };
+
+      const nextQty = toNum(current.quantity, 1);
+      const autoGross = computeGrossFromLatest(it, nextQty);
+
+      copy[idx] = {
+        ...current,
+        item_id: it.id,
+        // modo auto: no tocado manualmente
+        gross_touched: false,
+        gross_total: autoGross,
+      };
+      return copy;
+    });
+
     setItemQueries((prev) => {
       const copy = [...prev];
       copy[idx] = it.name;
       return copy;
     });
+
     setOpenDropdownIdx(null);
+  };
+
+  const handleQtyChange = (idx, newQty) => {
+    setRows((prev) => {
+      const copy = [...prev];
+      const row = copy[idx];
+      if (!row) return prev;
+
+      const qtyVal = newQty;
+
+      // siempre actualizamos quantity
+      const nextRow = { ...row, quantity: qtyVal };
+
+      // si NO está tocado manualmente, recalculamos total con latest_price
+      if (!row.gross_touched && row.item_id) {
+        const it = items?.find((x) => x.id === row.item_id);
+        if (it) {
+          nextRow.gross_total = computeGrossFromLatest(it, qtyVal);
+        }
+      }
+
+      copy[idx] = nextRow;
+      return copy;
+    });
+  };
+
+  const handleGrossChange = (idx, v) => {
+    // Si el usuario escribe en total, eso prevalece.
+    // Si lo deja vacío => vuelve a modo auto (gross_touched=false) y (si hay item) recalcula.
+    setRows((prev) => {
+      const copy = [...prev];
+      const row = copy[idx];
+      if (!row) return prev;
+
+      const trimmed = String(v ?? "");
+      const isEmpty = trimmed.trim() === "";
+
+      const nextRow = {
+        ...row,
+        gross_total: trimmed,
+        gross_touched: !isEmpty,
+      };
+
+      if (isEmpty && row.item_id) {
+        const it = items?.find((x) => x.id === row.item_id);
+        if (it) {
+          nextRow.gross_total = computeGrossFromLatest(it, row.quantity);
+        }
+      }
+
+      copy[idx] = nextRow;
+      return copy;
+    });
   };
 
   const handlePreview = async () => {
@@ -414,8 +531,12 @@ export default function ShoppingListQuickModal({
 
                       setOpenDropdownIdx(idx);
 
-                      // si borra, limpiamos selección real
-                      if (!v) updateRow(idx, "item_id", "");
+                      // si borra, limpiamos selección real + reseteamos modo auto
+                      if (!v) {
+                        updateRow(idx, "item_id", "");
+                        updateRow(idx, "gross_total", "");
+                        updateRow(idx, "gross_touched", false);
+                      }
                     }}
                     onFocus={() => setOpenDropdownIdx(idx)}
                     placeholder="Escribe para buscar artículo..."
@@ -428,57 +549,43 @@ export default function ShoppingListQuickModal({
                     open={openDropdownIdx === idx}
                     onClose={() => setOpenDropdownIdx(null)}
                   >
-                    <div
-                      className="
-                      w-full
-                      max-h-[240px]
-                      overflow-y-auto
-                      overscroll-contain
-                      rounded-lg
-                      border
-                      border-slate-700
-                      bg-slate-950
-                      shadow-xl
-                    "
+                    <button
+                      type="button"
+                      onClick={() => {
+                        updateRow(idx, "item_id", "");
+                        setItemQueries((prev) => {
+                          const copy = [...prev];
+                          copy[idx] = "";
+                          return copy;
+                        });
+                        setOpenDropdownIdx(null);
+                      }}
+                      className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800/60 border-b border-slate-800"
                     >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          updateRow(idx, "item_id", "");
-                          setItemQueries((prev) => {
-                            const copy = [...prev];
-                            copy[idx] = "";
-                            return copy;
-                          });
-                          setOpenDropdownIdx(null);
-                        }}
-                        className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800/60 border-b border-slate-800"
-                      >
-                        — Limpiar selección —
-                      </button>
+                      — Limpiar selección —
+                    </button>
 
-                      {filteredItemsForRow(idx)
-                        .slice(0, 50)
-                        .map((it) => (
-                          <button
-                            key={it.id}
-                            type="button"
-                            onClick={() => selectItemForRow(idx, it)}
-                            className="w-full text-left px-3 py-2 text-sm text-slate-100 hover:bg-slate-800/60"
-                          >
-                            {it.name}
-                            <span className="ml-2 text-xs text-slate-400">
-                              ({currency(it.latest_price)})
-                            </span>
-                          </button>
-                        ))}
+                    {filteredItemsForRow(idx)
+                      .slice(0, 50)
+                      .map((it) => (
+                        <button
+                          key={it.id}
+                          type="button"
+                          onClick={() => selectItemForRow(idx, it)}
+                          className="w-full text-left px-3 py-2 text-sm text-slate-100 hover:bg-slate-800/60"
+                        >
+                          {it.name}
+                          <span className="ml-2 text-xs text-slate-400">
+                            ({currency(it.latest_price)})
+                          </span>
+                        </button>
+                      ))}
 
-                      {filteredItemsForRow(idx).length === 0 && (
-                        <div className="px-3 py-2 text-xs text-slate-400">
-                          No hay resultados.
-                        </div>
-                      )}
-                    </div>
+                    {filteredItemsForRow(idx).length === 0 && (
+                      <div className="px-3 py-2 text-xs text-slate-400">
+                        No hay resultados.
+                      </div>
+                    )}
                   </TypeaheadDropdown>
                 </div>
 
@@ -486,7 +593,7 @@ export default function ShoppingListQuickModal({
                   type="number"
                   step="0.0001"
                   value={r.quantity}
-                  onChange={(e) => updateRow(idx, "quantity", e.target.value)}
+                  onChange={(e) => handleQtyChange(idx, e.target.value)}
                   placeholder="Cantidad"
                   className="sm:col-span-2 w-full rounded-lg px-3 py-2 text-sm bg-slate-900 border border-slate-700 text-slate-100"
                 />
@@ -495,9 +602,7 @@ export default function ShoppingListQuickModal({
                   type="number"
                   step="0.01"
                   value={r.gross_total}
-                  onChange={(e) =>
-                    updateRow(idx, "gross_total", e.target.value)
-                  }
+                  onChange={(e) => handleGrossChange(idx, e.target.value)}
                   placeholder="Total pagado"
                   className="sm:col-span-3 w-full rounded-lg px-3 py-2 text-sm bg-slate-900 border border-slate-700 text-slate-100"
                 />
@@ -521,6 +626,9 @@ export default function ShoppingListQuickModal({
                       {item.is_exempt
                         ? "Exento"
                         : `${Number(item.tax_rate || 0)}%`}
+                    </span>
+                    <span className="ml-2 text-[10px] text-slate-500">
+                      {r.gross_touched ? "• Manual" : "• Auto"}
                     </span>
                   </div>
                 )}

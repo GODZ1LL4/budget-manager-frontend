@@ -1,3 +1,4 @@
+// src/components/reports/AccountBalancesChart.jsx
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
@@ -17,10 +18,17 @@ const formatCurrency = (v) =>
     style: "currency",
     currency: "DOP",
     minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(Number.isFinite(Number(v)) ? Number(v) : 0);
 
+const formatCompact = (v) => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return "";
+  return new Intl.NumberFormat("es-DO", { notation: "compact" }).format(n);
+};
+
 function AccountBalancesChart({ token }) {
-  const [data, setData] = useState([]);
+  const [raw, setRaw] = useState([]);
   const [loading, setLoading] = useState(false);
   const api = import.meta.env.VITE_API_URL;
 
@@ -29,33 +37,150 @@ function AccountBalancesChart({ token }) {
 
     setLoading(true);
     axios
-      .get(`${api}/analytics/account-balances`, {
+      // ✅ endpoint correcto con available_balance y reserved_total
+      .get(`${api}/accounts/balances`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      .then((res) => setData(res?.data?.data || []))
+      .then((res) => setRaw(res?.data?.data || []))
       .catch((err) => console.error("Error cargando saldos por cuenta:", err))
       .finally(() => setLoading(false));
   }, [token, api]);
 
+  // ✅ normalización para barras apiladas (disponible + en metas)
+  const data = useMemo(() => {
+    return (raw || []).map((r) => {
+      const current = Number(r.current_balance) || 0;
+      const reserved = Math.max(0, Number(r.reserved_total) || 0);
+      const available = Number.isFinite(Number(r.available_balance))
+        ? Math.max(0, Number(r.available_balance))
+        : Math.max(0, current - reserved);
+
+      const totalPositive = Math.max(0, current);
+      const reservedPct =
+        totalPositive > 0 ? (reserved / totalPositive) * 100 : 0;
+
+      return {
+        id: r.id,
+        name: r.name || "Cuenta",
+        current_balance: current,
+        reserved_total: reserved,
+        available_balance: available,
+        reserved_pct: reservedPct,
+      };
+    });
+  }, [raw]);
+
   const kpis = useMemo(() => {
-    const total = (data || []).reduce(
-      (acc, r) => acc + (Number(r.balance) || 0),
+    const totalCurrent = (data || []).reduce(
+      (acc, r) => acc + (Number(r.current_balance) || 0),
       0
     );
+    const totalReserved = (data || []).reduce(
+      (acc, r) => acc + (Number(r.reserved_total) || 0),
+      0
+    );
+    const totalAvailable = (data || []).reduce(
+      (acc, r) => acc + (Number(r.available_balance) || 0),
+      0
+    );
+
     const positive = (data || []).reduce(
-      (acc, r) => acc + ((Number(r.balance) || 0) > 0 ? Number(r.balance) || 0 : 0),
+      (acc, r) =>
+        acc +
+        ((Number(r.current_balance) || 0) > 0
+          ? Number(r.current_balance) || 0
+          : 0),
       0
     );
     const negative = (data || []).reduce(
-      (acc, r) => acc + ((Number(r.balance) || 0) < 0 ? Number(r.balance) || 0 : 0),
+      (acc, r) =>
+        acc +
+        ((Number(r.current_balance) || 0) < 0
+          ? Number(r.current_balance) || 0
+          : 0),
       0
     );
-    const negativeCount = (data || []).filter((r) => (Number(r.balance) || 0) < 0).length;
+    const negativeCount = (data || []).filter(
+      (r) => (Number(r.current_balance) || 0) < 0
+    ).length;
 
-    return { total, positive, negative, negativeCount };
+    const reservedPctGlobal =
+      positive > 0 ? (totalReserved / positive) * 100 : 0;
+
+    return {
+      totalCurrent,
+      totalReserved,
+      totalAvailable,
+      positive,
+      negative,
+      negativeCount,
+      reservedPctGlobal,
+    };
   }, [data]);
 
-  const totalColor = kpis.total >= 0 ? "text-emerald-300" : "text-rose-300";
+  const totalColor =
+    kpis.totalCurrent >= 0 ? "text-emerald-300" : "text-rose-300";
+
+  // ✅ Tooltip custom para mostrar disponible + metas + porcentaje
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload || !payload.length) return null;
+
+    // payload trae las barras apiladas; buscamos valores por dataKey
+    const byKey = Object.fromEntries(payload.map((p) => [p.dataKey, p.value]));
+    const available = Number(byKey.available_balance || 0);
+    const reserved = Number(byKey.reserved_total || 0);
+
+    const row = payload?.[0]?.payload;
+    const pctReserved = Number(row?.reserved_pct || 0);
+
+    return (
+      <div
+        style={{
+          backgroundColor: "#020617",
+          border: "1px solid rgba(214,164,58,0.55)",
+          color: "#e5e7eb",
+          borderRadius: "0.75rem",
+          boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
+          padding: "10px 12px",
+          minWidth: 220,
+        }}
+      >
+        <div style={{ fontWeight: 800, marginBottom: 6 }}>{label}</div>
+
+        <div
+          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
+        >
+          <span style={{ color: "#a7f3d0", fontWeight: 700 }}>Disponible</span>
+          <span style={{ fontWeight: 800 }}>{formatCurrency(available)}</span>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 12,
+            marginTop: 4,
+          }}
+        >
+          <span style={{ color: "#fbbf24", fontWeight: 700 }}>En metas</span>
+          <span style={{ fontWeight: 800 }}>{formatCurrency(reserved)}</span>
+        </div>
+
+        <div
+          style={{
+            marginTop: 6,
+            color: "rgba(226,232,240,0.75)",
+            fontSize: 12,
+          }}
+        >
+          Reservado:{" "}
+          <span style={{ fontWeight: 800, color: "#fbbf24" }}>
+            {pctReserved.toFixed(1)}%
+          </span>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div
@@ -67,47 +192,56 @@ function AccountBalancesChart({ token }) {
         space-y-4
       "
     >
-      {/* Header + KPI */}
+      {/* Header + KPIs */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
         <div>
-          <h3 className="text-xl font-semibold text-slate-100">Saldos por Cuenta</h3>
-          <p className="text-sm text-slate-300 mt-1">
-            Visualiza el saldo actual de todas tus cuentas registradas.
-          </p>
+          <h3 className="text-xl font-semibold text-slate-100">
+            Saldos por cuenta
+          </h3>
+          
         </div>
 
         <div className="flex flex-col items-end gap-2">
-          {/* KPI principal (más grande) */}
-          <p className={`text-base font-medium ${totalColor}`}>
+          {/* Total en cuentas: solo el monto con color */}
+          <p className="text-base font-medium text-slate-200">
             Total en cuentas:{" "}
-            <span className="font-semibold">{formatCurrency(kpis.total)}</span>
+            <span className={`font-semibold ${totalColor}`}>
+              {formatCurrency(kpis.totalCurrent)}
+            </span>
             {loading ? (
               <span className="text-slate-300 ml-2 text-sm">Actualizando…</span>
             ) : null}
           </p>
 
-          {/* KPI secundario (labels menos opacos + fuente mayor) */}
-          <p className="text-sm text-slate-300">
+          {/* Línea compacta: solo montos con color */}
+          <p className="text-sm text-slate-300 text-right">
+            <span className="text-slate-200 font-medium">Disponible:</span>{" "}
+            <span className="text-emerald-300 font-semibold">
+              {formatCurrency(kpis.totalAvailable)}
+            </span>
+            <span className="mx-2 text-slate-500">·</span>
             <span className="text-slate-200 font-medium">Positivo:</span>{" "}
             <span className="text-emerald-300 font-semibold">
               {formatCurrency(kpis.positive)}
             </span>
-
             <span className="mx-2 text-slate-500">·</span>
-
             <span className="text-slate-200 font-medium">Negativo:</span>{" "}
             <span className="text-rose-300 font-semibold">
               {formatCurrency(kpis.negative)}
             </span>
-
-            {kpis.negativeCount > 0 && (
+            <span className="mx-2 text-slate-500">·</span>
+            <span className="text-slate-200 font-medium">Metas:</span>{" "}
+            <span className="text-amber-300 font-semibold">
+              {formatCurrency(kpis.totalReserved)}
+            </span>
+            {kpis.negativeCount > 0 ? (
               <>
                 <span className="mx-2 text-slate-500">·</span>
                 <span className="text-slate-200 font-medium">
                   {kpis.negativeCount} en negativo
                 </span>
               </>
-            )}
+            ) : null}
           </p>
         </div>
       </div>
@@ -120,43 +254,37 @@ function AccountBalancesChart({ token }) {
           No hay cuentas registradas aún.
         </p>
       ) : (
-        <div className="w-full h-[320px]">
+        <div className="w-full h-[340px]">
           <ResponsiveContainer>
-            <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
+            <BarChart
+              data={data}
+              layout="vertical"
+              margin={{ left: 8, right: 16 }}
+            >
               <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
 
               <XAxis
                 type="number"
                 stroke="#94a3b8"
-                tick={{ fill: "#cbd5e1", fontSize: 12 }}
-                tickFormatter={(v) => {
-                  const n = Number(v);
-                  if (!Number.isFinite(n)) return "";
-                  return new Intl.NumberFormat("es-DO", { notation: "compact" }).format(n);
-                }}
+                tick={{ fill: "#e2e8f0", fontSize: 12 }}
+                tickFormatter={formatCompact}
               />
 
               <YAxis
                 type="category"
                 dataKey="name"
-                width={150}
+                width={160}
                 stroke="#94a3b8"
-                tick={{ fill: "#cbd5e1", fontSize: 12 }}
+                tick={{ fill: "#e2e8f0", fontSize: 12 }}
               />
 
               <ReferenceLine x={0} stroke="#64748b" strokeDasharray="6 6" />
 
               <Tooltip
-                formatter={(val) => formatCurrency(val)}
-                contentStyle={{
-                  backgroundColor: "#020617",
-                  border: "1px solid #4b5563",
-                  color: "#e5e7eb",
-                  borderRadius: "0.5rem",
-                  boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
-                }}
-                itemStyle={{ color: "#e5e7eb" }}
-                labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+                cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                content={<CustomTooltip />}
+                // Recharts normalmente no se recorta, pero esto ayuda cerca del borde
+                wrapperStyle={{ zIndex: 999999 }}
               />
 
               <Legend
@@ -166,17 +294,29 @@ function AccountBalancesChart({ token }) {
                 )}
               />
 
+              {/* ✅ Apilado: Disponible (verde) */}
               <Bar
-                dataKey="balance"
+                dataKey="available_balance"
+                stackId="a"
                 fill="#10b981"
-                name="Saldo actual"
-                radius={[6, 6, 6, 6]}
+                name="Disponible"
+                radius={[6, 0, 0, 6]}
+              />
+
+              {/* ✅ Apilado: En metas (dorado/naranja) pegado al verde */}
+              <Bar
+                dataKey="reserved_total"
+                stackId="a"
+                fill="#f59e0b"
+                name="En metas"
+                radius={[0, 6, 6, 0]}
               />
             </BarChart>
           </ResponsiveContainer>
 
           <p className="text-sm text-slate-300 mt-2">
-            Tip: si una cuenta cruza la línea 0, significa que está en negativo.
+            Tip: “En metas” es dinero reservado; “Disponible” es lo que puedes
+            usar sin romper metas.
           </p>
         </div>
       )}

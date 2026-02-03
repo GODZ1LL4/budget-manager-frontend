@@ -10,7 +10,7 @@ import Goals from "./pages/Goals";
 import Dashboard from "./pages/Dashboard";
 import AppLayout from "./components/AppLayout";
 import Scenarios from "./pages/Scenarios";
-
+import ModernDashboard from "./pages/ModernDashboardPro";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -70,7 +70,7 @@ function App() {
           {view === "goals" && <Goals token={session.access_token} />}
           {view === "dashboard" && <Dashboard token={session.access_token} />}
           {view === "scenarios" && <Scenarios token={session.access_token} />}
-      
+          {view === "moderndashboard" && <ModernDashboard token={session.access_token} />}
         </AppLayout>
       )}
 

@@ -19,6 +19,7 @@ function Navbar({ onLogout, setView }) {
         { name: "Escenarios", view: "scenarios" },
         { name: "Metas de ahorro", view: "goals" },
         { name: "Presupuestos", view: "budgets" },
+        { name: "Dashh", view: "moderndashboard" },
       ],
     },
     {
