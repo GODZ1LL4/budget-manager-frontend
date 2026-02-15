@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   LineChart,
@@ -13,37 +13,96 @@ import {
 import { toast } from "react-toastify";
 
 const MAX_ITEMS = 20;
+const toNum = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+
+const normalizeMonth = (m) => {
+  if (m == null) return null;
+
+  const s = String(m).trim();
+
+  // YYYY-MM o YYYY-M
+  const match = s.match(/^(\d{4})-(\d{1,2})$/);
+  if (match) {
+    const yy = match[1];
+    const mm = String(Number(match[2])).padStart(2, "0");
+    return `${yy}-${mm}`;
+  }
+
+  // YYYY/MM o variantes
+  const match2 = s.match(/^(\d{4})[/-](\d{1,2})/);
+  if (match2) {
+    const yy = match2[1];
+    const mm = String(Number(match2[2])).padStart(2, "0");
+    return `${yy}-${mm}`;
+  }
+
+  return null;
+};
 
 function ItemTrendChart({ token }) {
-  const [items, setItems] = useState([]);
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [trendData, setTrendData] = useState([]); // datos crudos por item/mes
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [metric, setMetric] = useState("quantity"); // "quantity" | "total"
-
   const api = import.meta.env.VITE_API_URL;
 
-  // Mapa id -> nombre para usar en la leyenda
-  const itemNameMap = {};
-  items.forEach((i) => {
-    itemNameMap[String(i.id)] = i.name;
-  });
+  const [items, setItems] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [trendData, setTrendData] = useState([]); // {month, quantity, total, item_id}
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [metric, setMetric] = useState("quantity"); // "quantity" | "total"
+  const [search, setSearch] = useState("");
 
-  // 1) Cargar lista de artículos
+  const currentYear = new Date().getFullYear();
+  const yearOptions = useMemo(
+    () => Array.from({ length: 6 }, (_, i) => currentYear - i),
+    [currentYear]
+  );
+
+  const itemNameMap = useMemo(() => {
+    const m = {};
+    (items || []).forEach((i) => {
+      m[String(i.id)] = i.name;
+    });
+    return m;
+  }, [items]);
+
+  const formatCurrency = useMemo(() => {
+    const nf = new Intl.NumberFormat("es-DO", {
+      style: "currency",
+      currency: "DOP",
+      minimumFractionDigits: 2,
+    });
+    return (v) => nf.format(toNum(v));
+  }, []);
+
+  const formatTooltipValue = (value) => {
+    if (metric === "total") return formatCurrency(value);
+    return toNum(value);
+  };
+
+  // ✅ palette tokenizada (si hay más de 4 series, cae a HSL)
+  const getSeriesColor = (index) => {
+    const vars = [
+      "var(--primary)",
+      "var(--success)",
+      "var(--warning)",
+      "var(--danger)",
+    ];
+    if (index < vars.length) return vars[index];
+    return `hsl(${(index * 55) % 360} 70% 55%)`;
+  };
+
+  // 1) Lista de artículos
   useEffect(() => {
     if (!token) return;
 
     axios
-      .get(`${api}/items`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      .get(`${api}/items`, { headers: { Authorization: `Bearer ${token}` } })
       .then((res) => setItems(res.data.data || []))
       .catch((err) => {
         console.error("Error al cargar artículos:", err);
+        toast.error("No se pudieron cargar los artículos.");
       });
   }, [token, api]);
 
-  // 2) Cargar tendencias de consumo para los artículos seleccionados
+  // 2) Tendencias por item seleccionado (paralelo) + ✅ anti-mezcla por año
   useEffect(() => {
     if (!token) return;
 
@@ -52,58 +111,69 @@ function ItemTrendChart({ token }) {
       return;
     }
 
+    // ✅ limpia al cambiar year/selección para evitar “mezcla visual”
+    setTrendData([]);
+
+    let cancelled = false;
+
+    const y = Number(year);
+    if (!Number.isFinite(y) || y < 2000 || y > 2100) return;
+
     const requests = selectedIds.map((idStr) =>
       axios
         .get(`${api}/analytics/item-trend/${idStr}`, {
           headers: { Authorization: `Bearer ${token}` },
-          params: { year },
+          params: { year: y },
         })
-        .then((res) => ({
-          item_id: idStr,
-          rows: res.data.data || [],
-        }))
+        .then((res) => ({ item_id: idStr, rows: res.data?.data || [] }))
     );
 
     Promise.all(requests)
       .then((results) => {
-        const allEntries = [];
+        if (cancelled) return;
 
+        const allEntries = [];
         results.forEach(({ item_id, rows }) => {
-          rows.forEach((row) => {
-            allEntries.push({
-              ...row, // { month, quantity, total }
-              item_id,
-            });
-          });
+          rows.forEach((row) => allEntries.push({ ...row, item_id }));
         });
 
         setTrendData(allEntries);
       })
       .catch((err) => {
-        console.error("Error al cargar tendencia de artículos:", err);
+        if (cancelled) return;
+        console.error("Error al cargar tendencia:", err);
+        toast.error("No se pudo cargar la tendencia.");
       });
+
+    return () => {
+      cancelled = true; // ✅ ignora respuestas viejas
+    };
   }, [selectedIds, token, api, year]);
 
-  // 3) Agrupar por mes para el gráfico
-  const groupedByMonth = {};
+  // 3) Chart data (agrupado por mes) + ✅ filtro por año
+  const chartData = useMemo(() => {
+    const grouped = {};
+    const y = String(year);
 
-  trendData.forEach((entry) => {
-    const key = entry.month;
-    if (!groupedByMonth[key]) groupedByMonth[key] = { month: key };
+    (trendData || []).forEach((entry) => {
+      const key = normalizeMonth(entry.month);
+      if (!key) return;
+      if (!key.startsWith(`${y}-`)) return; // ✅ evita meses de otro año
 
-    const value =
-      metric === "quantity"
-        ? Number(entry.quantity ?? 0)
-        : Number(entry.total ?? 0);
+      if (!grouped[key]) grouped[key] = { month: key };
 
-    groupedByMonth[key][entry.item_id] = value;
-  });
+      const value =
+        metric === "quantity" ? toNum(entry.quantity) : toNum(entry.total);
 
-  const chartData = Object.values(groupedByMonth).sort((a, b) =>
-    a.month.localeCompare(b.month)
-  );
+      grouped[key][String(entry.item_id)] = value;
+    });
 
-  // 4) Manejo de selección múltiple
+    return Object.values(grouped).sort((a, b) =>
+      String(a.month).localeCompare(String(b.month))
+    );
+  }, [trendData, metric, year]);
+
+  // selección múltiple
   const handleCheckboxChange = (e) => {
     const idStr = String(e.target.value);
     const isChecked = e.target.checked;
@@ -112,111 +182,164 @@ function ItemTrendChart({ token }) {
       if (selectedIds.includes(idStr)) return;
 
       if (selectedIds.length >= MAX_ITEMS) {
-        toast.error(
-          `Solo puedes seleccionar hasta ${MAX_ITEMS} artículos a la vez.`
-        );
+        toast.error(`Solo puedes seleccionar hasta ${MAX_ITEMS} artículos.`);
         return;
       }
 
-      setSelectedIds([...selectedIds, idStr]);
+      setSelectedIds((prev) => [...prev, idStr]);
     } else {
-      setSelectedIds(selectedIds.filter((x) => x !== idStr));
+      setSelectedIds((prev) => prev.filter((x) => x !== idStr));
     }
   };
 
-  const handleClearAll = () => {
-    setSelectedIds([]);
+  const handleClearAll = () => setSelectedIds([]);
+
+  const monthTick = (m) => {
+    const key = normalizeMonth(m);
+    return key ? key.slice(5, 7) : "—";
   };
 
-  const handleYearChange = (e) => {
-    const value = e.target.value;
-    const num = Number(value);
-    if (Number.isNaN(num)) return;
-    setYear(num);
+  // ✅ Buscador: filtra items
+  const filteredItems = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return (items || []).filter((it) =>
+      String(it?.name || "").toLowerCase().includes(q)
+    );
+  }, [items, search]);
+
+  // ✅ estilos tokenizados (tokens reales)
+  const panelStyle = {
+    background:
+      "linear-gradient(135deg, var(--bg-1), color-mix(in srgb, var(--panel) 45%, transparent), var(--bg-1))",
+    border: `var(--border-w) solid var(--border-rgba)`,
+    borderRadius: "var(--radius-lg)",
+    boxShadow: "0 16px 40px rgba(0,0,0,0.55)",
   };
 
-  const formatTooltipValue = (value) => {
-    if (metric === "total") {
-      const num = typeof value === "number" ? value : Number(value ?? 0);
-      return `RD$ ${num.toFixed(2)}`;
-    }
-    return value;
+  const selectStyle = {
+    background: "color-mix(in srgb, var(--panel) 70%, transparent)",
+    color: "var(--text)",
+    border: `var(--border-w) solid var(--border-rgba)`,
+    borderRadius: "var(--radius-md)",
+  };
+
+  const chipWrapStyle = {
+    background: "color-mix(in srgb, var(--panel) 60%, transparent)",
+    border: `var(--border-w) solid var(--border-rgba)`,
+    borderRadius: "var(--radius-md)",
+  };
+
+  const chipActiveStyle = {
+    background: "color-mix(in srgb, var(--primary) 12%, transparent)",
+    borderRadius: "var(--radius-sm)",
+    color: "var(--text)",
+  };
+
+  const chipIdleStyle = {
+    borderRadius: "var(--radius-sm)",
+    color: "var(--muted)",
+  };
+
+  const listBoxStyle = {
+    background: "color-mix(in srgb, var(--panel) 55%, transparent)",
+    border: `var(--border-w) solid var(--border-rgba)`,
+    borderRadius: "var(--radius-md)",
+  };
+
+  const tooltipStyle = {
+    backgroundColor: "var(--panel)",
+    border: `var(--border-w) solid var(--border-rgba)`,
+    color: "var(--text)",
+    borderRadius: "12px",
+    boxShadow: "var(--glow-shadow)",
+    fontSize: "0.85rem",
+  };
+
+  const gridStroke = "color-mix(in srgb, var(--border-rgba) 55%, transparent)";
+  const axisStroke = "color-mix(in srgb, var(--text) 55%, transparent)";
+  const tickFill = "color-mix(in srgb, var(--text) 78%, transparent)";
+
+  const legendStyle = {
+    color: "color-mix(in srgb, var(--text) 85%, transparent)",
   };
 
   return (
-    <div
-      className="
-        rounded-2xl p-6
-        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950
-        border border-slate-800
-        shadow-[0_16px_40px_rgba(0,0,0,0.85)]
-        space-y-4
-      "
-    >
+    <div className="rounded-2xl p-6 space-y-4" style={panelStyle}>
       <div>
-        <h3 className="font-semibold mb-1 text-slate-100 text-lg">
+        <h3 className="text-lg font-semibold mb-1" style={{ color: "var(--text)" }}>
           Tendencia de consumo por artículo
         </h3>
-        <p className="text-sm text-slate-400">
-          Analiza la evolución mensual de consumo por artículo, ya sea por
-          cantidad o por monto total gastado.
+        <p className="text-sm" style={{ color: "var(--muted)" }}>
+          Analiza la evolución mensual de consumo por artículo, por cantidad o por monto gastado.
         </p>
       </div>
 
-      {/* Controles superiores: año + métrica */}
-      <div className="flex flex-wrap items-center gap-4 mb-2 text-sm text-slate-200">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-slate-300">Año:</span>
-          <input
-            type="number"
+      {/* Controles superiores */}
+      <div className="flex flex-wrap items-end gap-4 text-sm">
+        {/* Año */}
+        <div className="flex flex-col">
+          <label
+            className="text-[11px] uppercase tracking-[0.18em]"
+            style={{ color: "color-mix(in srgb,var(--text)_70%,transparent)" }}
+          >
+            Año
+          </label>
+          <select
             value={year}
-            onChange={handleYearChange}
-            className="
-              border border-slate-700 rounded-lg px-2 py-1 w-24 text-sm
-              bg-slate-900 text-slate-100
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-            "
-            min="2000"
-          />
+            onChange={(e) => setYear(Number(e.target.value))}
+            className="mt-1 px-3 py-2 text-sm focus:outline-none"
+            style={selectStyle}
+          >
+            {yearOptions.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-slate-300">Métrica:</span>
-          <label className="flex items-center gap-1 text-sm">
-            <input
-              type="radio"
-              name="metric"
-              value="quantity"
-              checked={metric === "quantity"}
-              onChange={() => setMetric("quantity")}
-              className="accent-emerald-400"
-            />
-            <span className="text-slate-200">Cantidad</span>
+        {/* Métrica */}
+        <div className="flex flex-col">
+          <label
+            className="text-[11px] uppercase tracking-[0.18em]"
+            style={{ color: "color-mix(in srgb,var(--text)_70%,transparent)" }}
+          >
+            Métrica
           </label>
-          <label className="flex items-center gap-1 text-sm">
-            <input
-              type="radio"
-              name="metric"
-              value="total"
-              checked={metric === "total"}
-              onChange={() => setMetric("total")}
-              className="accent-emerald-400"
-            />
-            <span className="text-slate-200">Gasto total</span>
-          </label>
+
+          <div className="mt-1 inline-flex p-1" style={chipWrapStyle}>
+            <button
+              type="button"
+              onClick={() => setMetric("quantity")}
+              className="px-3 py-1.5 text-xs transition"
+              style={metric === "quantity" ? chipActiveStyle : chipIdleStyle}
+            >
+              Cantidad
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setMetric("total")}
+              className="px-3 py-1.5 text-xs transition"
+              style={metric === "total" ? chipActiveStyle : chipIdleStyle}
+            >
+              Gasto total
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Controles de selección múltiple */}
-      <div className="mb-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-xs sm:text-sm text-slate-300">
+      {/* Selección múltiple */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="text-xs sm:text-sm" style={{ color: "var(--muted)" }}>
             Máximo{" "}
-            <span className="font-semibold text-emerald-300">
+            <span className="font-semibold" style={{ color: "var(--success)" }}>
               {MAX_ITEMS}
             </span>{" "}
             artículos. Seleccionados:{" "}
-            <span className="font-semibold text-slate-100">
+            <span className="font-semibold" style={{ color: "var(--text)" }}>
               {selectedIds.length}/{MAX_ITEMS}
             </span>
           </div>
@@ -225,54 +348,86 @@ function ItemTrendChart({ token }) {
             type="button"
             onClick={handleClearAll}
             disabled={selectedIds.length === 0}
-            className={`
-              text-xs sm:text-sm px-3 py-1.5 rounded-lg border
-              transition-colors
-              ${
-                selectedIds.length === 0
-                  ? "text-slate-600 border-slate-800 bg-slate-900 cursor-not-allowed"
-                  : "text-slate-100 border-slate-600 bg-slate-900 hover:bg-slate-800"
-              }
-            `}
+            className="text-xs sm:text-sm px-3 py-1.5 rounded-lg border transition disabled:opacity-60"
+            style={{
+              border: `var(--border-w) solid var(--border-rgba)`,
+              background: "color-mix(in srgb, var(--panel) 60%, transparent)",
+              color: "var(--text)",
+            }}
           >
             Desmarcar todos
           </button>
         </div>
 
-        <div
-          className="
-            max-h-48 overflow-y-auto
-            border border-slate-800 rounded-xl
-            bg-slate-950/70
-            p-2 space-y-1
-          "
-        >
+        {/* Buscador */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
+          <div className="flex-1 min-w-[220px]">
+            <label
+              className="text-[11px] uppercase tracking-[0.18em]"
+              style={{ color: "color-mix(in srgb,var(--text)_70%,transparent)" }}
+            >
+              Buscar artículo
+            </label>
+
+            <div className="relative mt-1">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Ej. arroz, leche, detergente..."
+                className="ff-input w-full pr-10"
+              />
+
+              {search.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs"
+                  style={{
+                    border: "1px solid var(--border-rgba)",
+                    background: "color-mix(in srgb, var(--panel) 60%, transparent)",
+                    color: "color-mix(in srgb, var(--text) 85%, transparent)",
+                  }}
+                  aria-label="Limpiar búsqueda"
+                  title="Limpiar"
+                >
+                  ✕
+                </button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <div className="max-h-48 overflow-y-auto p-2 space-y-1" style={listBoxStyle}>
           {items.length === 0 ? (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs" style={{ color: "color-mix(in srgb,var(--text)_60%,transparent)" }}>
               No hay artículos registrados.
             </p>
+          ) : filteredItems.length === 0 ? (
+            <p className="text-xs" style={{ color: "color-mix(in srgb,var(--text)_60%,transparent)" }}>
+              No hay resultados para “{search.trim()}”.
+            </p>
           ) : (
-            items.map((item) => {
+            filteredItems.map((item) => {
               const idStr = String(item.id);
               const checked = selectedIds.includes(idStr);
               return (
                 <label
                   key={item.id}
-                  className="
-                    flex items-center gap-2
-                    text-xs sm:text-sm
-                    text-slate-200
-                    cursor-pointer
-                    hover:bg-slate-900/70
-                    rounded-md px-2 py-1
-                  "
+                  className="flex items-center gap-2 text-xs sm:text-sm cursor-pointer rounded-md px-2 py-1"
+                  style={{
+                    color: "var(--text)",
+                    background: checked
+                      ? "color-mix(in srgb, var(--primary) 10%, transparent)"
+                      : "transparent",
+                  }}
                 >
                   <input
                     type="checkbox"
-                    className="form-checkbox accent-emerald-400"
                     value={idStr}
                     checked={checked}
                     onChange={handleCheckboxChange}
+                    className="accent-[var(--primary)]"
                   />
                   <span className="truncate">{item.name}</span>
                 </label>
@@ -282,75 +437,82 @@ function ItemTrendChart({ token }) {
         </div>
       </div>
 
-      {/* Gráfico */}
+      {/* Chart */}
       {chartData.length === 0 || selectedIds.length === 0 ? (
-        <p className="text-sm text-slate-400">
-          Selecciona uno o más artículos (hasta {MAX_ITEMS}) para ver su
-          tendencia de consumo.
+        <p className="text-sm" style={{ color: "var(--muted)" }}>
+          Selecciona uno o más artículos (hasta {MAX_ITEMS}) para ver la tendencia.
         </p>
       ) : (
-        <div className="w-full h-[300px]">
+        <div className="w-full h-[320px]">
           <ResponsiveContainer>
             <LineChart data={chartData}>
-              <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
+              <CartesianGrid stroke={gridStroke} strokeDasharray="4 4" />
+
               <XAxis
                 dataKey="month"
-                stroke="#94a3b8"
-                tick={{ fill: "#cbd5e1", fontSize: 12 }}
+                tickFormatter={monthTick}
+                stroke={axisStroke}
+                tick={{ fill: tickFill, fontSize: 12 }}
               />
+
               <YAxis
-                stroke="#94a3b8"
-                tick={{ fill: "#cbd5e1", fontSize: 12 }}
+                stroke={axisStroke}
+                tick={{ fill: tickFill, fontSize: 12 }}
+                tickFormatter={(v) => (metric === "total" ? formatCurrency(v) : v)}
               />
+
               <Tooltip
                 formatter={(value) => formatTooltipValue(value)}
-                contentStyle={{
-                  backgroundColor: "#020617",
-                  border: "1px solid #4b5563",
-                  color: "#e5e7eb",
-                  borderRadius: "0.5rem",
-                  boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
-                  fontSize: "0.8rem",
-                }}
-                itemStyle={{ color: "#e5e7eb" }}
-                labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+                contentStyle={tooltipStyle}
+                cursor={{ fill: "color-mix(in srgb, var(--text) 6%, transparent)" }}
+                itemStyle={{ color: "var(--text)" }}
+                labelStyle={{ color: "var(--text)", fontWeight: 700 }}
               />
+
               <Legend
-                wrapperStyle={{ color: "#e2e8f0" }}
+                wrapperStyle={legendStyle}
                 formatter={(value) => (
-                  <span className="text-slate-200 text-xs sm:text-sm">
+                  <span
+                    className="text-xs sm:text-sm"
+                    style={{ color: "color-mix(in srgb,var(--text)_85%,transparent)" }}
+                  >
                     {value}
                   </span>
                 )}
               />
 
               {selectedIds.map((id, index) => {
-                const color = `hsl(${(index * 60) % 360}, 70%, 55%)`;
+                const color = getSeriesColor(index);
                 return (
                   <Line
                     key={id}
                     type="monotone"
                     dataKey={id}
-                    stroke={color}
                     name={itemNameMap[id] || id}
-                    connectNulls={true}
+                    stroke={color}
                     strokeWidth={2}
+                    connectNulls
                     dot={{
-                      r: 4,
+                      r: 3.5,
                       strokeWidth: 1,
-                      stroke: "#020617",
+                      stroke: "var(--bg-1)",
                       fill: color,
                     }}
                     activeDot={{
-                      r: 7,
+                      r: 6,
                       strokeWidth: 2,
-                      stroke: "#e5e7eb",
+                      stroke: "var(--text)",
                     }}
+                    isAnimationActive={false}
                   />
                 );
               })}
             </LineChart>
           </ResponsiveContainer>
+
+          <p className="mt-2 text-xs" style={{ color: "var(--muted)" }}>
+            Tip: selecciona pocos artículos para una lectura más clara; con muchos, la leyenda se vuelve densa.
+          </p>
         </div>
       )}
     </div>

@@ -1,86 +1,125 @@
 @import "tailwindcss";
-/* === CONTENEDOR PRINCIPAL === */
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #000; /* fallback por si no carga theme.css */
+}
+
+#root {
+  margin: 0;
+  padding: 0;
+  max-width: none;
+}
+
+/* =========================
+   FullCalendar tokenizado
+   ========================= */
+
+/* Contenedor base */
 .fc {
-  background-color: #0f172a !important; /* azul oscuro */
+  background: color-mix(in srgb, var(--panel) 55%, transparent) !important;
+  color: var(--text) !important;
 }
 
-/* === HEADER DEL CALENDARIO === */
-.fc-toolbar-title {
-  color: #f1f5f9 !important; /* texto claro */
+/* Bordes del grid */
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border-color: color-mix(in srgb, var(--border-rgba) 70%, transparent) !important;
 }
 
-.fc-button {
-  background: #1e293b !important;
-  border: 1px solid #334155 !important;
-  color: #e2e8f0 !important;
+/* Toolbar */
+.fc .fc-toolbar-title {
+  color: var(--text) !important;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
-.fc-button:hover {
-  background: #334155 !important;
+/* Botones (today / prev / next) */
+.fc .fc-button {
+  background: var(--control-bg) !important;
+  border: var(--border-w) solid var(--border-rgba) !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
 }
 
-/* === DÍAS DE LA SEMANA (dom, lun, mar...) === */
-.fc-col-header-cell {
-  background: #0f172a !important;
-  border-color: #1e293b !important;
+.fc .fc-button:hover {
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border-rgba)) !important;
+  filter: brightness(1.06);
 }
 
-.fc-col-header-cell-cushion {
-  color: #94a3b8 !important;
-  font-weight: 600;
+.fc .fc-button:disabled {
+  opacity: 0.55 !important;
+}
+
+/* Header de días (dom, lun, mar...) */
+.fc .fc-col-header-cell {
+  background: color-mix(in srgb, var(--panel) 75%, transparent) !important;
+  border-color: color-mix(in srgb, var(--border-rgba) 70%, transparent) !important;
+}
+
+.fc .fc-col-header-cell-cushion {
+  color: var(--muted) !important;
+  font-weight: 700;
   font-size: 0.75rem;
   text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
-/* === CELDAS DEL CALENDARIO === */
-.fc-daygrid-day {
-  background: #1e293b !important; /* gris azulado oscuro */
-  border-color: #334155 !important;
+/* Celdas del calendario */
+.fc .fc-daygrid-day {
+  background: color-mix(in srgb, var(--panel) 35%, transparent) !important;
 }
 
-/* Números del día */
-.fc-daygrid-day-number {
-  color: #cbd5e1 !important;
+.fc .fc-daygrid-day-number {
+  color: color-mix(in srgb, var(--text) 85%, transparent) !important;
 }
 
-/* === DÍA ACTUAL === */
-.fc-day-today {
-  background: #475569 !important; /* resalta sin ser brillante */
+/* Día actual */
+.fc .fc-day-today {
+  background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
 }
 
-.fc-day-today .fc-daygrid-day-number {
-  color: #facc15 !important; /* amarillo */
-  font-weight: bold;
+.fc .fc-day-today .fc-daygrid-day-number {
+  color: var(--primary) !important;
+  font-weight: 800;
 }
 
-/* === EVENTOS === */
-.fc-event {
-  color: #0f172a !important;
-  border: none !important;
+/* Eventos */
+.fc .fc-event {
+  border: var(--border-w) solid var(--border-rgba) !important;
+  border-radius: 6px !important;
   font-size: 0.75rem;
   padding: 2px 4px !important;
-  border-radius: 4px !important;
 }
+
+/* Mejoras para que el "grid" no se vea blanco */
+.fc .fc-scrollgrid,
+.fc .fc-scrollgrid-section,
+.fc .fc-scrollgrid-sync-table,
+.fc .fc-daygrid-body,
+.fc .fc-daygrid-day-frame {
+  background: transparent !important;
+}
+
 
 .input {
-  background-color: rgba(15, 23, 42, 0.6); /* slate-900 */
-  border: 1px solid rgba(148, 163, 184, 0.35); /* slate-400 */
-  color: #e5e7eb; /* slate-200 */
-  border-radius: 0.5rem;
-  padding: 0.45rem 0.6rem;
-  font-size: 0.875rem;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  background-color: var(--panel-2);
+  border: var(--border-w) solid var(--border-rgba);
+  color: var(--text);
+  border-radius: var(--radius-sm);
 }
-
-.input:hover {
-  border-color: rgba(203, 213, 225, 0.6); /* slate-300 */
-}
-
+.input:hover { border-color: var(--border-rgba); }
 .input:focus {
-  outline: none;
-  border-color: #f59e0b; /* amber-500 */
-  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.6);
+  border-color: var(--ring);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ring) 60%, transparent);
 }
+
 
 /* =========================
    Scrollbar dark "premium"
@@ -124,3 +163,452 @@
 *::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* src/index.css (o donde tengas los primitives) */
+
+/* Surfaces */
+.ff-surface {
+  background: var(--panel);
+  color: var(--text);
+  border: var(--border-w) solid var(--border-rgba);
+  border-radius: var(--radius-lg);
+}
+
+.ff-card {
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  color: var(--text);
+  border: var(--border-w) solid var(--border-rgba);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--glow-shadow);
+}
+
+/* Inputs */
+.ff-label {
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.ff-input {
+  width: 100%;
+  background: var(--control-bg);
+  color: var(--control-text);
+  border: var(--border-w) solid var(--control-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  outline: none;
+}
+
+.ff-input:hover {
+  border-color: var(--control-border-hover);
+}
+
+.ff-input:focus {
+  border-color: var(--control-border-focus);
+  box-shadow: var(--control-focus-shadow);
+}
+
+.ff-input::placeholder {
+  color: color-mix(in srgb, var(--control-muted) 70%, transparent);
+}
+
+
+/* Buttons (system) */
+.ff-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: var(--btn-pad-y) var(--btn-pad-x);
+  font-size: var(--btn-font-size);
+  font-weight: var(--btn-font-weight);
+
+  border-radius: var(--btn-radius);
+  border: var(--btn-border-w) solid var(--btn-border);
+
+  /* ✅ Usamos SIEMPRE tokens */
+  background: var(--btn-bg);
+  color: var(--btn-text);
+
+  /* ✅ Glow configurable */
+  box-shadow: var(--btn-glow-shadow);
+
+  cursor: pointer;
+  user-select: none;
+  transition: filter 120ms ease, transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.ff-btn:hover {
+  background: var(--btn-hover-bg);
+  border-color: var(--btn-hover-border);
+  color: var(--btn-hover-text);
+  filter: brightness(1.06);
+}
+
+
+.ff-btn:active { transform: scale(0.98); }
+
+.ff-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
+/* Sizes */
+.ff-btn-sm {
+  --btn-pad-y: 7px;
+  --btn-pad-x: 10px;
+  --btn-font-size: 12px;
+}
+
+.ff-btn-lg {
+  --btn-pad-y: 12px;
+  --btn-pad-x: 16px;
+  --btn-font-size: 15px;
+}
+
+/* ✅ Variants usan SOLO tokens (y respetan customización) */
+.ff-btn-primary {
+  --btn-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--btn-primary-bg) 92%, #000) 0%,
+    color-mix(in srgb, var(--btn-primary-bg) 78%, #000) 100%
+  );
+  --btn-text: var(--btn-primary-text);
+  --btn-border: color-mix(in srgb, var(--btn-primary-bg) 55%, var(--border-rgba));
+  --btn-hover-border: color-mix(in srgb, var(--btn-primary-bg) 65%, var(--border-rgba));
+  --btn-hover-text: var(--btn-primary-hover-text);
+}
+
+.ff-btn-success {
+  --btn-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--btn-success-bg) 92%, #000) 0%,
+    color-mix(in srgb, var(--btn-success-bg) 78%, #000) 100%
+  );
+  --btn-text: var(--btn-success-text);
+  --btn-border: color-mix(in srgb, var(--btn-success-bg) 55%, var(--border-rgba));
+  --btn-hover-border: color-mix(in srgb, var(--btn-success-bg) 65%, var(--border-rgba));
+  --btn-hover-text: var(--btn-success-hover-text);
+}
+
+.ff-btn-warning {
+  --btn-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--btn-warning-bg) 92%, #000) 0%,
+    color-mix(in srgb, var(--btn-warning-bg) 78%, #000) 100%
+  );
+  --btn-text: var(--btn-warning-text);
+  --btn-border: color-mix(in srgb, var(--btn-warning-bg) 55%, var(--border-rgba));
+  --btn-hover-border: color-mix(in srgb, var(--btn-warning-bg) 65%, var(--border-rgba));
+  --btn-hover-text: var(--btn-warning-hover-text);
+}
+
+.ff-btn-danger {
+  --btn-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--btn-danger-bg) 92%, #000) 0%,
+    color-mix(in srgb, var(--btn-danger-bg) 78%, #000) 100%
+  );
+  --btn-text: var(--btn-danger-text);
+  --btn-border: color-mix(in srgb, var(--btn-danger-bg) 55%, var(--border-rgba));
+  --btn-hover-border: color-mix(in srgb, var(--btn-danger-bg) 65%, var(--border-rgba));
+  --btn-hover-text: var(--btn-danger-hover-text);
+}
+
+.ff-btn-outline {
+  --btn-bg: var(--btn-outline-bg);
+  --btn-text: var(--btn-outline-text);
+  --btn-border: var(--btn-outline-border);
+  --btn-hover-text: var(--btn-outline-hover-text);
+  box-shadow: none;
+}
+
+.ff-btn-ghost {
+  --btn-bg: var(--btn-ghost-bg);
+  --btn-text: var(--btn-ghost-text);
+  --btn-border: transparent;
+  --btn-hover-text: var(--btn-ghost-hover-text);
+  box-shadow: none;
+}
+
+
+.ff-btn-outline:hover {
+  background: color-mix(in srgb, var(--panel) 75%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 45%, var(--border-rgba));
+}
+
+.ff-btn-ghost {
+  --btn-bg: var(--btn-ghost-bg);
+  --btn-text: var(--btn-ghost-text);
+  --btn-border: transparent;
+  box-shadow: none;
+}
+
+.ff-btn-ghost:hover {
+  background: var(--btn-ghost-hover-bg);
+  border-color: color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+
+
+/* Table-ish helpers (para Transactions) */
+.ff-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  border: var(--border-w) solid var(--border-rgba);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+}
+
+.ff-th {
+  text-align: left;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 10px 12px;
+  border-bottom: var(--border-w) solid var(--border-rgba);
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+}
+
+.ff-td {
+  padding: 10px 12px;
+  border-bottom: var(--border-w) solid color-mix(in srgb, var(--border-rgba) 55%, transparent);
+  color: var(--text);
+}
+
+.ff-tr:hover .ff-td {
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+}
+
+/* =========================
+   FFSelect (custom dropdown)
+   ========================= */
+
+   .ff-select {
+    position: relative;
+    width: 100%;
+  }
+  
+  .ff-select-trigger {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  
+    padding: 10px 12px;
+    border-radius: var(--select-radius);
+    border: var(--select-border-w) solid var(--select-border);
+  
+    background: var(--select-bg);
+    color: var(--select-text);
+    outline: none;
+  
+    box-shadow: none;
+    cursor: pointer;
+    user-select: none;
+  }
+  
+  .ff-select-trigger:focus {
+    border-color: color-mix(in srgb, var(--primary) 55%, var(--select-border));
+    box-shadow: var(--glow-shadow);
+  }
+  
+  .ff-select-trigger[aria-disabled="true"] {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  
+  .ff-select-value {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  
+  .ff-select-placeholder {
+    color: var(--select-muted);
+  }
+  
+  .ff-select-chevron {
+    opacity: 0.9;
+    color: var(--select-text);
+  }
+  
+  .ff-select-menu {
+    position: absolute;
+    z-index: 80;
+    left: 0;
+    right: 0;
+    margin-top: 8px;
+  
+    /* ✅ Opaco para que no “transparentee” */
+    background: var(--control-bg);
+  
+    border: var(--border-w) solid var(--border-rgba);
+    border-radius: var(--radius-lg);
+  
+    box-shadow: var(--select-shadow);
+    padding: 8px;
+  
+    max-height: var(--select-max-h);
+    overflow: auto;
+  }
+  
+  .ff-select-item {
+    width: 100%;
+    text-align: left;
+    padding: 10px 10px;
+    border-radius: var(--select-item-radius);
+    border: 1px solid transparent;
+  
+    background: transparent;
+    color: var(--select-text);
+  
+    cursor: pointer;
+    user-select: none;
+  }
+  
+  
+  .ff-select-item:hover {
+    background: var(--select-hover-bg);
+    border-color: color-mix(in srgb, var(--border-rgba) 55%, transparent);
+  }
+  
+  .ff-select-item[data-active="true"] {
+    background: var(--select-active-bg);
+    border-color: color-mix(in srgb, var(--primary) 40%, var(--border-rgba));
+  }
+  
+  .ff-select-item[data-selected="true"] {
+    border-color: color-mix(in srgb, var(--primary) 55%, var(--border-rgba));
+  }
+  
+  .ff-select-item[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .ff-select-item-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+  
+/* Headings */
+.ff-h1, .ff-h2, .ff-h3 {
+  color: var(--heading);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.ff-h1 { font-size: 1.75rem; }
+.ff-h2 { font-size: 1.35rem; }
+.ff-h3 { font-size: 1.1rem; }
+
+.ff-heading-muted { color: var(--heading-muted); }
+.ff-heading-accent { color: var(--heading-accent); }
+
+/* Derived tokens (read-only display) */
+.ff-derived {
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  border: var(--border-w) dashed color-mix(in srgb, var(--border-rgba) 65%, transparent);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* =========================
+   FF Table / Tooltip primitives
+   ========================= */
+
+   .ff-thead {
+    background: color-mix(in srgb, var(--panel) 70%, transparent);
+    box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--text) 8%, transparent);
+  }
+  
+  .ff-thead th {
+    padding: 0.5rem;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: color-mix(in srgb, var(--text) 88%, transparent);
+  }
+  
+  .ff-row {
+    background: color-mix(in srgb, var(--panel) 18%, transparent);
+    transition: background-color 180ms ease;
+  }
+  
+  .ff-row-alt {
+    background: color-mix(in srgb, var(--panel) 26%, transparent);
+    transition: background-color 180ms ease;
+  }
+  
+  .ff-row:hover,
+  .ff-row-alt:hover {
+    background: color-mix(in srgb, var(--panel) 40%, transparent);
+  }
+  
+/* =========================
+   FF Tooltip (tokenized + variants)
+   ========================= */
+
+   .ff-tip {
+    --tip-bg: var(--panel);
+    --tip-text: var(--text);
+    --tip-border: var(--border-rgba);
+    --tip-shadow: var(--glow-shadow);
+  
+    background: var(--tip-bg);
+    color: var(--tip-text);
+    border: 1px solid var(--tip-border);
+    border-radius: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    box-shadow: var(--tip-shadow);
+  }
+  
+  /* Variantes */
+  .ff-tip--soft {
+    --tip-bg: color-mix(in srgb, var(--panel) 92%, transparent);
+    --tip-border: color-mix(in srgb, var(--border-rgba) 75%, transparent);
+    --tip-shadow: 0 18px 45px rgba(0,0,0,0.45);
+  }
+  
+  .ff-tip--glass {
+    --tip-bg: color-mix(in srgb, var(--panel) 78%, transparent);
+    --tip-border: color-mix(in srgb, var(--text) 10%, transparent);
+    --tip-shadow: 0 18px 55px rgba(0,0,0,0.55);
+  }
+  
+  .ff-tip--bright {
+    --tip-bg: color-mix(in srgb, var(--text) 10%, var(--panel));
+    --tip-border: color-mix(in srgb, var(--text) 18%, transparent);
+    --tip-shadow: 0 18px 55px rgba(0,0,0,0.55);
+  }
+  
+  /* Tonos (para “warning/success/danger/primary”) */
+  .ff-tip--success {
+    --tip-border: color-mix(in srgb, var(--success) 35%, transparent);
+    --tip-shadow: 0 18px 55px color-mix(in srgb, var(--success) 14%, transparent);
+  }
+  .ff-tip--danger {
+    --tip-border: color-mix(in srgb, var(--danger) 35%, transparent);
+    --tip-shadow: 0 18px 55px color-mix(in srgb, var(--danger) 14%, transparent);
+  }
+  .ff-tip--warning {
+    --tip-border: color-mix(in srgb, var(--warning) 35%, transparent);
+    --tip-shadow: 0 18px 55px color-mix(in srgb, var(--warning) 14%, transparent);
+  }
+  .ff-tip--primary {
+    --tip-border: color-mix(in srgb, var(--primary) 35%, transparent);
+    --tip-shadow: 0 18px 55px color-mix(in srgb, var(--primary) 14%, transparent);
+  }
+  

@@ -10,6 +10,7 @@ import Goals from "./pages/Goals";
 import Dashboard from "./pages/Dashboard";
 import AppLayout from "./components/AppLayout";
 import Scenarios from "./pages/Scenarios";
+import Theme from "./pages/Theme";
 import ModernDashboard from "./pages/ModernDashboardPro";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -55,9 +56,7 @@ function App() {
   return (
     <>
       {!session ? (
-        <div className="min-h-screen bg-white text-black p-6">
-          <Login onLogin={() => setView("dashboard")} />
-        </div>
+        <Login onLogin={() => setView("dashboard")} />
       ) : (
         <AppLayout onLogout={handleLogout} setView={setView}>
           {view === "categories" && <Categories token={session.access_token} />}
@@ -70,7 +69,10 @@ function App() {
           {view === "goals" && <Goals token={session.access_token} />}
           {view === "dashboard" && <Dashboard token={session.access_token} />}
           {view === "scenarios" && <Scenarios token={session.access_token} />}
-          {view === "moderndashboard" && <ModernDashboard token={session.access_token} />}
+          {view === "moderndashboard" && (
+            <ModernDashboard token={session.access_token} />
+          )}
+          {view === "theme" && <Theme />}
         </AppLayout>
       )}
 

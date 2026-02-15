@@ -10,21 +10,24 @@ function ScenarioCalendar({
 }) {
   const events = (projection || []).map((tx) => {
     const isIncome = tx.type === "income";
-    const isAI = tx.source === "advanced_forecast"; // 👈 viene del preview
-    const isProjected = Boolean(tx.isProjected); // ya lo usas en tu sistema
+    const isAI = tx.source === "advanced_forecast";
+    const isProjected = Boolean(tx.isProjected);
 
-    // Colores base
-    const baseColor = isIncome ? "#10b981" : "#ef4444";
+    // ✅ base en TOKENS
+    const base = isIncome ? "var(--success)" : "var(--danger)";
+    const aiBorder = "var(--warning)";
 
-    // Si es AI preview, lo diferenciamos visualmente (borde + fondo más suave)
+    // Fondo: sólido normal, suave si es AI preview
     const backgroundColor = isAI
-      ? isIncome
-        ? "rgba(16,185,129,0.18)"
-        : "rgba(239,68,68,0.18)"
-      : baseColor;
+      ? `color-mix(in srgb, ${base} 18%, transparent)`
+      : base;
 
-    const borderColor = isAI ? "#f59e0b" : baseColor; // ámbar para AI
-    const textColor = isAI ? "#e2e8f0" : "#0b1220"; // texto claro en AI, oscuro en sólido
+    // Borde: ámbar para AI preview, si no igual al tipo
+    const borderColor = isAI ? aiBorder : base;
+
+    // Texto: claro para AI (fondo transparente), oscuro para sólido
+    // (si quieres siempre claro, cambia ambos a var(--text))
+    const textColor = isAI ? "var(--text)" : "var(--text-on-primary, #061018)";
 
     const amount = Number(tx.amount || 0);
 
@@ -35,12 +38,11 @@ function ScenarioCalendar({
       }`,
       date: tx.date,
 
-      // FullCalendar styles
+      // FullCalendar inline styles (tokenizados)
       backgroundColor,
       borderColor,
       textColor,
 
-      // ✅ Importante: solo pasar realId si NO es AI preview
       extendedProps: {
         realId: isAI ? null : tx.real_id || tx.rule_id,
         source: isAI ? "advanced_forecast" : "scenario_projection",
@@ -48,24 +50,30 @@ function ScenarioCalendar({
         category_name: tx.category_name || null,
       },
 
-      // Clase CSS para afinar estilos con tailwind/css si quieres
       classNames: [isAI ? "fc-ai-preview" : "fc-simulated"],
     };
   });
 
   return (
-    <div className="mt-6 border-t border-slate-800/60 pt-4">
-      <h3 className="text-lg font-semibold text-slate-200 mb-3">
+    <div
+      className="mt-6 pt-4"
+      style={{
+        borderTop: "var(--border-w) solid color-mix(in srgb, var(--border-rgba) 70%, transparent)",
+      }}
+    >
+      <h3 className="text-lg font-semibold mb-3" style={{ color: "var(--text)" }}>
         Vista en calendario
       </h3>
 
       <div
-        className="
-          rounded-2xl border border-slate-800
-          bg-slate-950/40
-          shadow-[0_18px_50px_rgba(0,0,0,0.85)]
-          p-3 sm:p-4
-        "
+        className="rounded-2xl p-3 sm:p-4 border"
+        style={{
+          background: "color-mix(in srgb, var(--panel) 55%, transparent)",
+          borderColor: "var(--border-rgba)",
+          borderWidth: "var(--border-w)",
+          borderRadius: "var(--radius-lg)",
+          boxShadow: "var(--glow-shadow)",
+        }}
       >
         <FullCalendar
           plugins={[dayGridPlugin, interactionPlugin]}
@@ -74,9 +82,7 @@ function ScenarioCalendar({
           height="auto"
           locale="es"
           selectable={true}
-          select={({ startStr, endStr }) =>
-            onDateRangeSelect?.(startStr, endStr)
-          }
+          select={({ startStr, endStr }) => onDateRangeSelect?.(startStr, endStr)}
           eventClick={onEventClick}
           datesSet={(info) => {
             const gridStart =
@@ -84,37 +90,41 @@ function ScenarioCalendar({
             const gridEnd = info.endStr || info.end.toISOString().slice(0, 10);
 
             const d = info.view.currentStart;
-            const monthStart = `${d.getFullYear()}-${String(
-              d.getMonth() + 1
-            ).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            const monthStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
+              2,
+              "0"
+            )}-${String(d.getDate()).padStart(2, "0")}`;
 
             onViewRangeChange?.(gridStart, gridEnd, monthStart);
           }}
           className="fc-theme-dark text-xs sm:text-sm"
         />
 
-        {/* ✅ Leyenda */}
-        <div className="mt-3 flex flex-wrap gap-3 text-xs text-slate-300">
+        {/* Leyenda (tokenizada) */}
+        <div className="mt-3 flex flex-wrap gap-3 text-xs" style={{ color: "var(--muted)" }}>
           <span className="inline-flex items-center gap-2">
             <span
               className="inline-block w-3 h-3 rounded-sm"
-              style={{ background: "#10b981" }}
+              style={{ background: "var(--success)" }}
             />
             Ingreso
           </span>
+
           <span className="inline-flex items-center gap-2">
             <span
               className="inline-block w-3 h-3 rounded-sm"
-              style={{ background: "#ef4444" }}
+              style={{ background: "var(--danger)" }}
             />
             Gasto
           </span>
+
           <span className="inline-flex items-center gap-2">
             <span
               className="inline-block w-3 h-3 rounded-sm border"
               style={{
-                background: "rgba(245,158,11,0.15)",
-                borderColor: "#f59e0b",
+                background: "color-mix(in srgb, var(--warning) 15%, transparent)",
+                borderColor: "var(--warning)",
+                borderWidth: "var(--border-w)",
               }}
             />
             AI Preview (no editable)

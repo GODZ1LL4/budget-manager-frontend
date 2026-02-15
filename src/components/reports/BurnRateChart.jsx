@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+// src/components/reports/BurnRateChart.jsx
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   ResponsiveContainer,
@@ -20,46 +21,80 @@ function formatCurrencyDOP(value) {
   }).format(num);
 }
 
-// Tooltip custom para no duplicar la serie "Real"
 function BurnRateTooltip({ active, payload, label }) {
   if (!active || !payload || !payload.length) return null;
 
-  // Nos quedamos solo con Ideal y Real (ignoramos el área)
+  // Solo Ideal y Real (ignoramos el área)
   const filtered = payload.filter(
     (item) => item.dataKey === "Ideal" || item.dataKey === "Real"
   );
-
   if (!filtered.length) return null;
 
   return (
     <div
       style={{
-        backgroundColor: "#020617",
-        color: "#e5e7eb",
-        border: "1px solid #4b5563",
-        borderRadius: "0.5rem",
-        padding: "10px 14px",
-        fontSize: "0.85rem",
-        lineHeight: "1.3rem",
+        backgroundColor: "var(--bg-3)",
+        color: "var(--text)",
+        border: "1px solid var(--border-rgba)",
+        borderRadius: "12px",
+        padding: "10px 12px",
+        boxShadow: "0 18px 45px rgba(0,0,0,0.85)",
+        minWidth: 220,
       }}
     >
-      <p style={{ marginBottom: 6 }}>
-        <strong>Día {label}</strong>
-      </p>
+      <div style={{ fontWeight: 800, marginBottom: 6 }}>
+        Día {label}
+      </div>
+
       {filtered.map((entry) => (
-        <p key={entry.dataKey} style={{ margin: 0 }}>
-          {entry.dataKey === "Ideal" ? "Ideal" : "Real"}:{" "}
-          {formatCurrencyDOP(entry.value)}
-        </p>
+        <div
+          key={entry.dataKey}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 12,
+            fontSize: 13,
+            lineHeight: "18px",
+            marginTop: 4,
+          }}
+        >
+          <span style={{ color: "var(--muted)", fontWeight: 700 }}>
+            {entry.dataKey === "Ideal" ? "Ideal" : "Real"}
+          </span>
+          <span style={{ fontWeight: 800 }}>{formatCurrencyDOP(entry.value)}</span>
+        </div>
       ))}
     </div>
   );
 }
 
-function BurnRateChart({ token }) {
+export default function BurnRateChart({ token }) {
   const api = import.meta.env.VITE_API_URL;
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // ✅ Tokens de estilo (todos centralizados)
+  const styles = useMemo(() => {
+    return {
+      card: {
+        background:
+          "linear-gradient(135deg, var(--bg-3), color-mix(in srgb, var(--panel) 80%, transparent), var(--bg-2))",
+        border: "1px solid var(--border-rgba)",
+        borderRadius: "var(--radius-lg)",
+        boxShadow: "0 16px 40px rgba(0,0,0,0.85)",
+        color: "var(--text)",
+      },
+      subtleText: { color: "var(--muted)" },
+      axisLine: { stroke: "var(--border-rgba)" },
+      tick: { fill: "var(--text)", fontSize: 14 },
+      cursor: {
+        stroke: "var(--muted)",
+        strokeWidth: 1,
+        strokeDasharray: "3 3",
+      },
+      legendWrap: { color: "var(--text)", fontSize: "0.95rem" },
+    };
+  }, []);
 
   useEffect(() => {
     const fetchBurnRate = async () => {
@@ -82,14 +117,20 @@ function BurnRateChart({ token }) {
   }, [token, api]);
 
   if (loading) {
-    return <p className="text-sm text-slate-300">Cargando ritmo de gasto...</p>;
+    return (
+      <div className="p-4" style={styles.card}>
+        <p style={styles.subtleText}>Cargando ritmo de gasto...</p>
+      </div>
+    );
   }
 
-  if (!data || !data.series || !data.series.length) {
+  if (!data?.series?.length) {
     return (
-      <p className="text-sm text-slate-300">
-        No hay datos suficientes para calcular el burn rate de este mes.
-      </p>
+      <div className="p-4" style={styles.card}>
+        <p style={styles.subtleText}>
+          No hay datos suficientes para calcular el burn rate de este mes.
+        </p>
+      </div>
     );
   }
 
@@ -105,16 +146,15 @@ function BurnRateChart({ token }) {
     day_of_month,
   } = data;
 
-  // Punto del día actual
   const lastPoint =
     data.series[day_of_month - 1] || data.series[data.series.length - 1];
 
   const isOverIdeal =
     (lastPoint?.actual_cumulative || 0) > (lastPoint?.ideal_cumulative || 0);
 
-  const realLineColor = isOverIdeal ? "#e63946" : "#16a34a"; // rojo / verde
+  const realLineColor = isOverIdeal ? "var(--danger)" : "var(--success)";
+  const idealLineColor = "var(--primary)";
 
-  // Data para el gráfico (separamos Real y RealArea)
   const chartData = data.series.map((d) => ({
     day: d.day,
     Ideal: d.ideal_cumulative,
@@ -123,99 +163,116 @@ function BurnRateChart({ token }) {
     isToday: d.day === day_of_month,
   }));
 
-  // Dot grande solo para el día actual
-  const renderRealDot = (props) => {
-    const { cx, cy, payload } = props;
-    if (!payload || !payload.isToday) return null;
-
+  const renderRealDot = ({ cx, cy, payload }) => {
+    if (!payload?.isToday) return null;
     return (
       <circle
         cx={cx}
         cy={cy}
         r={6}
         fill={realLineColor}
-        stroke="#ffffff"
+        stroke="var(--text)"
         strokeWidth={2}
       />
     );
   };
 
+  const bannerStyle = {
+    backgroundColor: isOverIdeal
+      ? "color-mix(in srgb, var(--danger) 16%, transparent)"
+      : "color-mix(in srgb, var(--success) 16%, transparent)",
+    border: `1px solid ${
+      isOverIdeal
+        ? "color-mix(in srgb, var(--danger) 55%, var(--border-rgba))"
+        : "color-mix(in srgb, var(--success) 55%, var(--border-rgba))"
+    }`,
+    borderRadius: "var(--radius-md)",
+    color: "var(--text)",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+  };
+
+  const bannerTitleColor = isOverIdeal ? "var(--danger)" : "var(--success)";
+
   return (
-    <div>
-      {/* Banner de estado */}
-      <div
-        className={`mb-3 text-sm rounded border px-4 py-3 ${
-          isOverIdeal
-            ? "bg-red-900/40 text-red-200 border-red-500/60"
-            : "bg-emerald-900/40 text-emerald-200 border-emerald-500/60"
-        }`}
-      >
-        <p className="font-semibold flex items-center gap-1 text-base">
+    <div className="rounded-2xl p-6 space-y-4" style={styles.card}>
+      {/* Banner de estado (tokenizado) */}
+      <div className="px-4 py-3" style={bannerStyle}>
+        <p
+          className="font-semibold flex items-center gap-2 text-base"
+          style={{ color: bannerTitleColor }}
+        >
           {isOverIdeal
             ? "🔥 Estás gastando por encima del ritmo ideal."
             : "🟢 Vas por debajo del ritmo ideal, buen control."}
         </p>
-        <p>
-          Diferencia vs ideal a la fecha:{" "}
-          <strong>{formatCurrencyDOP(variance_to_ideal)}</strong>
-        </p>
-        <p>
-          Diferencia proyectada vs presupuesto del mes:{" "}
-          <strong>{formatCurrencyDOP(variance_to_budget_end)}</strong>
-        </p>
+
+        <div className="mt-1 text-sm" style={{ color: "var(--text)" }}>
+          <div>
+            Diferencia vs ideal a la fecha:{" "}
+            <strong>{formatCurrencyDOP(variance_to_ideal)}</strong>
+          </div>
+          <div>
+            Diferencia proyectada vs presupuesto del mes:{" "}
+            <strong>{formatCurrencyDOP(variance_to_budget_end)}</strong>
+          </div>
+        </div>
       </div>
 
       {/* Resumen numérico */}
-      <div className="mb-3 text-sm text-slate-200 space-y-1 leading-relaxed">
+      <div className="text-sm space-y-1 leading-relaxed">
         <p>
-          Mes: <strong>{month}</strong> — Hoy: <strong>{today}</strong>
+          <span style={styles.subtleText}>Mes:</span>{" "}
+          <strong>{month}</strong>{" "}
+          <span style={styles.subtleText}>— Hoy:</span>{" "}
+          <strong>{today}</strong>
         </p>
+
         <p>
-          Presupuesto mensual:{" "}
+          <span style={styles.subtleText}>Presupuesto mensual:</span>{" "}
           <strong>{formatCurrencyDOP(budget_total)}</strong>
         </p>
+
         <p>
-          Gasto ideal acumulado:{" "}
-          <strong>{formatCurrencyDOP(ideal_to_date)}</strong> | Gasto real
-          acumulado: <strong>{formatCurrencyDOP(actual_to_date)}</strong>
+          <span style={styles.subtleText}>Gasto ideal acumulado:</span>{" "}
+          <strong>{formatCurrencyDOP(ideal_to_date)}</strong>{" "}
+          <span style={styles.subtleText}>| Gasto real acumulado:</span>{" "}
+          <strong>{formatCurrencyDOP(actual_to_date)}</strong>
         </p>
+
         <p>
-          Proyección de gasto al cierre del mes:{" "}
+          <span style={styles.subtleText}>
+            Proyección de gasto al cierre del mes:
+          </span>{" "}
           <strong>{formatCurrencyDOP(projected_end_of_month)}</strong>
         </p>
       </div>
 
-      {/* Gráfico */}
+      {/* Chart */}
       <div style={{ width: "100%", height: 300 }}>
         <ResponsiveContainer>
           <ComposedChart data={chartData}>
             <XAxis
               dataKey="day"
-              tick={{ fill: "#e5e7eb", fontSize: 14 }}
-              axisLine={{ stroke: "#64748b" }}
-              tickLine={{ stroke: "#64748b" }}
+              tick={styles.tick}
+              axisLine={styles.axisLine}
+              tickLine={styles.axisLine}
             />
             <YAxis
-              tick={{ fill: "#e5e7eb", fontSize: 14 }}
-              axisLine={{ stroke: "#64748b" }}
-              tickLine={{ stroke: "#64748b" }}
+              tick={styles.tick}
+              axisLine={styles.axisLine}
+              tickLine={styles.axisLine}
             />
-            <Tooltip
-              content={<BurnRateTooltip />}
-              cursor={{
-                stroke: "#64748b",
-                strokeWidth: 1,
-                strokeDasharray: "3 3",
-              }}
-            />
+
+            <Tooltip content={<BurnRateTooltip />} cursor={styles.cursor} />
+
             <Legend
-              wrapperStyle={{ fontSize: "1rem", color: "#e5e7eb" }}
+              wrapperStyle={styles.legendWrap}
               payload={[
                 {
                   id: "Ideal",
                   value: "Ideal",
                   type: "line",
-                  color: "#8884d8",
+                  color: idealLineColor,
                 },
                 {
                   id: "Real",
@@ -226,7 +283,7 @@ function BurnRateChart({ token }) {
               ]}
             />
 
-            {/* Área bajo la línea real (no aparece en leyenda ni tooltip) */}
+            {/* Área real (no aparece en leyenda/tooltip) */}
             <Area
               type="monotone"
               dataKey="RealArea"
@@ -236,17 +293,17 @@ function BurnRateChart({ token }) {
               isAnimationActive={false}
             />
 
-            {/* Línea ideal (discontinua) */}
+            {/* Línea ideal */}
             <Line
               type="monotone"
               dataKey="Ideal"
-              stroke="#8884d8"
+              stroke={idealLineColor}
               strokeDasharray="5 5"
               strokeWidth={2}
               dot={false}
             />
 
-            {/* Línea real con color dinámico y punto del día actual */}
+            {/* Línea real */}
             <Line
               type="monotone"
               dataKey="Real"
@@ -259,7 +316,7 @@ function BurnRateChart({ token }) {
         </ResponsiveContainer>
       </div>
 
-      <p className="text-base text-slate-200 mt-3 leading-relaxed">
+      <p className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>
         La línea <strong>Ideal</strong> representa un gasto lineal del
         presupuesto durante todo el mes. La línea <strong>Real</strong> muestra
         tu gasto acumulado día a día. Si la línea real va por encima de la
@@ -268,5 +325,3 @@ function BurnRateChart({ token }) {
     </div>
   );
 }
-
-export default BurnRateChart;

@@ -16,7 +16,7 @@ function Login({ onLogin }) {
     }
 
     if (isLogin) {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -61,107 +61,74 @@ function Login({ onLogin }) {
   };
 
   return (
-    <div
-      className="
-        max-w-md mx-auto mt-16
-        rounded-2xl p-6 md:p-8
-        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800
-        border border-slate-800
-        shadow-[0_20px_60px_rgba(0,0,0,0.85)]
-        text-slate-200
-      "
-    >
-      <h2 className="text-2xl font-bold mb-2 text-[#f6e652] text-center">
-        {isLogin ? "Iniciar sesión" : "Crear cuenta"}
-      </h2>
-      <p className="text-xs text-slate-400 mb-6 text-center">
-        {isLogin
-          ? "Ingresa con tu correo para ver tu panel financiero."
-          : "Crea una cuenta para comenzar a registrar tus finanzas."}
-      </p>
+    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-[var(--bg-1)] via-[var(--bg-2)] to-[var(--bg-3)] text-[var(--text)]">
+      <div className="max-w-md w-full ff-card p-6 md:p-8">
+        <h2 className="ff-h2 mb-2 text-center">
+          <span className="ff-heading-accent">
+            {isLogin ? "Iniciar sesión" : "Crear cuenta"}
+          </span>
+        </h2>
 
-      <form onSubmit={handleAuth} className="space-y-4">
-        {/* Email */}
-        <div className="flex flex-col space-y-1">
-          <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-            Correo electrónico
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="ejemplo@correo.com"
-            className="
-              w-full rounded-lg px-3 py-2 text-sm
-              bg-slate-900 border border-slate-700
-              text-slate-100 placeholder:text-slate-500
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            "
-            required
-          />
-        </div>
+        <p className="text-xs text-[var(--muted)] mb-6 text-center">
+          {isLogin
+            ? "Ingresa con tu correo para ver tu panel financiero."
+            : "Crea una cuenta para comenzar a registrar tus finanzas."}
+        </p>
 
-        {/* Password */}
-        <div className="flex flex-col space-y-1">
-          <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-            Contraseña
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Mínimo 6 caracteres"
-            className="
-              w-full rounded-lg px-3 py-2 text-sm
-              bg-slate-900 border border-slate-700
-              text-slate-100 placeholder:text-slate-500
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            "
-            required
-          />
-          <p className="text-[11px] text-slate-500">
-            Usa una contraseña segura que solo tú conozcas.
-          </p>
-        </div>
+        <form onSubmit={handleAuth} className="space-y-4">
+          {/* Email */}
+          <div className="flex flex-col space-y-1">
+            <label className="ff-label">Correo electrónico</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="ejemplo@correo.com"
+              className="ff-input"
+              required
+            />
+          </div>
 
-        {/* Botón principal */}
-        <button
-          type="submit"
-          className="
-            w-full mt-2
-            inline-flex items-center justify-center
-            px-4 py-2.5 text-sm font-semibold
-            rounded-lg
-            bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
-            text-slate-950
-            shadow-[0_0_20px_rgba(16,185,129,0.7)]
-            hover:brightness-110
-            active:scale-95
-            transition-all
-          "
-        >
-          {isLogin ? "Iniciar sesión" : "Registrarse"}
-        </button>
-      </form>
+          {/* Password */}
+          <div className="flex flex-col space-y-1">
+            <label className="ff-label">Contraseña</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Mínimo 6 caracteres"
+              className="ff-input"
+              required
+            />
+            <p
+              className="text-[11px]"
+              style={{ color: "color-mix(in srgb, var(--muted) 75%, transparent)" }}
+            >
+              Usa una contraseña segura que solo tú conozcas.
+            </p>
+          </div>
 
-      {/* Toggle login/registro */}
-      <p className="mt-5 text-xs text-center text-slate-400">
-        {isLogin ? "¿No tienes una cuenta?" : "¿Ya tienes una cuenta?"}{" "}
-        <button
-          onClick={() => setIsLogin(!isLogin)}
-          className="
-            font-semibold
-            text-emerald-300 hover:text-emerald-200
-            underline underline-offset-2
-            transition-colors
-          "
-          type="button"
-        >
-          {isLogin ? "Crear una cuenta" : "Iniciar sesión"}
-        </button>
-      </p>
+          {/* Botón principal */}
+          <button type="submit" className="ff-btn ff-btn-primary w-full mt-2">
+            {isLogin ? "Iniciar sesión" : "Registrarse"}
+          </button>
+        </form>
+
+        {/* Toggle login/registro */}
+        <p className="mt-5 text-xs text-center text-[var(--muted)]">
+          {isLogin ? "¿No tienes una cuenta?" : "¿Ya tienes una cuenta?"}{" "}
+          <button
+            onClick={() => setIsLogin(!isLogin)}
+            type="button"
+            className="font-semibold underline underline-offset-2"
+            style={{ color: "var(--primary)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.filter = "brightness(1.12)")}
+            onMouseLeave={(e) => (e.currentTarget.style.filter = "none")}
+          >
+            {isLogin ? "Crear una cuenta" : "Iniciar sesión"}
+          </button>
+        </p>
+      </div>
     </div>
   );
 }

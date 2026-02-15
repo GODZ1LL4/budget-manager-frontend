@@ -17,6 +17,13 @@ const formatMoney = (v) => {
   return `RD$ ${num.toFixed(2)}`;
 };
 
+// ✅ helper: leer CSS variables (tema actual)
+function cssVar(name, fallback = "") {
+  if (typeof window === "undefined") return fallback;
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name);
+  return (v || fallback).trim();
+}
+
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload || payload.length === 0) return null;
 
@@ -24,24 +31,48 @@ function CustomTooltip({ active, payload, label }) {
   if (!row) return null;
 
   const balance = Number(row.balance ?? 0) || 0;
-  const balanceColor = balance >= 0 ? "#4ade80" : "#f97373";
+
+  const text = cssVar("--text", "#e2e8f0");
+  const muted = cssVar("--muted", "#94a3b8");
+  const border = cssVar("--border-rgba", "rgba(148,163,184,0.22)");
+  const bg = cssVar("--bg-3", "#0a0c10");
+  const success = cssVar("--success", "#34d399");
+  const danger = cssVar("--danger", "#fb7185");
+
+  const balanceColor = balance >= 0 ? success : danger;
 
   return (
     <div
       style={{
-        background: "#020617",
+        background: `color-mix(in srgb, ${bg} 78%, transparent)`,
         padding: "10px 12px",
-        border: "1px solid #4b5563",
-        borderRadius: "8px",
-        color: "#e5e7eb",
-        fontSize: "1rem",
+        border: `1px solid ${border}`,
+        borderRadius: "var(--radius-md)",
+        color: text,
+        fontSize: "0.95rem",
         boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
+        backdropFilter: "blur(10px)",
+        minWidth: 220,
       }}
     >
-      <p style={{ marginBottom: 4, fontWeight: 600 }}>Mes: {label}</p>
-      <p style={{ margin: 0 }}>Ingresos: {formatMoney(row.income)}</p>
-      <p style={{ margin: 0 }}>Gastos: {formatMoney(row.expense)}</p>
-      <p style={{ margin: 0, marginTop: 4, color: balanceColor }}>
+      <p style={{ marginBottom: 6, fontWeight: 800, color: text }}>
+        Mes: {label}
+      </p>
+      <p style={{ margin: 0, color: muted }}>
+        Ingresos: {formatMoney(row.income)}
+      </p>
+      <p style={{ margin: 0, color: muted }}>
+        Gastos: {formatMoney(row.expense)}
+      </p>
+
+      <p
+        style={{
+          margin: 0,
+          marginTop: 6,
+          fontWeight: 800,
+          color: balanceColor,
+        }}
+      >
         Balance: {formatMoney(balance)}
       </p>
     </div>
@@ -81,45 +112,59 @@ function MonthlyIncomeVsExpenseChart({ token }) {
     0
   );
 
-  const yearlyBalanceColor =
-    yearlyBalance >= 0 ? "text-emerald-400" : "text-rose-400";
+  const yearlyBalanceStyle = {
+    color: yearlyBalance >= 0 ? "var(--success)" : "var(--danger)",
+  };
 
   const monthLabel = (m) => (typeof m === "string" ? m.slice(5, 7) : m);
 
+  // ✅ tokens → colores reales
+  const gridStroke = cssVar("--border-rgba", "rgba(148,163,184,0.22)");
+  const axisStroke = cssVar("--muted", "#94a3b8");
+  const tickFill = cssVar("--text", "#e2e8f0");
+
+  const incomeFill = cssVar("--success", "#10b981");
+  const expenseFill = cssVar("--danger", "#fb7185");
+
   return (
     <div
-      className="
-        rounded-2xl p-6
-        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950
-        border border-slate-800
-        shadow-[0_16px_40px_rgba(0,0,0,0.85)]
-        space-y-4
-      "
+      className="rounded-2xl p-6 space-y-4 border shadow-[0_16px_40px_rgba(0,0,0,0.85)]"
+      style={{
+        background:
+          "linear-gradient(135deg, var(--bg-3), color-mix(in srgb, var(--bg-2) 70%, var(--bg-3)), var(--bg-3))",
+        borderColor: "var(--border-rgba)",
+        color: "var(--text)",
+      }}
     >
-      {/* ✅ Header ajustado */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-        {/* Título */}
-        <h3 className="text-lg md:text-xl font-semibold text-slate-100">
+        <h3
+          className="text-lg md:text-xl font-semibold"
+          style={{ color: "var(--heading)" }}
+        >
           Balance de Ingreso vs Gasto
         </h3>
 
-        {/* Controles + KPI (derecha) */}
         <div className="flex flex-col items-end gap-1">
-          {/* Selector año */}
           <div className="flex flex-col items-end">
-            <label className="text-[11px] uppercase tracking-[0.18em] text-slate-300">
+            <label
+              className="text-[11px] uppercase tracking-[0.18em]"
+              style={{ color: "var(--muted)" }}
+            >
               Año
             </label>
+
             <select
               value={year}
               onChange={(e) => setYear(parseInt(e.target.value, 10))}
-              className="
-                mt-1
-                bg-slate-900 border border-slate-700
-                text-slate-200
-                rounded-lg px-3 py-1.5 text-sm
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/60
-              "
+              className="mt-1 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2"
+              style={{
+                background: "var(--control-bg)",
+                border: "1px solid var(--control-border)",
+                color: "var(--control-text)",
+                boxShadow: "none",
+                outline: "none",
+              }}
             >
               {yearOptions.map((y) => (
                 <option key={y} value={y}>
@@ -129,12 +174,11 @@ function MonthlyIncomeVsExpenseChart({ token }) {
             </select>
           </div>
 
-          {/* KPI balance acumulado */}
-          <p className={`text-sm font-medium ${yearlyBalanceColor}`}>
+          <p className="text-sm font-medium" style={yearlyBalanceStyle}>
             Balance acumulado del año:{" "}
             <span className="font-semibold">{formatMoney(yearlyBalance)}</span>
             {loading ? (
-              <span className="text-slate-400 ml-2 text-xs">
+              <span className="ml-2 text-xs" style={{ color: "var(--muted)" }}>
                 Actualizando…
               </span>
             ) : null}
@@ -143,42 +187,51 @@ function MonthlyIncomeVsExpenseChart({ token }) {
       </div>
 
       {data.length === 0 ? (
-        <p className="text-sm text-slate-500 italic">
+        <p className="text-sm italic" style={{ color: "var(--muted)" }}>
           No hay datos disponibles para el período actual.
         </p>
       ) : (
         <div className="w-full h-[350px]">
           <ResponsiveContainer>
             <BarChart data={data}>
-              <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
+              <CartesianGrid stroke={gridStroke} strokeDasharray="4 4" />
+
               <XAxis
                 dataKey="month"
                 tickFormatter={monthLabel}
-                stroke="#94a3b8"
-                tick={{ fill: "#cbd5e1", fontSize: 14 }}
+                stroke={axisStroke}
+                tick={{ fill: tickFill, fontSize: 14 }}
               />
+
               <YAxis
-                stroke="#94a3b8"
-                tick={{ fill: "#cbd5e1", fontSize: 14 }}
+                stroke={axisStroke}
+                tick={{ fill: tickFill, fontSize: 14 }}
               />
+
               <Tooltip content={<CustomTooltip />} />
+
               <Legend
-                wrapperStyle={{ color: "#e2e8f0" }}
+                wrapperStyle={{ color: tickFill }}
                 formatter={(value) => (
-                  <span className="text-slate-200 text-xs sm:text-sm">
+                  <span
+                    className="text-xs sm:text-sm"
+                    style={{ color: tickFill }}
+                  >
                     {value}
                   </span>
                 )}
               />
+
               <Bar
                 dataKey="income"
-                fill="#10b981"
+                fill={incomeFill}
                 name="Ingresos"
                 radius={[4, 4, 0, 0]}
               />
+
               <Bar
                 dataKey="expense"
-                fill="#ef4444"
+                fill={expenseFill}
                 name="Gastos"
                 radius={[4, 4, 0, 0]}
               />

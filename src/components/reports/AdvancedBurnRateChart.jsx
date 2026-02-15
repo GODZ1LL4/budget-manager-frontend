@@ -33,23 +33,36 @@ function AdvancedBurnRateTooltip({ active, payload, label }) {
   return (
     <div
       style={{
-        backgroundColor: "#020617",
-        color: "#e5e7eb",
-        border: "1px solid #4b5563",
-        borderRadius: "0.5rem",
-        padding: "10px 14px",
+        backgroundColor: "var(--bg-3)",
+        color: "var(--text)",
+        border: "1px solid var(--border-rgba)",
+        borderRadius: "12px",
+        padding: "10px 12px",
+        boxShadow: "0 18px 45px rgba(0,0,0,0.85)",
         fontSize: "0.85rem",
         lineHeight: "1.3rem",
+        minWidth: 220,
       }}
     >
-      <p style={{ marginBottom: 6 }}>
-        <strong>Día {label}</strong>
+      <p style={{ marginBottom: 6, fontWeight: 800 }}>
+        Día {label}
       </p>
+
       {filtered.map((entry) => (
-        <p key={entry.dataKey} style={{ margin: 0 }}>
-          {entry.dataKey === "Expected" ? "Esperado" : "Real"}:{" "}
-          {formatCurrencyDOP(entry.value)}
-        </p>
+        <div
+          key={entry.dataKey}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 12,
+            marginTop: 4,
+          }}
+        >
+          <span style={{ color: "var(--muted)", fontWeight: 700 }}>
+            {entry.dataKey === "Expected" ? "Esperado" : "Real"}
+          </span>
+          <span style={{ fontWeight: 800 }}>{formatCurrencyDOP(entry.value)}</span>
+        </div>
       ))}
     </div>
   );
@@ -74,6 +87,67 @@ export default function AdvancedBurnRateChart({ token }) {
   const [errMsg, setErrMsg] = useState("");
 
   const didInitialLoad = useRef(false);
+
+  // ===== Tokenized UI styles =====
+  const ui = useMemo(() => {
+    const card = {
+      background:
+        "linear-gradient(135deg, var(--bg-3), color-mix(in srgb, var(--panel) 80%, transparent), var(--bg-2))",
+      border: "1px solid var(--border-rgba)",
+      borderRadius: "var(--radius-lg)",
+      boxShadow: "0 16px 40px rgba(0,0,0,0.85)",
+      color: "var(--text)",
+    };
+
+    const controlBase = {
+      backgroundColor: "var(--control-bg)",
+      color: "var(--control-text)",
+      border: "1px solid var(--control-border)",
+      borderRadius: "var(--radius-md)",
+      padding: "8px 10px",
+      outline: "none",
+      boxShadow: "none",
+    };
+
+    const label = {
+      color: "var(--muted)",
+      fontSize: 12,
+      fontWeight: 700,
+      letterSpacing: "0.08em",
+      textTransform: "uppercase",
+    };
+
+    return {
+      card,
+      label,
+      control: controlBase,
+      helper: { color: "var(--muted)" },
+
+      axisLine: { stroke: "var(--border-rgba)" },
+      tick: { fill: "var(--text)", fontSize: 14 },
+      cursor: { stroke: "var(--muted)", strokeWidth: 1, strokeDasharray: "3 3" },
+
+      legend: { fontSize: "0.95rem", color: "var(--text)" },
+
+      // Botón principal (recalcular) como “warning/primary” según tus tokens
+      btn: {
+        backgroundColor: "var(--btn-warning-bg)",
+        color: "var(--btn-warning-text)",
+        border: "1px solid color-mix(in srgb, var(--btn-warning-bg) 60%, var(--border-rgba))",
+        borderRadius: "var(--btn-radius)",
+        padding: "10px 14px",
+        fontWeight: 800,
+        boxShadow: "0 0 var(--btn-glow-blur) 0 color-mix(in srgb, var(--glow-color) 40%, transparent)",
+        transition: "filter 150ms ease, transform 120ms ease, opacity 150ms ease",
+      },
+
+      detailsBox: {
+        border: "1px solid var(--border-rgba)",
+        backgroundColor: "color-mix(in srgb, var(--panel) 55%, transparent)",
+        borderRadius: "var(--radius-md)",
+      },
+    };
+  }, []);
 
   const load = async () => {
     if (!token) return;
@@ -129,23 +203,34 @@ export default function AdvancedBurnRateChart({ token }) {
 
   if (loading) {
     return (
-      <p className="text-sm text-slate-300">Cargando burn rate avanzado...</p>
+      <div className="p-4" style={ui.card}>
+        <p style={ui.helper}>Cargando burn rate avanzado...</p>
+      </div>
     );
   }
 
   if (errMsg) {
     return (
-      <div className="text-sm text-red-300 border border-red-800 rounded-lg p-3">
-        {errMsg}
+      <div
+        className="p-4"
+        style={{
+          ...ui.card,
+          backgroundColor: "color-mix(in srgb, var(--danger) 14%, transparent)",
+          border: `1px solid color-mix(in srgb, var(--danger) 55%, var(--border-rgba))`,
+        }}
+      >
+        <p style={{ color: "var(--text)", fontWeight: 700 }}>{errMsg}</p>
       </div>
     );
   }
 
-  if (!data || !data.series || !data.series.length) {
+  if (!data?.series?.length) {
     return (
-      <p className="text-sm text-slate-300">
-        No hay datos suficientes para calcular el burn rate avanzado este mes.
-      </p>
+      <div className="p-4" style={ui.card}>
+        <p style={ui.helper}>
+          No hay datos suficientes para calcular el burn rate avanzado este mes.
+        </p>
+      </div>
     );
   }
 
@@ -163,89 +248,109 @@ export default function AdvancedBurnRateChart({ token }) {
     meta,
   } = data;
 
-  // ✅ Lo que querías: histórico usado para aprender patrones
+  // Histórico usado para aprender patrones
   const historyFrom = meta?.history_from || "—";
   const historyTo = meta?.history_to || "—";
-
-  // (Opcional) Mes analizado, por si lo quieres mostrar pequeño
-  // const analyzedFrom = meta?.date_from || "—";
-  // const analyzedTo = meta?.date_to || "—";
 
   const lastPoint =
     chartData[day_of_month - 1] || chartData[chartData.length - 1];
 
-  const isOverExpected =
-    (lastPoint?.Real || 0) > (lastPoint?.Expected || 0);
+  const isOverExpected = (lastPoint?.Real || 0) > (lastPoint?.Expected || 0);
 
-  const realLineColor = isOverExpected ? "#e63946" : "#16a34a";
+  const realLineColor = isOverExpected ? "var(--danger)" : "var(--success)";
+  const expectedLineColor = "var(--primary)";
+
+  const bannerStyle = {
+    backgroundColor: isOverExpected
+      ? "color-mix(in srgb, var(--danger) 16%, transparent)"
+      : "color-mix(in srgb, var(--success) 16%, transparent)",
+    border: `1px solid ${
+      isOverExpected
+        ? "color-mix(in srgb, var(--danger) 55%, var(--border-rgba))"
+        : "color-mix(in srgb, var(--success) 55%, var(--border-rgba))"
+    }`,
+    borderRadius: "var(--radius-md)",
+    padding: "12px 14px",
+    color: "var(--text)",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.45)",
+  };
 
   return (
-    <div className="space-y-4">
+    <div className="rounded-2xl p-6 space-y-4" style={ui.card}>
       {/* ===== Header + histórico usado ===== */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold text-slate-100">
+          <h3 style={{ color: "var(--heading)", fontWeight: 800, fontSize: 18 }}>
             Burn Rate Avanzado (por patrones)
           </h3>
 
-          <p className="text-sm text-slate-400">
-            Histórico usado: <strong>{historyFrom}</strong> →{" "}
-            <strong>{historyTo}</strong>
+          <p className="mt-1" style={{ color: "var(--muted)", fontSize: 13 }}>
+            Histórico usado: <strong style={{ color: "var(--text)" }}>{historyFrom}</strong>{" "}
+            → <strong style={{ color: "var(--text)" }}>{historyTo}</strong>
           </p>
-
-          {/* Si luego quieres mostrar el mes analizado también, descomenta:
-          <p className="text-xs text-slate-500 mt-0.5">
-            Mes analizado: <strong>{analyzedFrom}</strong> →{" "}
-            <strong>{analyzedTo}</strong>
-          </p>
-          */}
         </div>
       </div>
 
       {/* ===== Controls ===== */}
       <div className="flex flex-wrap gap-4 items-end">
         <div>
-          <label className="text-xs text-slate-400 mb-1 block">
-            Historial (meses)
-          </label>
+          <label style={ui.label}>Historial (meses)</label>
           <input
             type="number"
             min={1}
             max={36}
             value={months}
             onChange={(e) => setMonths(Number(e.target.value))}
-            className="input w-24"
+            style={ui.control}
+            className="w-24 mt-1"
+            onFocus={(e) => {
+              e.currentTarget.style.border = "1px solid var(--control-border-focus)";
+              e.currentTarget.style.boxShadow = "var(--control-focus-shadow)";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.border = "1px solid var(--control-border)";
+              e.currentTarget.style.boxShadow = "none";
+            }}
           />
         </div>
 
         <div>
-          <label className="text-xs text-slate-400 mb-1 block">
-            Min. ocurrencias
-          </label>
+          <label style={ui.label}>Min. ocurrencias</label>
           <input
             type="number"
             min={2}
             value={minOccurrences}
             onChange={(e) => setMinOccurrences(Number(e.target.value))}
-            className="input w-24"
+            style={ui.control}
+            className="w-24 mt-1"
+            onFocus={(e) => {
+              e.currentTarget.style.border = "1px solid var(--control-border-focus)";
+              e.currentTarget.style.boxShadow = "var(--control-focus-shadow)";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.border = "1px solid var(--control-border)";
+              e.currentTarget.style.boxShadow = "none";
+            }}
           />
         </div>
 
         <div className="flex items-center gap-4 pb-1">
-          <label className="flex items-center gap-2 text-sm text-slate-200">
+          <label className="flex items-center gap-2 text-sm" style={{ color: "var(--text)" }}>
             <input
               type="checkbox"
               checked={includeOccasional}
               onChange={(e) => setIncludeOccasional(e.target.checked)}
+              style={{ accentColor: "var(--primary)" }}
             />
             Incluir ocasionales
           </label>
 
-          <label className="flex items-center gap-2 text-sm text-slate-200">
+          <label className="flex items-center gap-2 text-sm" style={{ color: "var(--text)" }}>
             <input
               type="checkbox"
               checked={includeNoise}
               onChange={(e) => setIncludeNoise(e.target.checked)}
+              style={{ accentColor: "var(--primary)" }}
             />
             Incluir eventuales
           </label>
@@ -254,53 +359,84 @@ export default function AdvancedBurnRateChart({ token }) {
         <button
           onClick={load}
           disabled={loading}
-          className="
-            ml-auto px-4 py-2 rounded-lg
-            bg-amber-500 hover:bg-amber-400
-            text-slate-900 font-semibold
-            disabled:opacity-50
-          "
+          style={{
+            ...ui.btn,
+            opacity: loading ? 0.6 : 1,
+            cursor: loading ? "not-allowed" : "pointer",
+          }}
+          className="ml-auto"
+          onMouseDown={(e) => {
+            if (!loading) e.currentTarget.style.transform = "scale(0.98)";
+          }}
+          onMouseUp={(e) => {
+            e.currentTarget.style.transform = "scale(1)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "scale(1)";
+          }}
+          onMouseEnter={(e) => {
+            if (!loading) e.currentTarget.style.filter = "brightness(1.05)";
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.filter = "none";
+            e.currentTarget.style.transform = "scale(1)";
+          }}
         >
           {loading ? "Calculando..." : "Recalcular"}
         </button>
       </div>
 
-      <details>
-        <summary className="cursor-pointer text-sm text-slate-300">
+      <details
+        style={ui.detailsBox}
+        className="px-3 py-2"
+      >
+        <summary className="cursor-pointer text-sm" style={{ color: "var(--text)", fontWeight: 700 }}>
           Ajustes avanzados
         </summary>
 
         <div className="mt-3 flex flex-wrap gap-4">
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">
-              Min intervalo (días)
-            </label>
+            <label style={ui.label}>Min intervalo (días)</label>
             <input
               type="number"
               min={1}
               value={minIntervalDays}
               onChange={(e) => setMinIntervalDays(Number(e.target.value))}
-              className="input w-28"
+              style={ui.control}
+              className="w-28 mt-1"
+              onFocus={(e) => {
+                e.currentTarget.style.border = "1px solid var(--control-border-focus)";
+                e.currentTarget.style.boxShadow = "var(--control-focus-shadow)";
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.border = "1px solid var(--control-border)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
             />
           </div>
 
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">
-              Max intervalo (días)
-            </label>
+            <label style={ui.label}>Max intervalo (días)</label>
             <input
               type="number"
               min={1}
               value={maxIntervalDays}
               onChange={(e) => setMaxIntervalDays(Number(e.target.value))}
-              className="input w-28"
+              style={ui.control}
+              className="w-28 mt-1"
+              onFocus={(e) => {
+                e.currentTarget.style.border = "1px solid var(--control-border-focus)";
+                e.currentTarget.style.boxShadow = "var(--control-focus-shadow)";
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.border = "1px solid var(--control-border)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
             />
           </div>
 
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">
-              Coef. variación máx
-            </label>
+            <label style={ui.label}>Coef. variación máx</label>
             <input
               type="number"
               step="0.05"
@@ -308,53 +444,68 @@ export default function AdvancedBurnRateChart({ token }) {
               max={2}
               value={maxCoefVariation}
               onChange={(e) => setMaxCoefVariation(Number(e.target.value))}
-              className="input w-28"
+              style={ui.control}
+              className="w-28 mt-1"
+              onFocus={(e) => {
+                e.currentTarget.style.border = "1px solid var(--control-border-focus)";
+                e.currentTarget.style.boxShadow = "var(--control-focus-shadow)";
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.border = "1px solid var(--control-border)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
             />
           </div>
         </div>
       </details>
 
       {/* ===== Banner ===== */}
-      <div
-        className={`text-sm rounded border px-4 py-3 ${
-          (chartData[day_of_month - 1]?.Real || 0) >
-          (chartData[day_of_month - 1]?.Expected || 0)
-            ? "bg-red-900/40 text-red-200 border-red-500/60"
-            : "bg-emerald-900/40 text-emerald-200 border-emerald-500/60"
-        }`}
-      >
-        <p className="font-semibold flex items-center gap-1 text-base">
+      <div style={bannerStyle}>
+        <p
+          className="font-semibold flex items-center gap-2 text-base"
+          style={{ color: isOverExpected ? "var(--danger)" : "var(--success)" }}
+        >
           {isOverExpected
             ? "🔥 Estás gastando por encima de lo esperado según tus patrones."
             : "🟢 Vas por debajo de lo esperado según tus patrones."}
         </p>
-        <p>
-          Diferencia vs esperado a la fecha:{" "}
-          <strong>{formatCurrencyDOP(variance_to_expected)}</strong>
-        </p>
-        <p>
-          Diferencia proyectada vs esperado del mes:{" "}
-          <strong>{formatCurrencyDOP(variance_to_expected_end)}</strong>
-        </p>
+
+        <div className="mt-1 text-sm" style={{ color: "var(--text)" }}>
+          <p style={{ margin: 0 }}>
+            Diferencia vs esperado a la fecha:{" "}
+            <strong>{formatCurrencyDOP(variance_to_expected)}</strong>
+          </p>
+          <p style={{ margin: 0 }}>
+            Diferencia proyectada vs esperado del mes:{" "}
+            <strong>{formatCurrencyDOP(variance_to_expected_end)}</strong>
+          </p>
+        </div>
       </div>
 
       {/* ===== Resumen ===== */}
-      <div className="text-sm text-slate-200 space-y-1 leading-relaxed">
+      <div className="text-sm space-y-1 leading-relaxed" style={{ color: "var(--text)" }}>
         <p>
-          Mes: <strong>{month}</strong> — Hoy: <strong>{today}</strong> (día{" "}
-          {day_of_month} de {days_in_month})
+          <span style={{ color: "var(--muted)" }}>Mes:</span> <strong>{month}</strong>{" "}
+          <span style={{ color: "var(--muted)" }}>— Hoy:</span> <strong>{today}</strong>{" "}
+          <span style={{ color: "var(--muted)" }}>
+            (día {day_of_month} de {days_in_month})
+          </span>
         </p>
+
         <p>
-          Esperado mes (por patrones):{" "}
+          <span style={{ color: "var(--muted)" }}>Esperado mes (por patrones):</span>{" "}
           <strong>{formatCurrencyDOP(expected_total)}</strong>
         </p>
+
         <p>
-          Esperado acumulado:{" "}
-          <strong>{formatCurrencyDOP(expected_to_date)}</strong> | Real
-          acumulado: <strong>{formatCurrencyDOP(actual_to_date)}</strong>
+          <span style={{ color: "var(--muted)" }}>Esperado acumulado:</span>{" "}
+          <strong>{formatCurrencyDOP(expected_to_date)}</strong>{" "}
+          <span style={{ color: "var(--muted)" }}>| Real acumulado:</span>{" "}
+          <strong>{formatCurrencyDOP(actual_to_date)}</strong>
         </p>
+
         <p>
-          Proyección real al cierre del mes:{" "}
+          <span style={{ color: "var(--muted)" }}>Proyección real al cierre del mes:</span>{" "}
           <strong>{formatCurrencyDOP(projected_end_of_month)}</strong>
         </p>
       </div>
@@ -365,31 +516,26 @@ export default function AdvancedBurnRateChart({ token }) {
           <ComposedChart data={chartData}>
             <XAxis
               dataKey="day"
-              tick={{ fill: "#e5e7eb", fontSize: 14 }}
-              axisLine={{ stroke: "#64748b" }}
-              tickLine={{ stroke: "#64748b" }}
+              tick={ui.tick}
+              axisLine={ui.axisLine}
+              tickLine={ui.axisLine}
             />
             <YAxis
-              tick={{ fill: "#e5e7eb", fontSize: 14 }}
-              axisLine={{ stroke: "#64748b" }}
-              tickLine={{ stroke: "#64748b" }}
+              tick={ui.tick}
+              axisLine={ui.axisLine}
+              tickLine={ui.axisLine}
             />
-            <Tooltip
-              content={<AdvancedBurnRateTooltip />}
-              cursor={{
-                stroke: "#64748b",
-                strokeWidth: 1,
-                strokeDasharray: "3 3",
-              }}
-            />
+
+            <Tooltip content={<AdvancedBurnRateTooltip />} cursor={ui.cursor} />
+
             <Legend
-              wrapperStyle={{ fontSize: "1rem", color: "#e5e7eb" }}
+              wrapperStyle={ui.legend}
               payload={[
                 {
                   id: "Expected",
                   value: "Esperado",
                   type: "line",
-                  color: "#8884d8",
+                  color: expectedLineColor,
                 },
                 {
                   id: "Real",
@@ -412,7 +558,7 @@ export default function AdvancedBurnRateChart({ token }) {
             <Line
               type="monotone"
               dataKey="Expected"
-              stroke="#8884d8"
+              stroke={expectedLineColor}
               strokeDasharray="5 5"
               strokeWidth={2}
               dot={false}
@@ -432,7 +578,7 @@ export default function AdvancedBurnRateChart({ token }) {
                     cy={cy}
                     r={6}
                     fill={realLineColor}
-                    stroke="#ffffff"
+                    stroke="var(--text)"
                     strokeWidth={2}
                   />
                 );
@@ -443,7 +589,7 @@ export default function AdvancedBurnRateChart({ token }) {
         </ResponsiveContainer>
       </div>
 
-      <p className="text-base text-slate-200 leading-relaxed">
+      <p className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>
         La línea <strong>Esperado</strong> se construye con tu{" "}
         <strong>histórico usado</strong> (arriba). La línea <strong>Real</strong>{" "}
         es tu gasto acumulado día a día.

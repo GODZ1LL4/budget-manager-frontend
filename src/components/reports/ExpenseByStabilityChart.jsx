@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   ResponsiveContainer,
@@ -9,7 +9,12 @@ import {
   Legend,
 } from "recharts";
 
-const COLORS = ["#0ea5e9", "#f59e0b", "#ef4444"];
+// ✅ helper: leer CSS variables (tema actual)
+function cssVar(name, fallback = "") {
+  if (typeof window === "undefined") return fallback;
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name);
+  return (v || fallback).trim();
+}
 
 function ExpenseByStabilityChart({ token }) {
   const [data, setData] = useState([]);
@@ -34,35 +39,66 @@ function ExpenseByStabilityChart({ token }) {
     occasional: "Ocasional",
   };
 
-  const displayData = (data || []).map((d) => ({
-    ...d,
-    name: labelMap[d.type] || d.type,
-  }));
+  const displayData = useMemo(
+    () =>
+      (data || []).map((d) => ({
+        ...d,
+        name: labelMap[d.type] || d.type,
+      })),
+    [data]
+  );
+
+  // ✅ Colores por tipo usando tokens (cambian con el tema)
+  const colorsByType = useMemo(() => {
+    const primary = cssVar("--primary", "#10b981");
+    const warning = cssVar("--warning", "#fbbf24");
+    const danger = cssVar("--danger", "#fb7185");
+
+    return {
+      fixed: primary,
+      variable: warning,
+      occasional: danger,
+    };
+  }, []);
+
+  // ✅ Tooltip tokenizado
+  const tooltipStyle = useMemo(
+    () => ({
+      background: "color-mix(in srgb, var(--bg-3) 78%, transparent)",
+      border: "1px solid var(--border-rgba)",
+      color: "var(--text)",
+      borderRadius: "var(--radius-md)",
+      boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
+      padding: "10px 12px",
+      backdropFilter: "blur(10px)",
+      fontSize: "0.95rem",
+    }),
+    []
+  );
 
   return (
     <div
-      className="
-        rounded-2xl p-6
-        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950
-        border border-slate-800
-        shadow-[0_16px_40px_rgba(0,0,0,0.85)]
-        space-y-4
-      "
+      className="rounded-2xl p-6 space-y-4 border shadow-[0_16px_40px_rgba(0,0,0,0.85)]"
+      style={{
+        background:
+          "linear-gradient(135deg, var(--bg-3), color-mix(in srgb, var(--bg-2) 70%, var(--bg-3)), var(--bg-3))",
+        borderColor: "var(--border-rgba)",
+        color: "var(--text)",
+      }}
     >
       <div>
-        <h3 className="text-lg font-semibold text-slate-100">
+        <h3 className="text-lg font-semibold" style={{ color: "var(--heading)" }}>
           Distribución de gastos por tipo de estabilidad
         </h3>
-        <p className="text-sm text-slate-400 mt-1">
+        <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
           Muestra qué proporción de tus gastos corresponde a gastos fijos,
           variables y ocasionales.
         </p>
       </div>
 
       {displayData.length === 0 ? (
-        <p className="text-sm text-slate-500 italic">
-          No hay datos de gastos por tipo de estabilidad para el período
-          actual.
+        <p className="text-sm italic" style={{ color: "var(--muted)" }}>
+          No hay datos de gastos por tipo de estabilidad para el período actual.
         </p>
       ) : (
         <div className="w-full h-[300px]">
@@ -77,33 +113,29 @@ function ExpenseByStabilityChart({ token }) {
                   `${name} (${(percent * 100).toFixed(1)}%)`
                 }
               >
-                {displayData.map((_, index) => (
+                {displayData.map((row, index) => (
                   <Cell
-                    key={index}
-                    fill={COLORS[index % COLORS.length]}
-                    stroke="#020617"
+                    key={`${row.type}-${index}`}
+                    fill={colorsByType[row.type] || cssVar("--primary", "#10b981")}
+                    // borde del slice usando el fondo del tema
+                    stroke={cssVar("--bg-3", "#0a0c10")}
                     strokeWidth={1}
                   />
                 ))}
               </Pie>
+
               <Tooltip
                 formatter={(value) => `RD$ ${Number(value || 0).toFixed(2)}`}
                 labelFormatter={(label) => `Tipo: ${label}`}
-                contentStyle={{
-                  backgroundColor: "#020617",
-                  border: "1px solid #4b5563",
-                  color: "#e5e7eb",
-                  borderRadius: "0.5rem",
-                  boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
-                  fontSize: "1rem",
-                }}
-                itemStyle={{ color: "#e5e7eb" }}
-                labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+                contentStyle={tooltipStyle}
+                itemStyle={{ color: "var(--text)" }}
+                labelStyle={{ color: "var(--heading)", fontWeight: 700 }}
               />
+
               <Legend
-                wrapperStyle={{ color: "#e2e8f0" }}
+                wrapperStyle={{ color: cssVar("--text", "#e2e8f0") }}
                 formatter={(value) => (
-                  <span className="text-slate-200 text-xs sm:text-sm">
+                  <span className="text-xs sm:text-sm" style={{ color: "var(--text)" }}>
                     {value}
                   </span>
                 )}

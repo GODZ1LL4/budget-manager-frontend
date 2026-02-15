@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Modal from "../components/Modal";
+import FFSelect from "../components/FFSelect";
 import { toast } from "react-toastify";
 
 function Items({ token }) {
@@ -12,24 +13,19 @@ function Items({ token }) {
   const [taxes, setTaxes] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
   const [price, setPrice] = useState("");
-  const [date, setDate] = useState(
-    () => new Date().toISOString().split("T")[0]
-  );
+  const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [priceHistory, setPriceHistory] = useState([]);
   const [showTaxModal, setShowTaxModal] = useState(false);
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [itemToEdit, setItemToEdit] = useState(null);
   const [showEditItemModal, setShowEditItemModal] = useState(false);
 
-  // Modal de confirmación de borrado
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
 
-  // Búsqueda y selección
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
 
-  //Modal Confirmacion de borrado precio
   const [showDeletePriceModal, setShowDeletePriceModal] = useState(false);
   const [priceToDelete, setPriceToDelete] = useState(null);
 
@@ -42,11 +38,14 @@ function Items({ token }) {
       minimumFractionDigits: 2,
     }).format(amount);
 
+  const authHeaders = useMemo(
+    () => ({ headers: { Authorization: `Bearer ${token}` } }),
+    [token]
+  );
+
   const fetchItems = async () => {
     try {
-      const res = await axios.get(`${api}/items-with-price`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.get(`${api}/items-with-price`, authHeaders);
       setItems(res.data.data);
     } catch {
       toast.error("Error al cargar artículos");
@@ -55,9 +54,7 @@ function Items({ token }) {
 
   const fetchTaxes = async () => {
     try {
-      const res = await axios.get(`${api}/taxes`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.get(`${api}/taxes`, authHeaders);
       setTaxes(res.data.data);
     } catch {
       toast.error("Error al cargar impuestos");
@@ -66,9 +63,7 @@ function Items({ token }) {
 
   const fetchPrices = async (itemId) => {
     try {
-      const res = await axios.get(`${api}/item-prices/${itemId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await axios.get(`${api}/item-prices/${itemId}`, authHeaders);
       setPriceHistory(res.data.data);
     } catch {
       toast.error("Error al obtener historial de precios");
@@ -81,21 +76,15 @@ function Items({ token }) {
     try {
       await axios.post(
         `${api}/items`,
-        {
-          name,
-          description,
-          category,
-          tax_id: selectedTaxId || null,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { name, description, category, tax_id: selectedTaxId || null },
+        authHeaders
       );
 
       setName("");
       setDescription("");
       setCategory("");
       setSelectedTaxId("");
+
       toast.success("Artículo creado correctamente");
       fetchItems();
     } catch {
@@ -116,13 +105,12 @@ function Items({ token }) {
           category: itemToEdit.category,
           tax_id: itemToEdit.tax_id || null,
         },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        authHeaders
       );
 
       setItemToEdit(null);
       setShowEditItemModal(false);
+
       toast.success("Artículo actualizado correctamente");
       fetchItems();
     } catch {
@@ -143,29 +131,22 @@ function Items({ token }) {
     try {
       await axios.post(
         `${api}/item-prices`,
-        {
-          item_id: selectedItem.id,
-          price: numericPrice,
-          date,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { item_id: selectedItem.id, price: numericPrice, date },
+        authHeaders
       );
 
       setPrice("");
       await fetchPrices(selectedItem.id);
       await fetchItems();
-      setSelectedItem((prev) =>
-        prev ? { ...prev, latest_price: numericPrice } : prev
-      );
+
+      setSelectedItem((prev) => (prev ? { ...prev, latest_price: numericPrice } : prev));
       toast.success("Precio agregado correctamente");
     } catch (err) {
       const code = err?.response?.data?.error;
       const message = err?.response?.data?.message;
 
       if (code === "DUPLICATE_PRICE_FOR_DATE") {
-        toast.error(
-          message || "Ya existe un precio para este artículo en esa fecha."
-        );
+        toast.error(message || "Ya existe un precio para este artículo en esa fecha.");
       } else if (message) {
         toast.error(message);
       } else {
@@ -174,14 +155,11 @@ function Items({ token }) {
     }
   };
 
-  // Borrado de artículo (se ejecuta luego de confirmar en el modal)
   const handleDeleteItem = async (item) => {
     if (!item) return;
 
     try {
-      await axios.delete(`${api}/items/${item.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(`${api}/items/${item.id}`, authHeaders);
 
       toast.success("Artículo eliminado correctamente");
       setItemToDelete(null);
@@ -201,37 +179,6 @@ function Items({ token }) {
     }
   };
 
-  const handleDeletePrice = async (priceRecord) => {
-    if (!selectedItem || !priceRecord) return;
-
-    // Si quieres una confirmación rápida:
-    const ok = window.confirm(
-      `¿Seguro que deseas eliminar el precio del ${priceRecord.date}?`
-    );
-    if (!ok) return;
-
-    try {
-      await axios.delete(`${api}/item-prices/${priceRecord.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      toast.success("Precio eliminado correctamente");
-
-      // refrescamos historial y lista principal
-      await fetchPrices(selectedItem.id);
-      await fetchItems();
-    } catch (err) {
-      const code = err?.response?.data?.error;
-      const message = err?.response?.data?.message;
-
-      if (code === "PRICE_NOT_FOUND") {
-        toast.error(message || "El precio ya no existe.");
-      } else {
-        toast.error("Error al eliminar precio");
-      }
-    }
-  };
-
   const handleAskDeletePrice = (priceRecord) => {
     setPriceToDelete(priceRecord);
     setShowDeletePriceModal(true);
@@ -241,12 +188,9 @@ function Items({ token }) {
     if (!selectedItem || !priceToDelete) return;
 
     try {
-      await axios.delete(`${api}/item-prices/${priceToDelete.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(`${api}/item-prices/${priceToDelete.id}`, authHeaders);
 
       toast.success("Precio eliminado correctamente");
-
       setShowDeletePriceModal(false);
       setPriceToDelete(null);
 
@@ -266,12 +210,10 @@ function Items({ token }) {
     }
   };
 
-  // Lista filtrada por búsqueda
   const filteredItems = items.filter((item) =>
     item.name?.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Helpers de selección
   const toggleItemSelection = (id) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -289,12 +231,8 @@ function Items({ token }) {
         filteredItems.every((item) => prev.includes(item.id));
 
       if (allSelected) {
-        // desmarcar todos los filtrados
-        return prev.filter(
-          (id) => !filteredItems.some((item) => item.id === id)
-        );
+        return prev.filter((id) => !filteredItems.some((item) => item.id === id));
       } else {
-        // marcar todos los filtrados
         const set = new Set(prev);
         filteredItems.forEach((item) => set.add(item.id));
         return Array.from(set);
@@ -302,7 +240,6 @@ function Items({ token }) {
     });
   };
 
-  // Exportar precios seleccionados
   const handleExport = async () => {
     if (selectedIds.length === 0) {
       toast.error("Debes seleccionar al menos un artículo");
@@ -313,15 +250,10 @@ function Items({ token }) {
       const response = await axios.post(
         `${api}/items-with-price/export-prices`,
         { ids: selectedIds },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          responseType: "blob",
-        }
+        { ...authHeaders, responseType: "blob" }
       );
 
-      const blob = new Blob([response.data], {
-        type: "text/csv;charset=utf-8;",
-      });
+      const blob = new Blob([response.data], { type: "text/csv;charset=utf-8;" });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -339,294 +271,189 @@ function Items({ token }) {
     }
   };
 
-  // Importar precios desde CSV
   const handleImport = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      const res = await axios.post(
-        `${api}/items-with-price/import-prices`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      const res = await axios.post(`${api}/items-with-price/import-prices`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-      toast.success(
-        `Importación completada. Filas insertadas: ${res.data.inserted}`
-      );
-      if (res.data.errors?.length) {
-        console.warn("Errores de importación:", res.data.errors);
-      }
+      toast.success(`Importación completada. Filas insertadas: ${res.data.inserted}`);
+      if (res.data.errors?.length) console.warn("Errores de importación:", res.data.errors);
 
       fetchItems();
     } catch (error) {
       console.error(error);
       toast.error("Error al importar archivo de precios");
     } finally {
-      e.target.value = ""; // reset input file
+      e.target.value = "";
     }
   };
 
   useEffect(() => {
-    if (token) {
-      fetchItems();
-      fetchTaxes();
-    }
+    if (!token) return;
+    fetchItems();
+    fetchTaxes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  const taxOptions = useMemo(() => {
+    const base = [{ value: "", label: "Sin impuesto" }];
+    const mapped = taxes.map((tax) => ({
+      value: tax.id,
+      label: `${tax.name} (${tax.is_exempt ? "Exento" : `${tax.rate}%`})`,
+    }));
+    return [...base, ...mapped];
+  }, [taxes]);
+
   return (
-    <div
-      className="
-        rounded-2xl p-4 md:p-6
-        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900
-        border border-slate-800
-        shadow-[0_18px_45px_rgba(0,0,0,0.85)]
-        text-slate-200
-      "
-    >
-      <h2 className="text-2xl font-bold mb-2 text-[#f6e652]">Artículos</h2>
-      <p className="text-sm text-slate-400 mb-4">
-        Registra productos y controla cómo varían sus precios a lo largo del
-        tiempo.
+    <div className="ff-card p-4 md:p-6">
+      <h2 className="ff-h1 ff-heading-accent mb-2">Artículos</h2>
+      <p className="text-sm text-[var(--muted)] mb-4">
+        Registra productos y controla cómo varían sus precios a lo largo del tiempo.
       </p>
 
       <button
-        className="text-sm text-emerald-300 hover:text-emerald-200 underline mb-4"
+        type="button"
+        className="text-sm underline underline-offset-2 mb-4"
+        style={{ color: "var(--primary)" }}
         onClick={() => setShowTaxModal(true)}
       >
         Administrar impuestos
       </button>
 
-      {/* Formulario solo para crear artículos */}
-      <form
-        onSubmit={handleCreateItem}
-        className="grid gap-4 mb-6 md:grid-cols-3"
-      >
+      {/* Crear artículo */}
+      <form onSubmit={handleCreateItem} className="grid gap-4 mb-6 md:grid-cols-3">
         <div className="flex flex-col space-y-1">
-          <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-            Nombre
-          </label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="
-              border border-slate-700 rounded-lg px-3 py-2 text-sm
-              bg-slate-900 text-slate-100
-              placeholder:text-slate-500
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            "
-            required
-          />
+          <label className="ff-label uppercase font-semibold">Nombre</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} className="ff-input" required />
         </div>
 
         <div className="flex flex-col space-y-1">
-          <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-            Categoría
-          </label>
-          <input
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="
-              border border-slate-700 rounded-lg px-3 py-2 text-sm
-              bg-slate-900 text-slate-100
-              placeholder:text-slate-500
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            "
-          />
+          <label className="ff-label uppercase font-semibold">Categoría</label>
+          <input value={category} onChange={(e) => setCategory(e.target.value)} className="ff-input" />
         </div>
 
         <div className="flex flex-col space-y-1">
-          <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-            Impuesto
-          </label>
-          <select
+          <label className="ff-label uppercase font-semibold">Impuesto</label>
+          <FFSelect
             value={selectedTaxId}
-            onChange={(e) => setSelectedTaxId(e.target.value)}
-            className="
-              border border-slate-700 rounded-lg px-3 py-2 text-sm
-              bg-slate-900 text-slate-100
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            "
-          >
-            <option value="">Sin impuesto</option>
-            {taxes.map((tax) => (
-              <option key={tax.id} value={tax.id}>
-                {tax.name} ({tax.is_exempt ? "Exento" : `${tax.rate}%`})
-              </option>
-            ))}
-          </select>
+            onChange={(v) => setSelectedTaxId(v)}
+            options={taxOptions}
+            searchable
+            clearable={false}
+            placeholder="Sin impuesto"
+          />
         </div>
 
         <div className="flex flex-col md:col-span-3 space-y-1">
-          <label className="text-xs font-semibold uppercase tracking-wide text-slate-300">
-            Descripción
-          </label>
-          <input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="
-              border border-slate-700 rounded-lg px-3 py-2 text-sm
-              bg-slate-900 text-slate-100
-              placeholder:text-slate-500
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            "
-          />
+          <label className="ff-label uppercase font-semibold">Descripción</label>
+          <input value={description} onChange={(e) => setDescription(e.target.value)} className="ff-input" />
         </div>
 
         <div className="md:col-span-3">
-          <button
-            className="
-              px-4 py-2 text-sm font-semibold rounded-lg
-              bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
-              text-slate-950
-              shadow-[0_0_16px_rgba(16,185,129,0.7)]
-              hover:brightness-110 active:scale-95
-              transition-all
-            "
-          >
+          <button type="submit" className="ff-btn ff-btn-primary">
             Agregar artículo
           </button>
         </div>
       </form>
 
-      {/* Barra de búsqueda + selección + exportar/importar */}
+      {/* Search + acciones */}
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <input
             type="text"
             placeholder="Buscar artículo..."
-            className="
-              border border-slate-700 rounded-lg px-3 py-2 text-sm
-              bg-slate-900 text-slate-100
-              placeholder:text-slate-500
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-              w-full md:w-1/3
-            "
+            className="ff-input w-full md:w-1/3"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
 
           <div className="flex flex-wrap items-center gap-3 justify-between md:justify-end w-full md:w-auto text-sm">
-            <span className="text-xs text-slate-400">
-              Total:{" "}
-              <span className="font-semibold text-slate-100">
-                {filteredItems.length}
-              </span>{" "}
-              · Seleccionados:{" "}
-              <span className="font-semibold text-emerald-300">
+            <span className="text-xs text-[var(--muted)]">
+              Total: <span className="font-semibold text-[var(--text)]">{filteredItems.length}</span> ·
+              Seleccionados:{" "}
+              <span className="font-semibold" style={{ color: "var(--primary)" }}>
                 {selectedIds.length}
               </span>
             </span>
 
-            {/* Marcar / desmarcar todos */}
             <button
               type="button"
               onClick={toggleSelectAllFiltered}
               disabled={filteredItems.length === 0}
-              className={`
-                inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm
-                border border-slate-600 bg-slate-900 text-slate-200
-                hover:bg-slate-800 hover:border-slate-500
-                disabled:opacity-40 disabled:cursor-not-allowed
-                transition-colors
-              `}
+              className="ff-btn ff-btn-outline ff-btn-sm rounded-full"
             >
               <span className="text-xs">☑️</span>
               {allFilteredSelected ? "Desmarcar todos" : "Marcar todos"}
             </button>
 
-            {/* Exportar precios */}
             <button
               type="button"
               onClick={handleExport}
               disabled={selectedIds.length === 0}
-              className="
-                inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm
-                bg-sky-600 text-white shadow-sm
-                hover:bg-sky-500
-                disabled:opacity-40 disabled:cursor-not-allowed
-                transition-colors
-              "
+              className="ff-btn ff-btn-outline ff-btn-sm rounded-full"
+              style={{ borderColor: "color-mix(in srgb, var(--primary) 55%, var(--border-rgba))" }}
             >
               <span className="text-xs">⬇️</span>
-              <span>Exportar precios</span>
+              Exportar precios
             </button>
 
-            {/* Importar precios */}
-            <label
-              className="
-                inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs md:text-sm
-                border border-sky-500 text-sky-300 bg-slate-900
-                hover:bg-slate-800 hover:border-sky-400
-                cursor-pointer transition-colors
-              "
-            >
+            <label className="ff-btn ff-btn-ghost ff-btn-sm rounded-full cursor-pointer">
               <span className="text-xs">⬆️</span>
-              <span>Importar precios</span>
-              <input
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={handleImport}
-              />
+              Importar precios
+              <input type="file" accept=".csv" className="hidden" onChange={handleImport} />
             </label>
           </div>
         </div>
       </div>
 
-      {/* Lista de artículos */}
+      {/* Lista */}
       <ul className="space-y-3">
         {filteredItems.map((item, idx) => (
           <li
             key={item.id}
-            className={`
-              p-4 rounded-xl border
-              ${
+            className="p-4 rounded-xl"
+            style={{
+              background:
                 idx % 2 === 0
-                  ? "bg-slate-950/50 border-slate-800"
-                  : "bg-slate-900/70 border-slate-800"
-              }
-              shadow-[0_10px_30px_rgba(0,0,0,0.45)]
-            `}
+                  ? "color-mix(in srgb, var(--panel) 60%, transparent)"
+                  : "color-mix(in srgb, var(--panel-2) 65%, transparent)",
+              border: "var(--border-w) solid var(--border-rgba)",
+              boxShadow: "var(--glow-shadow)",
+            }}
           >
             <div className="flex justify-between items-start gap-4">
               <div className="flex-1">
                 <label className="flex items-center gap-2 mb-1">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500/70"
+                    className="h-4 w-4 rounded"
+                    style={{ accentColor: "var(--primary)" }}
                     checked={selectedIds.includes(item.id)}
                     onChange={() => toggleItemSelection(item.id)}
                   />
-                  <span className="font-semibold text-slate-100">
+                  <span className="font-semibold text-[var(--text)]">
                     {item.name}{" "}
-                    <span className="text-sm italic text-slate-400">
+                    <span className="text-sm italic text-[var(--muted)]">
                       {item.category ? `(${item.category})` : ""}
                     </span>
                   </span>
                 </label>
 
-                <p className="text-sm text-slate-300">
-                  {item.description || (
-                    <span className="italic text-slate-500">
-                      Sin descripción
-                    </span>
-                  )}
+                <p className="text-sm text-[var(--muted)]">
+                  {item.description || <span className="italic opacity-70">Sin descripción</span>}
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+
+                <p className="text-xs text-[var(--muted)] mt-1">
                   Impuesto:{" "}
                   {item.tax_name
                     ? item.is_exempt
@@ -634,28 +461,31 @@ function Items({ token }) {
                       : `${item.tax_name} (${item.tax_rate}%)`
                     : "No asignado"}
                 </p>
-                <p className="text-sm text-slate-300 mt-1">
+
+                <p className="text-sm text-[var(--muted)] mt-1">
                   Último precio:{" "}
-                  {item.latest_price !== null
-                    ? formatCurrency(item.latest_price)
-                    : "No registrado"}
+                  {item.latest_price !== null ? formatCurrency(item.latest_price) : "No registrado"}
                 </p>
               </div>
-              <div className="space-x-2 whitespace-nowrap text-sm">
+
+              <div className="space-x-3 whitespace-nowrap text-sm">
                 <button
+                  type="button"
                   onClick={() => {
                     setSelectedItem(item);
-                    setPrice(""); // 👈 limpiamos el campo precio
-                    setDate(new Date().toISOString().split("T")[0]); // opcional, refrescar fecha
+                    setPrice("");
+                    setDate(new Date().toISOString().split("T")[0]);
                     fetchPrices(item.id);
                     setShowPriceModal(true);
                   }}
-                  className="text-sky-400 hover:text-sky-300 underline"
+                  className="underline underline-offset-2"
+                  style={{ color: "var(--primary)" }}
                 >
                   Ver precios
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => {
                     setItemToEdit({
                       id: item.id,
@@ -666,16 +496,20 @@ function Items({ token }) {
                     });
                     setShowEditItemModal(true);
                   }}
-                  className="text-slate-300 hover:text-slate-100 underline"
+                  className="underline underline-offset-2"
+                  style={{ color: "var(--text)" }}
                 >
                   Editar
                 </button>
+
                 <button
+                  type="button"
                   onClick={() => {
                     setItemToDelete(item);
                     setShowDeleteModal(true);
                   }}
-                  className="text-rose-400 hover:text-rose-300 underline"
+                  className="underline underline-offset-2"
+                  style={{ color: "var(--danger)" }}
                 >
                   Eliminar
                 </button>
@@ -685,124 +519,53 @@ function Items({ token }) {
         ))}
       </ul>
 
-      {/* === Modales (ya estaban en dark, los dejo igual) === */}
-
-      {/* Modal edición de artículo */}
-      <Modal
-        isOpen={showEditItemModal}
-        onClose={() => setShowEditItemModal(false)}
-        title="Editar artículo"
-      >
+      {/* Modal editar item */}
+      <Modal isOpen={showEditItemModal} onClose={() => setShowEditItemModal(false)} title="Editar artículo">
         {itemToEdit && (
-          <form onSubmit={handleEditItem} className="space-y-4 text-slate-200">
-            {/* Nombre */}
+          <form onSubmit={handleEditItem} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-300">
-                Nombre
-              </label>
+              <label className="ff-label">Nombre</label>
               <input
                 value={itemToEdit.name}
-                onChange={(e) =>
-                  setItemToEdit({ ...itemToEdit, name: e.target.value })
-                }
-                className="
-                  w-full rounded-lg px-3 py-2 text-sm
-                  bg-slate-900 border border-slate-700
-                  text-slate-100 placeholder:text-slate-500
-                  focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                  transition-colors
-                "
-                placeholder="Nombre del artículo"
+                onChange={(e) => setItemToEdit({ ...itemToEdit, name: e.target.value })}
+                className="ff-input"
               />
             </div>
 
-            {/* Categoría */}
             <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-300">
-                Categoría
-              </label>
+              <label className="ff-label">Categoría</label>
               <input
                 value={itemToEdit.category || ""}
-                onChange={(e) =>
-                  setItemToEdit({ ...itemToEdit, category: e.target.value })
-                }
-                className="
-                  w-full rounded-lg px-3 py-2 text-sm
-                  bg-slate-900 border border-slate-700
-                  text-slate-100 placeholder:text-slate-500
-                  focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                  transition-colors
-                "
-                placeholder="Ej. Snacks, Bebidas, Aseo..."
+                onChange={(e) => setItemToEdit({ ...itemToEdit, category: e.target.value })}
+                className="ff-input"
               />
             </div>
 
-            {/* Descripción */}
             <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-300">
-                Descripción
-              </label>
+              <label className="ff-label">Descripción</label>
               <textarea
                 value={itemToEdit.description || ""}
-                onChange={(e) =>
-                  setItemToEdit({ ...itemToEdit, description: e.target.value })
-                }
-                className="
-                  w-full rounded-lg px-3 py-2 text-sm
-                  bg-slate-900 border border-slate-700
-                  text-slate-100 placeholder:text-slate-500
-                  focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                  transition-colors
-                  resize-none
-                "
+                onChange={(e) => setItemToEdit({ ...itemToEdit, description: e.target.value })}
+                className="ff-input"
                 rows={3}
-                placeholder="Detalle opcional del artículo"
+                style={{ resize: "none" }}
               />
             </div>
 
-            {/* Impuesto */}
             <div className="space-y-1">
-              <label className="text-sm font-medium text-slate-300">
-                Impuesto
-              </label>
-              <select
+              <label className="ff-label">Impuesto</label>
+              <FFSelect
                 value={itemToEdit.tax_id || ""}
-                onChange={(e) =>
-                  setItemToEdit({ ...itemToEdit, tax_id: e.target.value })
-                }
-                className="
-                  w-full rounded-lg px-3 py-2 text-sm
-                  bg-slate-900 border border-slate-700
-                  text-slate-100
-                  focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                  transition-colors
-                "
-              >
-                <option value="">Sin impuesto</option>
-                {taxes.map((tax) => (
-                  <option key={tax.id} value={tax.id}>
-                    {tax.name} ({tax.is_exempt ? "Exento" : `${tax.rate}%`})
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setItemToEdit({ ...itemToEdit, tax_id: v })}
+                options={taxOptions}
+                searchable
+                clearable={false}
+                placeholder="Sin impuesto"
+              />
             </div>
 
-            {/* Botón guardar */}
             <div className="pt-2 flex justify-end">
-              <button
-                type="submit"
-                className="
-                  inline-flex items-center justify-center
-                  px-4 py-2 text-sm font-semibold
-                  rounded-lg
-                  bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
-                  text-slate-950
-                  shadow-[0_0_18px_rgba(16,185,129,0.7)]
-                  hover:brightness-110
-                  active:scale-95
-                  transition-all
-                "
-              >
+              <button type="submit" className="ff-btn ff-btn-primary">
                 Guardar cambios
               </button>
             </div>
@@ -815,134 +578,89 @@ function Items({ token }) {
         isOpen={showPriceModal}
         onClose={() => setShowPriceModal(false)}
         title={`Precios de: ${selectedItem?.name || ""}`}
+        size="lg"
       >
-        <form
-          onSubmit={handleAddPrice}
-          className="flex flex-col sm:flex-row gap-3 mb-6 text-slate-200"
-        >
-          {/* Precio */}
-          <div className="flex-1 space-y-1">
-            <label className="text-sm font-medium text-slate-300">Precio</label>
+        <form onSubmit={handleAddPrice} className="grid gap-3 mb-5 sm:grid-cols-3">
+          <div className="sm:col-span-1 space-y-1">
+            <label className="ff-label">Precio</label>
             <input
               type="number"
               step="0.01"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
-              className="
-                w-full rounded-lg px-3 py-2 text-sm
-                bg-slate-900 border border-slate-700
-                text-slate-100 placeholder:text-slate-500
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                transition-colors
-              "
+              className="ff-input"
               placeholder="0.00"
               required
             />
           </div>
 
-          {/* Fecha */}
-          <div className="flex-1 space-y-1">
-            <label className="text-sm font-medium text-slate-300">Fecha</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="
-                w-full rounded-lg px-3 py-2 text-sm
-                bg-slate-900 border border-slate-700
-                text-slate-100
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                transition-colors
-              "
-              required
-            />
+          <div className="sm:col-span-1 space-y-1">
+            <label className="ff-label">Fecha</label>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="ff-input" required />
           </div>
 
-          {/* Botón Agregar */}
-          <div className="flex items-end">
-            <button
-              type="submit"
-              className="
-                w-full sm:w-auto
-                inline-flex items-center justify-center
-                px-4 py-2 text-sm font-semibold
-                rounded-lg
-                bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
-                text-slate-950
-                shadow-[0_0_15px_rgba(16,185,129,0.5)]
-                hover:brightness-110
-                active:scale-95
-                transition-all
-              "
-            >
+          <div className="sm:col-span-1 flex items-end">
+            <button type="submit" className="ff-btn ff-btn-primary w-full">
               Agregar
             </button>
           </div>
         </form>
 
-        {/* Historial de precios */}
-        <ul className="text-sm text-slate-300 space-y-2">
-          {priceHistory.length === 0 ? (
-            <p className="text-slate-500 italic">Sin precios aún.</p>
-          ) : (
-            priceHistory.map((p) => (
-              <li
-                key={p.id}
-                className="
-          flex items-center justify-between gap-3
-          bg-slate-900/50 border border-slate-800
-          px-3 py-2 rounded-lg
-        "
-              >
-                {/* Columna fecha */}
-                <span className="text-sm text-slate-300">{p.date}</span>
-
-                {/* Columna precio + botón eliminar */}
-                <div className="flex items-center gap-3">
-                  <strong className="text-emerald-300">
-                    {formatCurrency(p.price)}
-                  </strong>
-
-                  <button
-                    type="button"
-                    onClick={() => handleAskDeletePrice(p)}
-                    className="
-              text-xs font-semibold
-              px-3 py-1 rounded-full
-              bg-rose-600/90 text-white
-              hover:bg-rose-500
-              shadow-sm
-              transition-colors
-            "
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </li>
-            ))
-          )}
-        </ul>
+        <div className="max-h-80 overflow-auto rounded-xl">
+          <table className="ff-table">
+            <thead>
+              <tr>
+                <th className="ff-th">Fecha</th>
+                <th className="ff-th" style={{ textAlign: "right" }}>
+                  Precio
+                </th>
+                <th className="ff-th" style={{ textAlign: "right" }}>
+                  Acción
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {priceHistory.length === 0 ? (
+                <tr>
+                  <td className="ff-td" colSpan={3} style={{ color: "var(--muted)" }}>
+                    <span className="italic">Sin precios aún.</span>
+                  </td>
+                </tr>
+              ) : (
+                priceHistory.map((p) => (
+                  <tr key={p.id} className="ff-tr">
+                    <td className="ff-td">{p.date}</td>
+                    <td className="ff-td" style={{ textAlign: "right", color: "var(--primary)", fontWeight: 700 }}>
+                      {formatCurrency(p.price)}
+                    </td>
+                    <td className="ff-td" style={{ textAlign: "right" }}>
+                      <button
+                        type="button"
+                        onClick={() => handleAskDeletePrice(p)}
+                        className="ff-btn ff-btn-danger ff-btn-sm"
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </Modal>
 
       {/* Modal impuestos */}
-      <Modal
-        isOpen={showTaxModal}
-        onClose={() => setShowTaxModal(false)}
-        title="Gestión de Impuestos"
-      >
-        {/* FORMULARIO NUEVO IMPUESTO */}
+      <Modal isOpen={showTaxModal} onClose={() => setShowTaxModal(false)} title="Gestión de Impuestos" size="lg">
         <form
           onSubmit={async (e) => {
             e.preventDefault();
             const name = e.target.name.value;
             const rate = parseFloat(e.target.rate.value);
             const is_exempt = e.target.exempt.checked;
+
             try {
-              await axios.post(
-                `${api}/taxes`,
-                { name, rate, is_exempt },
-                { headers: { Authorization: `Bearer ${token}` } }
-              );
+              await axios.post(`${api}/taxes`, { name, rate, is_exempt }, authHeaders);
               toast.success("Impuesto guardado correctamente");
               fetchTaxes();
               e.target.reset();
@@ -950,125 +668,84 @@ function Items({ token }) {
               toast.error("Error al guardar impuesto");
             }
           }}
-          className="space-y-4 text-slate-200"
+          className="space-y-4"
         >
-          {/* Nombre */}
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-300">Nombre</label>
-            <input
-              name="name"
-              className="
-                w-full rounded-lg px-3 py-2 text-sm
-                bg-slate-900 border border-slate-700
-                text-slate-100 placeholder:text-slate-500
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                transition-colors
-              "
-              placeholder="Ej. ITBIS, Selectivo, etc."
-            />
+            <label className="ff-label">Nombre</label>
+            <input name="name" className="ff-input" placeholder="Ej. ITBIS, Selectivo, etc." />
           </div>
 
-          {/* Porcentaje */}
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-300">
-              Porcentaje (%)
-            </label>
-            <input
-              name="rate"
-              type="number"
-              step="0.01"
-              className="
-                w-full rounded-lg px-3 py-2 text-sm
-                bg-slate-900 border border-slate-700
-                text-slate-100 placeholder:text-slate-500
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                transition-colors
-              "
-              placeholder="Ej. 18"
-            />
+            <label className="ff-label">Porcentaje (%)</label>
+            <input name="rate" type="number" step="0.01" className="ff-input" placeholder="Ej. 18" />
           </div>
 
-          {/* Exento */}
-          <label className="flex items-center gap-2 text-sm text-slate-300">
-            <input
-              name="exempt"
-              type="checkbox"
-              className="
-                h-4 w-4 rounded border-slate-600 bg-slate-900
-                text-emerald-500
-                focus:ring-emerald-500/70
-              "
-            />
+          <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
+            <input name="exempt" type="checkbox" className="h-4 w-4 rounded" style={{ accentColor: "var(--primary)" }} />
             Exento de impuestos
           </label>
 
-          {/* Botón guardar */}
           <div className="pt-1 flex justify-end">
-            <button
-              type="submit"
-              className="
-                inline-flex items-center justify-center
-                px-4 py-2 text-sm font-semibold
-                rounded-lg
-                bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
-                text-slate-950
-                shadow-[0_0_16px_rgba(16,185,129,0.6)]
-                hover:brightness-110
-                active:scale-95
-                transition-all
-              "
-            >
+            <button type="submit" className="ff-btn ff-btn-primary">
               Guardar
             </button>
           </div>
         </form>
 
-        {/* LISTA DE IMPUESTOS EXISTENTES */}
-        <ul className="mt-5 space-y-2">
-          {taxes.map((tax) => (
-            <li
-              key={tax.id}
-              className="
-                flex justify-between items-center gap-3
-                rounded-lg px-3 py-2
-                bg-slate-950/50 border border-slate-800
-              "
-            >
-              <span className="text-sm text-slate-200">
-                <span className="font-semibold">{tax.name}</span>{" "}
-                <span className="text-slate-400">—</span>{" "}
-                <span className="text-slate-300">
-                  {tax.is_exempt ? "Exento" : `${tax.rate}%`}
-                </span>
-              </span>
-              <button
-                onClick={async () => {
-                  try {
-                    await axios.delete(`${api}/taxes/${tax.id}`, {
-                      headers: { Authorization: `Bearer ${token}` },
-                    });
-                    toast.success("Impuesto eliminado");
-                    fetchTaxes();
-                  } catch {
-                    toast.error("Error al eliminar impuesto");
-                  }
-                }}
-                className="
-                  text-xs font-semibold
-                  text-rose-400
-                  hover:text-rose-300
-                  hover:underline
-                  transition-colors
-                "
-              >
-                Eliminar
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-5 max-h-72 overflow-auto rounded-xl">
+          <table className="ff-table">
+            <thead>
+              <tr>
+                <th className="ff-th">Impuesto</th>
+                <th className="ff-th" style={{ textAlign: "right" }}>
+                  Tipo
+                </th>
+                <th className="ff-th" style={{ textAlign: "right" }}>
+                  Acción
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {taxes.map((tax) => (
+                <tr key={tax.id} className="ff-tr">
+                  <td className="ff-td">
+                    <span className="font-semibold">{tax.name}</span>
+                  </td>
+                  <td className="ff-td" style={{ textAlign: "right", color: "var(--muted)" }}>
+                    {tax.is_exempt ? "Exento" : `${tax.rate}%`}
+                  </td>
+                  <td className="ff-td" style={{ textAlign: "right" }}>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await axios.delete(`${api}/taxes/${tax.id}`, authHeaders);
+                          toast.success("Impuesto eliminado");
+                          fetchTaxes();
+                        } catch {
+                          toast.error("Error al eliminar impuesto");
+                        }
+                      }}
+                      className="ff-btn ff-btn-danger ff-btn-sm"
+                    >
+                      Eliminar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {taxes.length === 0 && (
+                <tr>
+                  <td className="ff-td" colSpan={3} style={{ color: "var(--muted)" }}>
+                    <span className="italic">No hay impuestos todavía.</span>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </Modal>
 
-      {/* Modal confirmación de eliminación de artículo */}
+      {/* Modal eliminar artículo */}
       <Modal
         isOpen={showDeleteModal}
         onClose={() => {
@@ -1077,28 +754,16 @@ function Items({ token }) {
         }}
         title="Eliminar artículo"
       >
-        <p className="text-sm text-slate-300 mb-6 leading-relaxed">
-          {itemToDelete
-            ? `¿Seguro que deseas eliminar el artículo "${itemToDelete.name}"?`
-            : ""}
+        <p className="text-sm text-[var(--muted)] mb-6 leading-relaxed">
+          {itemToDelete ? `¿Seguro que deseas eliminar el artículo "${itemToDelete.name}"?` : ""}
           <br />
-          <span className="text-slate-500 text-xs">
-            Esta acción no se puede deshacer.
-          </span>
+          <span className="text-xs opacity-80">Esta acción no se puede deshacer.</span>
         </p>
 
         <div className="flex justify-end gap-3">
-          {/* Botón ELIMINAR */}
           <button
-            className="
-              px-4 py-2 text-sm font-semibold rounded-lg
-              bg-gradient-to-r from-rose-600 via-rose-500 to-rose-400
-              text-white
-              shadow-[0_0_12px_rgba(244,63,94,0.35)]
-              hover:brightness-110
-              active:scale-95
-              transition-all
-            "
+            type="button"
+            className="ff-btn ff-btn-danger"
             onClick={async () => {
               await handleDeleteItem(itemToDelete);
               setShowDeleteModal(false);
@@ -1108,17 +773,9 @@ function Items({ token }) {
             Eliminar
           </button>
 
-          {/* Botón CANCELAR */}
           <button
-            className="
-              px-4 py-2 text-sm font-semibold rounded-lg
-              border border-slate-600
-              bg-slate-900
-              text-slate-300
-              hover:bg-slate-800 hover:border-slate-500
-              active:scale-95
-              transition-all
-            "
+            type="button"
+            className="ff-btn ff-btn-outline"
             onClick={() => {
               setShowDeleteModal(false);
               setItemToDelete(null);
@@ -1129,6 +786,7 @@ function Items({ token }) {
         </div>
       </Modal>
 
+      {/* Modal eliminar precio */}
       <Modal
         isOpen={showDeletePriceModal}
         onClose={() => {
@@ -1137,12 +795,12 @@ function Items({ token }) {
         }}
         title="Eliminar precio"
       >
-        <p className="text-sm text-slate-300 mb-6 leading-relaxed">
+        <p className="text-sm text-[var(--muted)] mb-6 leading-relaxed">
           {priceToDelete ? (
             <>
               ¿Seguro que deseas eliminar el precio del día{" "}
-              <span className="font-semibold">{priceToDelete.date}</span> por{" "}
-              <span className="font-semibold">
+              <span className="font-semibold text-[var(--text)]">{priceToDelete.date}</span> por{" "}
+              <span className="font-semibold text-[var(--text)]">
                 {formatCurrency(priceToDelete.price)}
               </span>
               ?
@@ -1151,37 +809,17 @@ function Items({ token }) {
             ""
           )}
           <br />
-          <span className="text-slate-500 text-xs">
-            Esta acción no se puede deshacer.
-          </span>
+          <span className="text-xs opacity-80">Esta acción no se puede deshacer.</span>
         </p>
 
         <div className="flex justify-end gap-3">
-          <button
-            className="
-        px-4 py-2 text-sm font-semibold rounded-lg
-        bg-gradient-to-r from-rose-600 via-rose-500 to-rose-400
-        text-white
-        shadow-[0_0_12px_rgba(244,63,94,0.35)]
-        hover:brightness-110
-        active:scale-95
-        transition-all
-      "
-            onClick={handleConfirmDeletePrice}
-          >
+          <button type="button" className="ff-btn ff-btn-danger" onClick={handleConfirmDeletePrice}>
             Eliminar
           </button>
 
           <button
-            className="
-        px-4 py-2 text-sm font-semibold rounded-lg
-        border border-slate-600
-        bg-slate-900
-        text-slate-300
-        hover:bg-slate-800 hover:border-slate-500
-        active:scale-95
-        transition-all
-      "
+            type="button"
+            className="ff-btn ff-btn-outline"
             onClick={() => {
               setShowDeletePriceModal(false);
               setPriceToDelete(null);

@@ -17,6 +17,47 @@ function ProjectedVsActualExpenseByCategoryChart({ token }) {
   const [meta, setMeta] = useState(null);
   const api = import.meta.env.VITE_API_URL;
 
+  // ===== Tokenized UI =====
+  const ui = useMemo(() => {
+    const axis = "color-mix(in srgb, var(--muted) 80%, transparent)";
+    const grid = "color-mix(in srgb, var(--border-rgba) 65%, transparent)";
+    const panelBg =
+      "linear-gradient(135deg, var(--bg-3), color-mix(in srgb, var(--panel) 78%, transparent), var(--bg-2))";
+
+    return {
+      // semantic colors
+      projected: "var(--primary)", // Proyectado
+      actual: "var(--danger)", // Real gastado
+
+      text: "var(--text)",
+      muted: "var(--muted)",
+      heading: "var(--heading)",
+      border: "var(--border-rgba)",
+      axis,
+      grid,
+
+      card: {
+        borderRadius: "var(--radius-lg)",
+        border: "1px solid var(--border-rgba)",
+        background: panelBg,
+        boxShadow: "0 16px 40px rgba(0,0,0,0.85)",
+        color: "var(--text)",
+      },
+
+      tooltip: {
+        backgroundColor: "var(--bg-3)",
+        border: "1px solid var(--border-rgba)",
+        color: "var(--text)",
+        borderRadius: "12px",
+        boxShadow: "0 18px 45px rgba(0,0,0,0.85)",
+        padding: "10px 12px",
+      },
+
+      refLine: "color-mix(in srgb, var(--muted) 55%, transparent)",
+      cursorFill: "color-mix(in srgb, var(--muted) 10%, transparent)",
+    };
+  }, []);
+
   useEffect(() => {
     if (!token) return;
 
@@ -40,6 +81,11 @@ function ProjectedVsActualExpenseByCategoryChart({ token }) {
       minimumFractionDigits: 2,
     }).format(Number.isFinite(+v) ? +v : 0);
 
+  const formatCompact = (v) =>
+    new Intl.NumberFormat("es-DO", { notation: "compact" }).format(
+      Number.isFinite(+v) ? +v : 0
+    );
+
   const toNum = (x) => (Number.isFinite(+x) ? +x : 0);
 
   // Datos saneados + label + ordenados para lectura (ranking)
@@ -61,38 +107,41 @@ function ProjectedVsActualExpenseByCategoryChart({ token }) {
     return rows;
   }, [data]);
 
-  // Layout vertical => necesitamos ancho de YAxis dinámico para labels largos
+  // Layout vertical => ancho de YAxis dinámico para labels largos
   const yAxisWidth = useMemo(() => {
-    const maxLen = chartData.reduce((acc, r) => Math.max(acc, (r.label || "").length), 0);
+    const maxLen = chartData.reduce(
+      (acc, r) => Math.max(acc, (r.label || "").length),
+      0
+    );
     // Aproximación: 7px por carácter, clamp 140..320
     return Math.max(140, Math.min(320, Math.round(maxLen * 7)));
   }, [chartData]);
 
-  // Altura dinámica para que no se "aplasten" las barras
+  // Altura dinámica
   const chartHeight = useMemo(() => {
     const n = chartData.length;
-    const base = 220; // espacio mínimo para ejes/leyenda
-    const perRow = 26; // alto por barra (aprox)
+    const base = 220;
+    const perRow = 26;
     return Math.max(320, Math.min(920, base + n * perRow));
   }, [chartData]);
 
   return (
-    <div className="rounded-2xl p-6 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 border border-slate-800 shadow-[0_16px_40px_rgba(0,0,0,0.85)] space-y-4">
+    <div className="rounded-2xl p-6 space-y-4" style={ui.card}>
       <div>
-        <h3 className="text-xl font-semibold text-slate-100">
+        <h3 className="text-xl font-semibold" style={{ color: ui.heading }}>
           Proyección vs realidad por categoría
         </h3>
-        <p className="text-sm text-slate-400 mt-1">
+        <p className="text-sm mt-1" style={{ color: ui.muted }}>
           Compara lo proyectado (mediana histórica) con el gasto real del mes{" "}
-          <span className="text-slate-200 font-medium">
+          <span style={{ color: ui.text, fontWeight: 600 }}>
             {meta?.month || ""}
           </span>
-          . 
+          .
         </p>
       </div>
 
       {chartData.length === 0 ? (
-        <p className="text-sm text-slate-500 italic">
+        <p className="text-sm italic" style={{ color: ui.muted }}>
           No hay datos suficientes para este análisis.
         </p>
       ) : (
@@ -104,14 +153,14 @@ function ProjectedVsActualExpenseByCategoryChart({ token }) {
               margin={{ top: 10, right: 24, bottom: 10, left: 10 }}
               barCategoryGap={8}
             >
-              <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
+              <CartesianGrid stroke={ui.grid} strokeDasharray="4 4" />
 
               {/* X = monto */}
               <XAxis
                 type="number"
-                stroke="#94a3b8"
-                tick={{ fill: "#cbd5e1", fontSize: 12 }}
-                tickFormatter={(v) => formatCurrency(v)}
+                stroke={ui.axis}
+                tick={{ fill: ui.text, fontSize: 12 }}
+                tickFormatter={formatCompact}
               />
 
               {/* Y = categorías */}
@@ -119,21 +168,15 @@ function ProjectedVsActualExpenseByCategoryChart({ token }) {
                 type="category"
                 dataKey="label"
                 width={yAxisWidth}
-                stroke="#94a3b8"
-                tick={{ fill: "#cbd5e1", fontSize: 12 }}
+                stroke={ui.axis}
+                tick={{ fill: ui.text, fontSize: 12 }}
               />
 
-              <ReferenceLine x={0} stroke="#334155" />
+              <ReferenceLine x={0} stroke={ui.refLine} strokeWidth={1} />
 
               <Tooltip
-                cursor={{ fill: "rgba(148,163,184,0.08)" }}
-                contentStyle={{
-                  backgroundColor: "#020617",
-                  border: "1px solid #4b5563",
-                  color: "#e5e7eb",
-                  borderRadius: "0.5rem",
-                  boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
-                }}
+                cursor={{ fill: ui.cursorFill }}
+                contentStyle={ui.tooltip}
                 formatter={(value, _name, item) => {
                   const key = item?.dataKey;
                   if (key === "projected_monthly")
@@ -145,23 +188,23 @@ function ProjectedVsActualExpenseByCategoryChart({ token }) {
               />
 
               <Legend
-                wrapperStyle={{ color: "#e2e8f0" }}
+                wrapperStyle={{ color: ui.text }}
                 formatter={(val) => (
-                  <span className="text-slate-200 text-sm">{val}</span>
+                  <span style={{ color: ui.text, fontSize: 13 }}>{val}</span>
                 )}
               />
 
-              {/* ✅ Colores cambiados (antes índigo/naranja). Ahora: teal + fucsia */}
+              {/* ✅ Token colors */}
               <Bar
                 dataKey="projected_monthly"
                 name="Proyectado del mes"
-                fill="#14b8a6"
+                fill={ui.projected}
                 radius={[8, 8, 8, 8]}
               />
               <Bar
                 dataKey="actual_month_to_date"
                 name="Real gastado"
-                fill="#f59e0b"
+                fill={ui.actual}
                 radius={[8, 8, 8, 8]}
               />
             </BarChart>
@@ -169,11 +212,11 @@ function ProjectedVsActualExpenseByCategoryChart({ token }) {
         </div>
       )}
 
-      {/* Nota opcional de interpretación */}
-      <div className="text-xs text-slate-500 leading-relaxed">
-        Tip: Si el <span className="text-slate-300">Real (MTD)</span> va por encima del{" "}
-        <span className="text-slate-300">Proyectado</span> temprano en el mes, puede ser
-        señal de gasto acelerado (no necesariamente “fuera de control” si tus gastos son front-loaded).
+      <div className="text-xs leading-relaxed" style={{ color: ui.muted }}>
+        Tip: Si el <span style={{ color: ui.text }}>Real (MTD)</span> va por encima
+        del <span style={{ color: ui.text }}>Proyectado</span> temprano en el mes,
+        puede ser señal de gasto acelerado (no necesariamente “fuera de control”
+        si tus gastos son front-loaded).
       </div>
     </div>
   );

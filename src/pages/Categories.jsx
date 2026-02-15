@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+
+import FFSelect from "../components/FFSelect";
 
 function Categories({ token }) {
   const [name, setName] = useState("");
@@ -17,7 +19,7 @@ function Categories({ token }) {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCategories(res.data.data);
-    } catch (err) {
+    } catch {
       toast.error("Error al obtener categorías");
     }
   };
@@ -42,7 +44,7 @@ function Categories({ token }) {
       setStabilityType("variable");
       fetchCategories();
       toast.success("Categoría creada correctamente");
-    } catch (err) {
+    } catch {
       toast.error("Error al crear categoría");
     }
   };
@@ -74,7 +76,7 @@ function Categories({ token }) {
       setStabilityType("variable");
       fetchCategories();
       toast.success("Categoría actualizada");
-    } catch (err) {
+    } catch {
       toast.error("Error al actualizar categoría");
     }
   };
@@ -88,7 +90,7 @@ function Categories({ token }) {
       });
       fetchCategories();
       toast.success("Categoría eliminada");
-    } catch (err) {
+    } catch {
       toast.error("Error al eliminar categoría");
     }
   };
@@ -97,21 +99,29 @@ function Categories({ token }) {
     if (token) fetchCategories();
   }, [token]);
 
+  const typeOptions = useMemo(
+    () => [
+      { value: "expense", label: "Gasto" },
+      { value: "income", label: "Ingreso" },
+    ],
+    []
+  );
+
+  const stabilityOptions = useMemo(
+    () => [
+      { value: "fixed", label: "Fijo" },
+      { value: "variable", label: "Variable" },
+      { value: "occasional", label: "Ocasional" },
+    ],
+    []
+  );
+
   return (
-    <div
-      className="
-        p-4 md:p-6
-        rounded-2xl
-        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900
-        border border-slate-800
-        shadow-[0_18px_45px_rgba(0,0,0,0.85)]
-        text-slate-200
-      "
-    >
-      <h2 className="text-xl md:text-2xl font-bold mb-2 text-[#f6e652]">
+    <div className="ff-card p-4 md:p-6">
+      <h2 className="text-xl md:text-2xl font-bold mb-2 text-[var(--heading-accent)]">
         Categorías
       </h2>
-      <p className="text-sm text-slate-400 mb-4">
+      <p className="text-sm text-[var(--muted)] mb-4">
         Define cómo se clasifican tus ingresos y gastos, y marca su tipo de
         estabilidad para mejores análisis.
       </p>
@@ -122,74 +132,47 @@ function Categories({ token }) {
         className="flex flex-col sm:flex-row flex-wrap gap-3 mb-6"
       >
         <div className="flex-1 min-w-[140px] flex flex-col space-y-1">
-          <label className="text-xs font-semibold tracking-wide text-slate-300 uppercase">
+          <label className="text-xs font-semibold tracking-wide uppercase text-[var(--muted)]">
             Nombre
           </label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Ej: Supermercado, Alquiler..."
-            className="
-              border border-slate-700 rounded-lg px-3 py-2 text-sm
-              bg-slate-900 text-slate-100
-              placeholder:text-slate-500
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            "
+            className="ff-input"
           />
         </div>
 
         <div className="min-w-[140px] flex flex-col space-y-1">
-          <label className="text-xs font-semibold tracking-wide text-slate-300 uppercase">
+          <label className="text-xs font-semibold tracking-wide uppercase text-[var(--muted)]">
             Tipo
           </label>
-          <select
+          <FFSelect
             value={type}
-            onChange={(e) => setType(e.target.value)}
-            className="
-              border border-slate-700 rounded-lg px-3 py-2 text-sm
-              bg-slate-900 text-slate-100
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            "
-          >
-            <option value="expense">Gasto</option>
-            <option value="income">Ingreso</option>
-          </select>
+            onChange={(v) => setType(v)}
+            options={typeOptions}
+            searchable={false}
+            clearable={false}
+          />
         </div>
 
         <div className="min-w-[160px] flex flex-col space-y-1">
-          <label className="text-xs font-semibold tracking-wide text-slate-300 uppercase">
+          <label className="text-xs font-semibold tracking-wide uppercase text-[var(--muted)]">
             Estabilidad
           </label>
-          <select
+          <FFSelect
             value={stabilityType}
-            onChange={(e) => setStabilityType(e.target.value)}
-            className="
-              border border-slate-700 rounded-lg px-3 py-2 text-sm
-              bg-slate-900 text-slate-100
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            "
-          >
-            <option value="fixed">Fijo</option>
-            <option value="variable">Variable</option>
-            <option value="occasional">Ocasional</option>
-          </select>
+            onChange={(v) => setStabilityType(v)}
+            options={stabilityOptions}
+            searchable={false}
+            clearable={false}
+          />
         </div>
 
         <div className="flex items-end">
           <button
             type="submit"
-            className="
-              px-4 py-2 text-sm font-semibold rounded-lg
-              bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
-              text-slate-950
-              shadow-[0_0_16px_rgba(16,185,129,0.7)]
-              hover:brightness-110 active:scale-95
-              transition-all
-              min-w-[120px]
-            "
+            className="ff-btn ff-btn-primary min-w-[120px] w-full sm:w-auto"
           >
             Agregar
           </button>
@@ -197,154 +180,125 @@ function Categories({ token }) {
       </form>
 
       {/* TABLA */}
-      <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/40">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-900/80 border-b border-slate-800">
+      <div
+        className="overflow-x-auto rounded-xl"
+        style={{
+          border: "var(--border-w) solid var(--border-rgba)",
+          background: "color-mix(in srgb, var(--panel) 55%, transparent)",
+          boxShadow: "var(--glow-shadow)",
+        }}
+      >
+        <table className="ff-table min-w-full text-sm">
+          <thead>
             <tr>
-              <th className="p-2 border-r border-slate-800 text-left text-xs font-semibold text-slate-300 uppercase tracking-wide">
-                Nombre
-              </th>
-              <th className="p-2 border-r border-slate-800 text-left text-xs font-semibold text-slate-300 uppercase tracking-wide">
-                Tipo
-              </th>
-              <th className="p-2 border-r border-slate-800 text-left text-xs font-semibold text-slate-300 uppercase tracking-wide">
-                Estabilidad
-              </th>
-              <th className="p-2 text-center text-xs font-semibold text-slate-300 uppercase tracking-wide">
+              <th className="ff-th">Nombre</th>
+              <th className="ff-th">Tipo</th>
+              <th className="ff-th">Estabilidad</th>
+              <th className="ff-th" style={{ textAlign: "center" }}>
                 Acciones
               </th>
             </tr>
           </thead>
-          <tbody>
-            {categories.map((cat, idx) => {
-              const rowBg =
-                idx % 2 === 0
-                  ? "bg-slate-950/40 hover:bg-slate-900/80"
-                  : "bg-slate-900/70 hover:bg-slate-900";
 
-              return (
-                <tr
-                  key={cat.id}
-                  className={`${rowBg} border-t border-slate-800`}
-                >
-                  {editId === cat.id ? (
-                    <>
-                      <td className="p-2 border-r border-slate-800">
-                        <input
-                          value={name}
-                          onChange={(e) => setName(e.target.value)}
-                          className="
-                            border border-slate-700 rounded-lg px-2 py-1 text-sm
-                            w-full bg-slate-950 text-slate-100
-                            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                          "
-                        />
-                      </td>
-                      <td className="p-2 border-r border-slate-800">
-                        <select
-                          value={type}
-                          onChange={(e) => setType(e.target.value)}
-                          className="
-                            border border-slate-700 rounded-lg px-2 py-1 text-sm
-                            w-full bg-slate-950 text-slate-100
-                            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                          "
+          <tbody>
+            {categories.map((cat, idx) => (
+              <tr key={cat.id} className="ff-tr">
+                {editId === cat.id ? (
+                  <>
+                    <td className="ff-td">
+                      <input
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="ff-input"
+                      />
+                    </td>
+
+                    <td className="ff-td">
+                      <FFSelect
+                        value={type}
+                        onChange={(v) => setType(v)}
+                        options={typeOptions}
+                        searchable={false}
+                        clearable={false}
+                      />
+                    </td>
+
+                    <td className="ff-td">
+                      <FFSelect
+                        value={stabilityType}
+                        onChange={(v) => setStabilityType(v)}
+                        options={stabilityOptions}
+                        searchable={false}
+                        clearable={false}
+                      />
+                    </td>
+
+                    <td className="ff-td">
+                      <div className="flex justify-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdate(cat.id)}
+                          className="ff-btn ff-btn-success ff-btn-sm"
                         >
-                          <option value="expense">Gasto</option>
-                          <option value="income">Ingreso</option>
-                        </select>
-                      </td>
-                      <td className="p-2 border-r border-slate-800">
-                        <select
-                          value={stabilityType}
-                          onChange={(e) => setStabilityType(e.target.value)}
-                          className="
-                            border border-slate-700 rounded-lg px-2 py-1 text-sm
-                            w-full bg-slate-950 text-slate-100
-                            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                          "
+                          Guardar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditId(null);
+                            setName("");
+                            setType("expense");
+                            setStabilityType("variable");
+                          }}
+                          className="ff-btn ff-btn-ghost ff-btn-sm"
                         >
-                          <option value="fixed">Fijo</option>
-                          <option value="variable">Variable</option>
-                          <option value="occasional">Ocasional</option>
-                        </select>
-                      </td>
-                      <td className="p-2 text-center">
-                        <div className="flex justify-center gap-2 flex-wrap">
-                          <button
-                            onClick={() => handleUpdate(cat.id)}
-                            className="
-                              inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg
-                              bg-emerald-500 text-slate-950
-                              hover:brightness-110 active:scale-95
-                              transition-all
-                            "
-                          >
-                            Guardar
-                          </button>
-                          <button
-                            onClick={() => {
-                              setEditId(null);
-                              setName("");
-                              setType("expense");
-                              setStabilityType("variable");
-                            }}
-                            className="
-                              inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg
-                              bg-slate-800 text-slate-200
-                              hover:bg-slate-700 active:scale-95
-                              transition-all
-                            "
-                          >
-                            Cancelar
-                          </button>
-                        </div>
-                      </td>
-                    </>
-                  ) : (
-                    <>
-                      <td className="p-2 border-r border-slate-800 text-slate-100">
-                        {cat.name}
-                      </td>
-                      <td className="p-2 border-r border-slate-800 italic text-xs text-slate-400">
-                        {cat.type === "income" ? "Ingreso" : "Gasto"}
-                      </td>
-                      <td className="p-2 border-r border-slate-800 italic text-xs text-slate-400">
-                        {cat.stability_type || "variable"}
-                      </td>
-                      <td className="p-2 text-center">
-                        <div className="flex justify-center gap-2 flex-wrap">
-                          <button
-                            onClick={() => startEdit(cat)}
-                            className="
-                              inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg
-                              bg-sky-500 text-slate-950
-                              hover:brightness-110 active:scale-95
-                              transition-all
-                            "
-                          >
-                            Editar
-                          </button>
-                          <button
-                            onClick={() => handleDelete(cat.id)}
-                            className="
-                              inline-flex items-center px-3 py-1.5 text-xs font-semibold rounded-lg
-                              bg-rose-600 text-white
-                              hover:brightness-110 active:scale-95
-                              transition-all
-                            "
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      </td>
-                    </>
-                  )}
-                </tr>
-              );
-            })}
+                          Cancelar
+                        </button>
+                      </div>
+                    </td>
+                  </>
+                ) : (
+                  <>
+                    <td className="ff-td">{cat.name}</td>
+
+                    <td className="ff-td text-xs italic text-[var(--muted)]">
+                      {cat.type === "income" ? "Ingreso" : "Gasto"}
+                    </td>
+
+                    <td className="ff-td text-xs italic text-[var(--muted)]">
+                      {cat.stability_type || "variable"}
+                    </td>
+
+                    <td className="ff-td">
+                      <div className="flex justify-center gap-2 flex-wrap">
+                        <button
+                          type="button"
+                          onClick={() => startEdit(cat)}
+                          className="ff-btn ff-btn-outline ff-btn-sm"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(cat.id)}
+                          className="ff-btn ff-btn-danger ff-btn-sm"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </td>
+                  </>
+                )}
+              </tr>
+            ))}
           </tbody>
         </table>
+
+        {categories.length === 0 && (
+          <div className="p-4 text-sm text-[var(--muted)]">
+            No hay categorías todavía.
+          </div>
+        )}
       </div>
     </div>
   );

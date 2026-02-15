@@ -37,7 +37,6 @@ function AccountBalancesChart({ token }) {
 
     setLoading(true);
     axios
-      // ✅ endpoint correcto con available_balance y reserved_total
       .get(`${api}/accounts/balances`, {
         headers: { Authorization: `Bearer ${token}` },
       })
@@ -46,7 +45,6 @@ function AccountBalancesChart({ token }) {
       .finally(() => setLoading(false));
   }, [token, api]);
 
-  // ✅ normalización para barras apiladas (disponible + en metas)
   const data = useMemo(() => {
     return (raw || []).map((r) => {
       const current = Number(r.current_balance) || 0;
@@ -121,11 +119,10 @@ function AccountBalancesChart({ token }) {
   const totalColor =
     kpis.totalCurrent >= 0 ? "text-emerald-300" : "text-rose-300";
 
-  // ✅ Tooltip custom para mostrar disponible + metas + porcentaje
+  // ✅ Tooltip tokenizado (usa tus vars)
   const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload || !payload.length) return null;
 
-    // payload trae las barras apiladas; buscamos valores por dataKey
     const byKey = Object.fromEntries(payload.map((p) => [p.dataKey, p.value]));
     const available = Number(byKey.available_balance || 0);
     const reserved = Number(byKey.reserved_total || 0);
@@ -136,21 +133,24 @@ function AccountBalancesChart({ token }) {
     return (
       <div
         style={{
-          backgroundColor: "#020617",
-          border: "1px solid rgba(214,164,58,0.55)",
-          color: "#e5e7eb",
-          borderRadius: "0.75rem",
+          background: "color-mix(in srgb, var(--bg-3) 78%, transparent)",
+          border: "1px solid var(--border-rgba)",
+          color: "var(--text)",
+          borderRadius: "var(--radius-md)",
           boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
           padding: "10px 12px",
           minWidth: 220,
+          backdropFilter: "blur(10px)",
         }}
       >
-        <div style={{ fontWeight: 800, marginBottom: 6 }}>{label}</div>
+        <div style={{ fontWeight: 800, marginBottom: 6, color: "var(--heading)" }}>
+          {label}
+        </div>
 
-        <div
-          style={{ display: "flex", justifyContent: "space-between", gap: 12 }}
-        >
-          <span style={{ color: "#a7f3d0", fontWeight: 700 }}>Disponible</span>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+          <span style={{ color: "var(--success)", fontWeight: 700 }}>
+            Disponible
+          </span>
           <span style={{ fontWeight: 800 }}>{formatCurrency(available)}</span>
         </div>
 
@@ -162,19 +162,21 @@ function AccountBalancesChart({ token }) {
             marginTop: 4,
           }}
         >
-          <span style={{ color: "#fbbf24", fontWeight: 700 }}>En metas</span>
+          <span style={{ color: "var(--warning)", fontWeight: 700 }}>
+            En metas
+          </span>
           <span style={{ fontWeight: 800 }}>{formatCurrency(reserved)}</span>
         </div>
 
         <div
           style={{
             marginTop: 6,
-            color: "rgba(226,232,240,0.75)",
+            color: "var(--heading-muted)",
             fontSize: 12,
           }}
         >
           Reservado:{" "}
-          <span style={{ fontWeight: 800, color: "#fbbf24" }}>
+          <span style={{ fontWeight: 800, color: "var(--warning)" }}>
             {pctReserved.toFixed(1)}%
           </span>
         </div>
@@ -184,60 +186,71 @@ function AccountBalancesChart({ token }) {
 
   return (
     <div
-      className="
-        rounded-2xl p-6
-        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950
-        border border-slate-800
-        shadow-[0_16px_40px_rgba(0,0,0,0.85)]
-        space-y-4
-      "
+      className="rounded-2xl p-6 space-y-4"
+      style={{
+        background:
+          "linear-gradient(135deg, var(--panel), color-mix(in srgb, var(--panel) 75%, transparent))",
+        border: "var(--border-w) solid var(--border-rgba)",
+        boxShadow: "0 16px 40px rgba(0,0,0,0.85)",
+        color: "var(--text)",
+      }}
     >
       {/* Header + KPIs */}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
         <div>
-          <h3 className="text-xl font-semibold text-slate-100">
+          <h3
+            className="text-xl font-semibold"
+            style={{ color: "var(--heading)" }}
+          >
             Saldos por cuenta
           </h3>
-          
         </div>
 
         <div className="flex flex-col items-end gap-2">
-          {/* Total en cuentas: solo el monto con color */}
-          <p className="text-base font-medium text-slate-200">
+          <p className="text-base font-medium" style={{ color: "var(--text)" }}>
             Total en cuentas:{" "}
             <span className={`font-semibold ${totalColor}`}>
               {formatCurrency(kpis.totalCurrent)}
             </span>
             {loading ? (
-              <span className="text-slate-300 ml-2 text-sm">Actualizando…</span>
+              <span className="ml-2 text-sm" style={{ color: "var(--muted)" }}>
+                Actualizando…
+              </span>
             ) : null}
           </p>
 
-          {/* Línea compacta: solo montos con color */}
-          <p className="text-sm text-slate-300 text-right">
-            <span className="text-slate-200 font-medium">Disponible:</span>{" "}
-            <span className="text-emerald-300 font-semibold">
+          <p className="text-sm text-right" style={{ color: "var(--muted)" }}>
+            <span style={{ color: "var(--text)" }}>Disponible:</span>{" "}
+            <span style={{ color: "var(--success)", fontWeight: 700 }}>
               {formatCurrency(kpis.totalAvailable)}
             </span>
-            <span className="mx-2 text-slate-500">·</span>
-            <span className="text-slate-200 font-medium">Positivo:</span>{" "}
-            <span className="text-emerald-300 font-semibold">
+            <span className="mx-2" style={{ color: "var(--heading-muted)" }}>
+              ·
+            </span>
+            <span style={{ color: "var(--text)" }}>Positivo:</span>{" "}
+            <span style={{ color: "var(--success)", fontWeight: 700 }}>
               {formatCurrency(kpis.positive)}
             </span>
-            <span className="mx-2 text-slate-500">·</span>
-            <span className="text-slate-200 font-medium">Negativo:</span>{" "}
-            <span className="text-rose-300 font-semibold">
+            <span className="mx-2" style={{ color: "var(--heading-muted)" }}>
+              ·
+            </span>
+            <span style={{ color: "var(--text)" }}>Negativo:</span>{" "}
+            <span style={{ color: "var(--danger)", fontWeight: 700 }}>
               {formatCurrency(kpis.negative)}
             </span>
-            <span className="mx-2 text-slate-500">·</span>
-            <span className="text-slate-200 font-medium">Metas:</span>{" "}
-            <span className="text-amber-300 font-semibold">
+            <span className="mx-2" style={{ color: "var(--heading-muted)" }}>
+              ·
+            </span>
+            <span style={{ color: "var(--text)" }}>Metas:</span>{" "}
+            <span style={{ color: "var(--warning)", fontWeight: 700 }}>
               {formatCurrency(kpis.totalReserved)}
             </span>
             {kpis.negativeCount > 0 ? (
               <>
-                <span className="mx-2 text-slate-500">·</span>
-                <span className="text-slate-200 font-medium">
+                <span className="mx-2" style={{ color: "var(--heading-muted)" }}>
+                  ·
+                </span>
+                <span style={{ color: "var(--text)" }}>
                   {kpis.negativeCount} en negativo
                 </span>
               </>
@@ -248,25 +261,26 @@ function AccountBalancesChart({ token }) {
 
       {/* Estados */}
       {loading && data.length === 0 ? (
-        <p className="text-sm text-slate-500 italic">Cargando cuentas…</p>
+        <p className="text-sm italic" style={{ color: "var(--muted)" }}>
+          Cargando cuentas…
+        </p>
       ) : data.length === 0 ? (
-        <p className="text-sm text-slate-500 italic">
+        <p className="text-sm italic" style={{ color: "var(--muted)" }}>
           No hay cuentas registradas aún.
         </p>
       ) : (
         <div className="w-full h-[340px]">
           <ResponsiveContainer>
-            <BarChart
-              data={data}
-              layout="vertical"
-              margin={{ left: 8, right: 16 }}
-            >
-              <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
+            <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
+              <CartesianGrid
+                stroke="var(--border-rgba)"
+                strokeDasharray="4 4"
+              />
 
               <XAxis
                 type="number"
-                stroke="#94a3b8"
-                tick={{ fill: "#e2e8f0", fontSize: 12 }}
+                stroke="var(--border-rgba)"
+                tick={{ fill: "var(--text)", fontSize: 12 }}
                 tickFormatter={formatCompact}
               />
 
@@ -274,47 +288,48 @@ function AccountBalancesChart({ token }) {
                 type="category"
                 dataKey="name"
                 width={160}
-                stroke="#94a3b8"
-                tick={{ fill: "#e2e8f0", fontSize: 12 }}
+                stroke="var(--border-rgba)"
+                tick={{ fill: "var(--text)", fontSize: 12 }}
               />
 
-              <ReferenceLine x={0} stroke="#64748b" strokeDasharray="6 6" />
+              <ReferenceLine x={0} stroke="var(--border-rgba)" strokeDasharray="6 6" />
 
               <Tooltip
-                cursor={{ fill: "rgba(255,255,255,0.04)" }}
+                cursor={{ fill: "color-mix(in srgb, var(--text) 6%, transparent)" }}
                 content={<CustomTooltip />}
-                // Recharts normalmente no se recorta, pero esto ayuda cerca del borde
                 wrapperStyle={{ zIndex: 999999 }}
               />
 
               <Legend
-                wrapperStyle={{ color: "#e2e8f0" }}
+                wrapperStyle={{ color: "var(--text)" }}
                 formatter={(value) => (
-                  <span className="text-slate-200 text-sm">{value}</span>
+                  <span className="text-sm" style={{ color: "var(--text)" }}>
+                    {value}
+                  </span>
                 )}
               />
 
-              {/* ✅ Apilado: Disponible (verde) */}
+              {/* ✅ Disponible */}
               <Bar
                 dataKey="available_balance"
                 stackId="a"
-                fill="#10b981"
+                fill="var(--success)"
                 name="Disponible"
                 radius={[6, 0, 0, 6]}
               />
 
-              {/* ✅ Apilado: En metas (dorado/naranja) pegado al verde */}
+              {/* ✅ En metas */}
               <Bar
                 dataKey="reserved_total"
                 stackId="a"
-                fill="#f59e0b"
+                fill="var(--warning)"
                 name="En metas"
                 radius={[0, 6, 6, 0]}
               />
             </BarChart>
           </ResponsiveContainer>
 
-          <p className="text-sm text-slate-300 mt-2">
+          <p className="text-sm mt-2" style={{ color: "var(--muted)" }}>
             Tip: “En metas” es dinero reservado; “Disponible” es lo que puedes
             usar sin romper metas.
           </p>

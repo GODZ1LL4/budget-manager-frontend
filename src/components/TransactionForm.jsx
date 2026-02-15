@@ -1,3 +1,5 @@
+import FFSelect from "../components/FFSelect"; // ajusta la ruta si aplica
+
 function TransactionForm({
   formData,
   setFormData,
@@ -12,116 +14,87 @@ function TransactionForm({
   );
 
   return (
-    <div className="space-y-4 text-slate-200">
+    <div className="space-y-4" style={{ color: "var(--text)" }}>
       {/* Nombre */}
       <div className="space-y-1">
-        <label className="text-sm font-medium text-slate-300">
-          Nombre
-        </label>
+        <label className="ff-label">Nombre</label>
         <input
           type="text"
           placeholder="Ej: Renta, Luz, Supermercado..."
           value={formData.name}
-          onChange={(e) =>
-            setFormData({ ...formData, name: e.target.value })
-          }
-          className="
-            w-full rounded-lg px-3 py-2 text-sm
-            bg-slate-900 border border-slate-700
-            text-slate-100 placeholder:text-slate-500
-            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-            transition-colors
-          "
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          className="ff-input"
           required
         />
       </div>
 
       {/* Monto */}
       <div className="space-y-1">
-        <label className="text-sm font-medium text-slate-300">
-          Monto
-        </label>
+        <label className="ff-label">Monto</label>
         <div className="relative">
-          <span className="absolute inset-y-0 left-3 flex items-center text-xs text-slate-400">
+          <span
+            className="absolute inset-y-0 left-3 flex items-center text-xs"
+            style={{ color: "var(--muted)" }}
+          >
             RD$
           </span>
+
           <input
             type="number"
             placeholder="0.00"
             value={formData.amount}
-            onChange={(e) =>
+            min={0}
+            step="0.01"
+            onChange={(e) => {
+              const v = Number(e.target.value);
               setFormData({
                 ...formData,
-                amount: Number(e.target.value || 0),
-              })
-            }
-            className="
-              w-full rounded-lg pl-10 pr-3 py-2 text-sm
-              bg-slate-900 border border-slate-700
-              text-slate-100 placeholder:text-slate-500
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            "
+                amount: Number.isNaN(v) ? 0 : Math.max(0, v),
+              });
+            }}
+            className="ff-input"
+            style={{ paddingLeft: "3.25rem" }} // espacio real para "RD$"
             required
           />
         </div>
       </div>
 
-      {/* Tipo */}
+      {/* Tipo (FFSelect) */}
       <div className="space-y-1">
-        <label className="text-sm font-medium text-slate-300">
-          Tipo
-        </label>
-        <select
+        <label className="ff-label">Tipo</label>
+        <FFSelect
           value={formData.type}
-          onChange={(e) =>
+          onChange={(v) =>
             setFormData({
               ...formData,
-              type: e.target.value,
+              type: v,
               category_id: null,
             })
           }
-          className="
-            w-full rounded-lg px-3 py-2 text-sm
-            bg-slate-900 border border-slate-700
-            text-slate-100
-            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-            transition-colors
-          "
-        >
-          <option value="expense">Gasto</option>
-          <option value="income">Ingreso</option>
-        </select>
+          options={[
+            { value: "expense", label: "Gasto" },
+            { value: "income", label: "Ingreso" },
+          ]}
+          clearable={false}
+        />
       </div>
 
-      {/* Categoría */}
+      {/* Categoría (FFSelect) */}
       <div className="space-y-1">
-        <label className="text-sm font-medium text-slate-300">
-          Categoría
-        </label>
-        <select
+        <label className="ff-label">Categoría</label>
+        <FFSelect
           value={formData.category_id || ""}
-          onChange={(e) =>
+          onChange={(v) =>
             setFormData({
               ...formData,
-              category_id: e.target.value || null,
+              category_id: v ? v : null,
             })
           }
-          className="
-            w-full rounded-lg px-3 py-2 text-sm
-            bg-slate-900 border border-slate-700
-            text-slate-100
-            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-            transition-colors
-          "
-        >
-          <option value="">Sin categoría</option>
-          {filteredCategories.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
+          options={[{ id: "", name: "Sin categoría" }, ...filteredCategories]}
+          getOptionValue={(cat) => cat.id}
+          getOptionLabel={(cat) => cat.name}
+          clearable={false}
+        />
       </div>
 
       {/* Botones */}
@@ -129,15 +102,7 @@ function TransactionForm({
         <button
           type="button"
           onClick={onSave}
-          className="
-            px-4 py-2 text-sm font-semibold rounded-lg
-            bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
-            text-slate-950
-            shadow-[0_0_18px_rgba(16,185,129,0.7)]
-            hover:brightness-110
-            active:scale-95
-            transition-all
-          "
+          className="ff-btn ff-btn-primary"
         >
           {isEditing ? "Actualizar" : "Guardar"}
         </button>
@@ -146,15 +111,7 @@ function TransactionForm({
           <button
             type="button"
             onClick={onDelete}
-            className="
-              px-4 py-2 text-sm font-semibold rounded-lg
-              bg-gradient-to-r from-rose-600 via-rose-500 to-rose-400
-              text-white
-              shadow-[0_0_14px_rgba(248,113,113,0.45)]
-              hover:brightness-110
-              active:scale-95
-              transition-all
-            "
+            className="ff-btn ff-btn-danger"
           >
             Eliminar
           </button>
@@ -162,15 +119,8 @@ function TransactionForm({
 
         <button
           type="button"
-          className="
-            px-4 py-2 text-sm font-semibold rounded-lg
-            border border-slate-600
-            bg-slate-900 text-slate-300
-            hover:bg-slate-800 hover:border-slate-500
-            active:scale-95
-            transition-all
-          "
           onClick={onCancel}
+          className="ff-btn ff-btn-outline"
         >
           Cancelar
         </button>

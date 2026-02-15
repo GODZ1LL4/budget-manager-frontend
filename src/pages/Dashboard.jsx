@@ -179,12 +179,42 @@ function Dashboard({ token }) {
     return `${sign}${formatted}`;
   };
 
+  // Helpers UI tokenizados (ponlos dentro de Dashboard, antes del return)
+  const ui = {
+    text: "var(--text)",
+    muted: "var(--muted)",
+
+    // tonos “intermedios” para texto
+    soft: "color-mix(in srgb, var(--text) 78%, transparent)",
+    soft2: "color-mix(in srgb, var(--text) 70%, transparent)",
+    subtle: "color-mix(in srgb, var(--muted) 85%, transparent)",
+
+    // border
+    border: "color-mix(in srgb, var(--border-rgba) 85%, transparent)",
+
+    // semánticos
+    success: "var(--success)",
+    danger: "var(--danger)",
+    warning: "var(--warning)",
+  };
+
+  const dividerStyle = { borderTop: `1px solid ${ui.border}` };
+
+  const deltaStyle = (isGood) => ({
+    color: isGood ? ui.success : ui.danger,
+    fontWeight: 800,
+  });
+
+  const boldText = { color: ui.text, fontWeight: 700 };
+  const labelMuted = { color: ui.soft };
+  const labelStrong = { color: ui.text, fontWeight: 600 };
+  const metaMuted = { color: ui.subtle };
+
   return (
     <div className="p-4 space-y-6">
       <h2
-        className="text-2xl font-bold text-slate-200
-
- tracking-tight"
+        className="ff-h1 ff-heading-accent mb-2"
+        
       >
         Dashboard Financiero
       </h2>
@@ -335,13 +365,11 @@ function Dashboard({ token }) {
         >
           <ul className="space-y-2">
             <li className="flex items-center justify-between gap-3">
-              <span className="text-slate-300">Ingresos</span>
+              <span style={labelMuted}>Ingresos</span>
               <span
-                className={`font-extrabold ${
+                style={deltaStyle(
                   (data.previousMonthComparison.incomeDiffAbs || 0) >= 0
-                    ? "text-emerald-300"
-                    : "text-rose-300"
-                }`}
+                )}
               >
                 {formatSignedCurrency(
                   data.previousMonthComparison.incomeDiffAbs
@@ -350,14 +378,12 @@ function Dashboard({ token }) {
             </li>
 
             <li className="flex items-center justify-between gap-3">
-              <span className="text-slate-300">Gastos</span>
-              {/* ✅ Gastos: subir es malo => rojo; bajar es bueno => verde */}
+              <span style={labelMuted}>Gastos</span>
+              {/* Gastos: subir es malo => danger; bajar es bueno => success */}
               <span
-                className={`font-extrabold ${
-                  (data.previousMonthComparison.expenseDiffAbs || 0) >= 0
-                    ? "text-rose-300"
-                    : "text-emerald-300"
-                }`}
+                style={deltaStyle(
+                  (data.previousMonthComparison.expenseDiffAbs || 0) < 0
+                )}
               >
                 {formatSignedCurrency(
                   data.previousMonthComparison.expenseDiffAbs
@@ -365,14 +391,15 @@ function Dashboard({ token }) {
               </span>
             </li>
 
-            <li className="flex items-center justify-between gap-3 border-t border-slate-700 pt-2 mt-2">
-              <span className="text-slate-200 font-medium">Ahorro</span>
+            <li
+              className="flex items-center justify-between gap-3 pt-2 mt-2"
+              style={dividerStyle}
+            >
+              <span style={labelStrong}>Ahorro</span>
               <span
-                className={`font-extrabold ${
+                style={deltaStyle(
                   (data.previousMonthComparison.savingDiffAbs || 0) >= 0
-                    ? "text-emerald-300"
-                    : "text-rose-300"
-                }`}
+                )}
               >
                 {formatSignedCurrency(
                   data.previousMonthComparison.savingDiffAbs
@@ -387,25 +414,23 @@ function Dashboard({ token }) {
           title="Variaciones por categoría (en RD$)"
           accent="dual"
         >
-          <p className="text-sm text-slate-300 mt-1">
+          <p className="text-sm mt-1" style={{ color: ui.soft2 }}>
             Comparando{" "}
-            <span className="text-slate-100 font-semibold">
+            <span style={boldText}>
               {data.categoryVariationMeta?.currentMonthKey || "mes actual"}
             </span>{" "}
             vs{" "}
-            <span className="text-slate-100 font-semibold">
+            <span style={boldText}>
               {data.categoryVariationMeta?.previousMonthKey || "mes anterior"}
             </span>{" "}
-            <span className="text-slate-400">
-              (solo gastos fijos/variables)
-            </span>
+            <span style={metaMuted}>(solo gastos fijos/variables)</span>
           </p>
 
           {data.mostIncreasedCategoryAbs ? (
             <div className="mt-3">
-              <p className="text-base text-slate-100">
+              <p className="text-base" style={{ color: ui.text }}>
                 Mayor aumento de gasto:{" "}
-                <span className="font-extrabold">
+                <span style={{ fontWeight: 800, color: ui.text }}>
                   {data.categoryNameMap?.[
                     data.mostIncreasedCategoryAbs.category_id
                   ] ||
@@ -416,22 +441,24 @@ function Dashboard({ token }) {
                 </span>
               </p>
 
-              <p className="mt-1 text-sm text-slate-200">
-                <span className="text-slate-400">(</span>
-                <span className="font-medium text-slate-200">
+              <p className="mt-1 text-sm" style={{ color: ui.soft }}>
+                <span style={metaMuted}>(</span>
+                <span style={{ fontWeight: 600, color: ui.soft }}>
                   {formatCurrencyDOP(
                     data.mostIncreasedCategoryAbs.previous || 0
                   )}
                 </span>{" "}
-                <span className="text-slate-500">→</span>{" "}
-                <span className="font-medium text-slate-200">
+                <span style={metaMuted}>→</span>{" "}
+                <span style={{ fontWeight: 600, color: ui.soft }}>
                   {formatCurrencyDOP(
                     data.mostIncreasedCategoryAbs.current || 0
                   )}
                 </span>
-                <span className="text-slate-400">)</span>{" "}
-                {/* ✅ Aumento = ROJO */}
-                <span className="ml-2 text-rose-300 font-extrabold text-base">
+                <span style={metaMuted}>)</span> {/* Aumento = danger */}
+                <span
+                  className="ml-2 text-base"
+                  style={{ color: ui.danger, fontWeight: 800 }}
+                >
                   {formatSignedCurrency(
                     data.mostIncreasedCategoryAbs.diff || 0
                   )}
@@ -439,16 +466,16 @@ function Dashboard({ token }) {
               </p>
             </div>
           ) : (
-            <p className="mt-3 text-sm text-slate-400">
+            <p className="mt-3 text-sm" style={metaMuted}>
               No se detectaron aumentos en gastos fijos/variables.
             </p>
           )}
 
           {data.mostDecreasedCategoryAbs ? (
             <div className="mt-4">
-              <p className="text-base text-slate-100">
+              <p className="text-base" style={{ color: ui.text }}>
                 Mayor disminución de gasto:{" "}
-                <span className="font-extrabold">
+                <span style={{ fontWeight: 800, color: ui.text }}>
                   {data.categoryNameMap?.[
                     data.mostDecreasedCategoryAbs.category_id
                   ] ||
@@ -459,22 +486,24 @@ function Dashboard({ token }) {
                 </span>
               </p>
 
-              <p className="mt-1 text-sm text-slate-200">
-                <span className="text-slate-400">(</span>
-                <span className="font-medium text-slate-200">
+              <p className="mt-1 text-sm" style={{ color: ui.soft }}>
+                <span style={metaMuted}>(</span>
+                <span style={{ fontWeight: 600, color: ui.soft }}>
                   {formatCurrencyDOP(
                     data.mostDecreasedCategoryAbs.previous || 0
                   )}
                 </span>{" "}
-                <span className="text-slate-500">→</span>{" "}
-                <span className="font-medium text-slate-200">
+                <span style={metaMuted}>→</span>{" "}
+                <span style={{ fontWeight: 600, color: ui.soft }}>
                   {formatCurrencyDOP(
                     data.mostDecreasedCategoryAbs.current || 0
                   )}
                 </span>
-                <span className="text-slate-400">)</span>{" "}
-                {/* ✅ Disminución = VERDE */}
-                <span className="ml-2 text-emerald-300 font-extrabold text-base">
+                <span style={metaMuted}>)</span> {/* Disminución = success */}
+                <span
+                  className="ml-2 text-base"
+                  style={{ color: ui.success, fontWeight: 800 }}
+                >
                   {formatSignedCurrency(
                     data.mostDecreasedCategoryAbs.diff || 0
                   )}
@@ -482,7 +511,7 @@ function Dashboard({ token }) {
               </p>
             </div>
           ) : (
-            <p className="mt-4 text-sm text-slate-400">
+            <p className="mt-4 text-sm" style={metaMuted}>
               No se detectaron disminuciones en gastos fijos/variables.
             </p>
           )}
@@ -641,7 +670,7 @@ function MetricCard({
   title,
   value,
   suffix = "",
-  color = "gray",
+  color = "gray", // "green" | "red" | "gray"
   isCurrency = false,
   subtitle = "",
 }) {
@@ -656,74 +685,81 @@ function MetricCard({
       }).format(safeValue)
     : `${safeValue.toFixed(2)}${suffix}`;
 
-  // Acentos según tipo
-  const accentValueClass =
+  // Tokens por acento
+  const accentToken =
     color === "green"
-      ? "text-emerald-300"
+      ? "var(--success)"
       : color === "red"
-      ? "text-rose-300"
-      : "text-slate-100";
+      ? "var(--danger)"
+      : "var(--muted)";
 
-  const accentSideClass =
+  // Texto del número (un poquito más “vivo” que el resto)
+  const valueColor =
     color === "green"
-      ? "from-emerald-500 to-emerald-300"
+      ? "color-mix(in srgb, var(--success) 70%, var(--text))"
       : color === "red"
-      ? "from-rose-500 to-rose-300"
-      : "from-slate-500 to-slate-300";
+      ? "color-mix(in srgb, var(--danger) 70%, var(--text))"
+      : "var(--text)";
 
   return (
     <div
-      className="
-        relative overflow-hidden rounded-2xl p-4
-        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800
-        border border-slate-700/80
-        shadow-[0_10px_30px_rgba(0,0,0,0.65)]
-        transition-all duration-300
-        hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.9)]
-      "
+      className="relative overflow-hidden rounded-2xl p-4 transition-all duration-300 hover:-translate-y-0.5"
+      style={{
+        background:
+          "linear-gradient(135deg, var(--panel), color-mix(in srgb, var(--panel) 70%, transparent))",
+        border: "var(--border-w) solid var(--border-rgba)",
+        boxShadow: "var(--glow-shadow)",
+        color: "var(--text)",
+      }}
     >
-      {/* Barra lateral cromada de acento */}
+      {/* Barra lateral de acento */}
       <div
-        className={`
-          absolute inset-y-0 left-0 w-[3px]
-          bg-gradient-to-b ${accentSideClass}
-        `}
+        className="absolute inset-y-0 left-0 w-[3px]"
+        style={{
+          background: `linear-gradient(to bottom, ${accentToken}, color-mix(in srgb, ${accentToken} 35%, transparent))`,
+        }}
       />
 
-      {/* Borde interior sutil (efecto panel metálico */}
+      {/* Borde interior sutil */}
       <div
-        className="
-          pointer-events-none absolute inset-[1px] rounded-2xl
-          border border-white/5
-        "
+        className="pointer-events-none absolute inset-[1px] rounded-2xl"
+        style={{
+          border: "1px solid color-mix(in srgb, var(--text) 10%, transparent)",
+        }}
       />
 
       {/* Brillo superior sutil */}
       <div
-        className="
-          pointer-events-none absolute inset-x-0 top-0 h-8
-          bg-gradient-to-b from-white/10 via-white/5 to-transparent
-          opacity-40
-        "
+        className="pointer-events-none absolute inset-x-0 top-0 h-8 opacity-40"
+        style={{
+          background:
+            "linear-gradient(to bottom, color-mix(in srgb, var(--text) 14%, transparent), transparent)",
+        }}
       />
 
       {/* Contenido */}
       <div className="relative z-10 flex flex-col gap-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">
+        <p
+          className="text-[11px] font-semibold uppercase tracking-[0.18em]"
+          style={{ color: "var(--muted)" }}
+        >
           {title}
         </p>
 
         <p
-          className={`
-            text-xl font-extrabold mt-0.5 leading-tight
-            ${accentValueClass}
-          `}
+          className="text-xl font-extrabold mt-0.5 leading-tight"
+          style={{ color: valueColor }}
         >
           {displayValue}
         </p>
 
         {subtitle && (
-          <p className="text-xs mt-1 text-slate-300 truncate">{subtitle}</p>
+          <p
+            className="text-xs mt-1 truncate"
+            style={{ color: "var(--muted)" }}
+          >
+            {subtitle}
+          </p>
         )}
       </div>
     </div>
@@ -735,47 +771,78 @@ function ChromeInfoCard({
   children,
   accent = "neutral", // "neutral" | "green" | "red" | "amber" | "dual"
 }) {
-  const accentClass =
-    accent === "green"
-      ? "from-emerald-500 to-emerald-300"
-      : accent === "red"
-      ? "from-rose-500 to-rose-300"
-      : accent === "amber"
-      ? "from-amber-500 to-amber-300"
-      : accent === "dual"
-      ? "from-rose-500 via-amber-300 to-emerald-400"
-      : "from-slate-500 to-slate-300";
+  const accentMap = {
+    green: [
+      "var(--success)",
+      "color-mix(in srgb, var(--success) 25%, transparent)",
+    ],
+    red: [
+      "var(--danger)",
+      "color-mix(in srgb, var(--danger) 25%, transparent)",
+    ],
+    amber: [
+      "var(--warning)",
+      "color-mix(in srgb, var(--warning) 25%, transparent)",
+    ],
+    dual: ["var(--danger)", "var(--warning)", "var(--success)"],
+    neutral: [
+      "var(--muted)",
+      "color-mix(in srgb, var(--muted) 25%, transparent)",
+    ],
+  };
+
+  const stops = accentMap[accent] || accentMap.neutral;
+
+  const accentGradient =
+    stops.length === 3
+      ? `linear-gradient(to bottom, ${stops[0]}, ${stops[1]}, ${stops[2]})`
+      : `linear-gradient(to bottom, ${stops[0]}, ${stops[1]})`;
 
   return (
     <div
-      className="
-        relative overflow-hidden rounded-2xl p-4
-        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800
-        border border-slate-700/80
-        shadow-[0_10px_30px_rgba(0,0,0,0.65)]
-        transition-all duration-300
-        hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.9)]
-      "
+      className="relative overflow-hidden rounded-2xl p-4 transition-all duration-300 hover:-translate-y-0.5"
+      style={{
+        background: "color-mix(in srgb, var(--panel) 80%, transparent)",
+        border: "var(--border-w) solid var(--border-rgba)",
+        boxShadow: "var(--glow-shadow)",
+        color: "var(--text)",
+      }}
     >
-      {/* ✅ Barra lateral con color configurable */}
+      {/* Barra lateral con acento */}
       <div
-        className={`
-          absolute inset-y-0 left-0 w-[3px]
-          bg-gradient-to-b ${accentClass}
-        `}
+        className="absolute inset-y-0 left-0 w-[3px]"
+        style={{ background: accentGradient }}
       />
 
       {/* Borde interior sutil */}
-      <div className="pointer-events-none absolute inset-[1px] rounded-2xl border border-white/5" />
+      <div
+        className="pointer-events-none absolute inset-[1px] rounded-2xl"
+        style={{
+          border: "1px solid color-mix(in srgb, var(--text) 10%, transparent)",
+        }}
+      />
 
       {/* Brillo superior */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-white/10 via-white/5 to-transparent opacity-40" />
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 h-8 opacity-40"
+        style={{
+          background:
+            "linear-gradient(to bottom, color-mix(in srgb, var(--text) 14%, transparent), transparent)",
+        }}
+      />
 
       <div className="relative z-10">
-        <h3 className="text-sm font-bold uppercase tracking-[0.18em] text-slate-200 mb-2">
+        <h3
+          className="text-sm font-bold uppercase tracking-[0.18em] mb-2"
+          style={{ color: "var(--text)" }}
+        >
           {title}
         </h3>
-        <div className="text-sm text-slate-200 space-y-2 leading-snug">
+
+        <div
+          className="text-sm space-y-2 leading-snug"
+          style={{ color: "var(--text)" }}
+        >
           {children}
         </div>
       </div>
@@ -798,14 +865,13 @@ function FlipMetricCard({ summary }) {
   if (!summary) {
     return (
       <div
-        className="
-          relative overflow-hidden rounded-2xl p-4
-          bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800
-          border border-slate-700/80
-          shadow-[0_10px_30px_rgba(0,0,0,0.65)]
-          flex items-center justify-center
-          text-sm text-slate-300
-        "
+        className="relative overflow-hidden rounded-2xl p-4 flex items-center justify-center text-sm"
+        style={{
+          background: "color-mix(in srgb, var(--panel) 80%, transparent)",
+          border: "var(--border-w) solid var(--border-rgba)",
+          boxShadow: "var(--glow-shadow)",
+          color: "var(--muted)",
+        }}
       >
         Cargando resumen anual...
       </div>
@@ -824,41 +890,39 @@ function FlipMetricCard({ summary }) {
 
   return (
     <div
-      className="
-        relative overflow-hidden rounded-2xl
-        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800
-        border border-slate-700/80
-        shadow-[0_10px_30px_rgba(0,0,0,0.65)]
-        transition-all duration-300
-        hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.9)]
-        h-full min-h-[150px]
-        cursor-pointer
-      "
+      className="relative overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-0.5 h-full min-h-[150px] cursor-pointer"
+      style={{
+        background: "color-mix(in srgb, var(--panel) 80%, transparent)",
+        border: "var(--border-w) solid var(--border-rgba)",
+        boxShadow: "var(--glow-shadow)",
+        color: "var(--text)",
+      }}
       onClick={() => setFlipped((prev) => !prev)}
     >
       {/* Barra lateral de acento */}
       <div
-        className="
-          absolute inset-y-0 left-0 w-[3px]
-          bg-gradient-to-b from-emerald-500 to-emerald-300
-        "
+        className="absolute inset-y-0 left-0 w-[3px]"
+        style={{
+          background:
+            "linear-gradient(to bottom, var(--success), color-mix(in srgb, var(--success) 25%, transparent))",
+        }}
       />
 
       {/* Borde interior */}
       <div
-        className="
-          pointer-events-none absolute inset-[1px] rounded-2xl
-          border border-white/5
-        "
+        className="pointer-events-none absolute inset-[1px] rounded-2xl"
+        style={{
+          border: "1px solid color-mix(in srgb, var(--text) 10%, transparent)",
+        }}
       />
 
       {/* Brillo superior */}
       <div
-        className="
-          pointer-events-none absolute inset-x-0 top-0 h-8
-          bg-gradient-to-b from-white/10 via-white/5 to-transparent
-          opacity-40
-        "
+        className="pointer-events-none absolute inset-x-0 top-0 h-8 opacity-40"
+        style={{
+          background:
+            "linear-gradient(to bottom, color-mix(in srgb, var(--text) 14%, transparent), transparent)",
+        }}
       />
 
       {/* Contenido flippeable */}
@@ -871,43 +935,55 @@ function FlipMetricCard({ summary }) {
         `}
       >
         {/* FRONT */}
-        <div
-          className="
-    absolute inset-0 p-4
-    [backface-visibility:hidden]
-    flex flex-col
-  "
-        >
+        <div className="absolute inset-0 p-4 [backface-visibility:hidden] flex flex-col">
           <div>
-            <p className="text-sm font-bold text-slate-200 uppercase tracking-[0.18em]">
+            <p
+              className="text-sm font-bold uppercase tracking-[0.18em]"
+              style={{ color: "var(--text)" }}
+            >
               Resumen anual {year}
             </p>
-            <p className="text-xs font-semibold text-slate-300 mt-1">
+            <p
+              className="text-xs font-semibold mt-1"
+              style={{ color: "var(--muted)" }}
+            >
               Click para ver por estabilidad
             </p>
           </div>
 
           <div className="mt-4 space-y-2 text-sm">
             <div className="flex justify-between items-center">
-              <span className="text-slate-300">Ingreso total</span>
-              <span className="font-extrabold text-emerald-300 text-base">
+              <span style={{ color: "var(--muted)" }}>Ingreso total</span>
+              <span
+                className="text-base font-extrabold"
+                style={{ color: "var(--success)" }}
+              >
                 {formatCurrencyDOP(total?.income)}
               </span>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-slate-300">Gasto total</span>
-              <span className="font-extrabold text-rose-300 text-base">
+              <span style={{ color: "var(--muted)" }}>Gasto total</span>
+              <span
+                className="text-base font-extrabold"
+                style={{ color: "var(--danger)" }}
+              >
                 {formatCurrencyDOP(total?.expense)}
               </span>
             </div>
 
-            <div className="flex justify-between items-center border-t border-slate-700 pt-3 mt-3">
-              <span className="text-slate-200 font-semibold">Ahorro neto</span>
+            <div
+              className="flex justify-between items-center pt-3 mt-3"
+              style={{ borderTop: `1px solid var(--border-rgba)` }}
+            >
+              <span style={{ color: "var(--text)", fontWeight: 700 }}>
+                Ahorro neto
+              </span>
               <span
-                className={`text-base font-extrabold ${
-                  ahorroNeto >= 0 ? "text-emerald-300" : "text-rose-300"
-                }`}
+                className="text-base font-extrabold"
+                style={{
+                  color: ahorroNeto >= 0 ? "var(--success)" : "var(--danger)",
+                }}
               >
                 {formatCurrencyDOP(ahorroNeto)}
               </span>
@@ -916,19 +992,18 @@ function FlipMetricCard({ summary }) {
         </div>
 
         {/* BACK */}
-        <div
-          className="
-            absolute inset-0 p-4
-            [backface-visibility:hidden]
-            [transform:rotateY(180deg)]
-            flex flex-col
-          "
-        >
+        <div className="absolute inset-0 p-4 [backface-visibility:hidden] [transform:rotateY(180deg)] flex flex-col">
           <div className="mb-2">
-            <p className="text-sm font-bold text-slate-200 uppercase tracking-[0.18em]">
+            <p
+              className="text-sm font-bold uppercase tracking-[0.18em]"
+              style={{ color: "var(--text)" }}
+            >
               Detalle por estabilidad
             </p>
-            <p className="text-[11px] font-semibold text-slate-400 mt-0.5">
+            <p
+              className="text-[11px] font-semibold mt-0.5"
+              style={{ color: "var(--muted)" }}
+            >
               (Click para volver)
             </p>
           </div>
@@ -937,22 +1012,27 @@ function FlipMetricCard({ summary }) {
             {Object.entries(byStability || {}).map(([key, value]) => (
               <div
                 key={key}
-                className="border border-slate-600 rounded px-2 py-1.5 bg-slate-900/60"
+                className="rounded px-2 py-1.5"
+                style={{
+                  border: `1px solid var(--border-rgba)`,
+                  background:
+                    "color-mix(in srgb, var(--panel) 70%, transparent)",
+                }}
               >
                 <div className="mb-1">
-                  <span className="font-semibold text-slate-100">
+                  <span style={{ fontWeight: 700, color: "var(--text)" }}>
                     {stabilityLabels[key] || key}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-300">Ingresos</span>
-                  <span className="font-medium text-emerald-300">
+                  <span style={{ color: "var(--muted)" }}>Ingresos</span>
+                  <span style={{ fontWeight: 600, color: "var(--success)" }}>
                     {formatCurrencyDOP(value.income)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-300">Gastos</span>
-                  <span className="font-medium text-rose-300">
+                  <span style={{ color: "var(--muted)" }}>Gastos</span>
+                  <span style={{ fontWeight: 600, color: "var(--danger)" }}>
                     {formatCurrencyDOP(value.expense)}
                   </span>
                 </div>

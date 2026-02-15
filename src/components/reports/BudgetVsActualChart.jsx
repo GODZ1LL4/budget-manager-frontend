@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   BarChart,
@@ -10,6 +10,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+
+const money = (v) => `RD$ ${Number(v || 0).toFixed(2)}`;
 
 function BudgetVsActualChart({ token }) {
   const [data, setData] = useState([]);
@@ -28,77 +30,97 @@ function BudgetVsActualChart({ token }) {
       });
   }, [token, api]);
 
+  // ====== Tokenized UI (solo vars) ======
+  const ui = useMemo(() => {
+    const card = {
+      background:
+        "linear-gradient(135deg, var(--bg-3), color-mix(in srgb, var(--panel) 80%, transparent), var(--bg-2))",
+      border: "1px solid var(--border-rgba)",
+      borderRadius: "var(--radius-lg)",
+      boxShadow: "0 16px 40px rgba(0,0,0,0.85)",
+      color: "var(--text)",
+    };
+
+    const tooltip = {
+      backgroundColor: "var(--bg-3)",
+      border: "1px solid var(--border-rgba)",
+      color: "var(--text)",
+      borderRadius: "12px",
+      boxShadow: "0 18px 45px rgba(0,0,0,0.85)",
+      fontSize: "0.95rem",
+      padding: "10px 12px",
+    };
+
+    return {
+      card,
+      tooltip,
+      grid: { stroke: "var(--border-rgba)", strokeDasharray: "4 4" },
+      axisStroke: "var(--muted)",
+      tick: { fill: "var(--text)", fontSize: 14 },
+      legendWrap: { color: "var(--text)" },
+
+      // Series colors (tokenized)
+      budgetFill: "var(--primary)",
+      actualFill: "var(--danger)",
+    };
+  }, []);
+
   return (
-    <div
-      className="
-        rounded-2xl p-6
-        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950
-        border border-slate-800
-        shadow-[0_16px_40px_rgba(0,0,0,0.85)]
-        space-y-4
-      "
-    >
+    <div className="rounded-2xl p-6 space-y-4" style={ui.card}>
       <div>
-        <h3 className="text-xl font-semibold text-slate-100">
+        <h3 style={{ color: "var(--heading)", fontWeight: 800, fontSize: 18 }}>
           Presupuesto vs Gasto Real
         </h3>
-        <p className="text-sm text-slate-400 mt-1">
+        <p className="mt-1" style={{ color: "var(--muted)", fontSize: 14 }}>
           Compara el presupuesto asignado con el gasto real por categoría.
         </p>
       </div>
 
       {data.length === 0 ? (
-        <p className="text-sm text-slate-500 italic">
+        <p style={{ color: "var(--muted)", fontSize: 14, fontStyle: "italic" }}>
           No hay datos disponibles.
         </p>
       ) : (
         <div className="w-full h-[300px]">
           <ResponsiveContainer>
             <BarChart data={data}>
-              <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
+              <CartesianGrid {...ui.grid} />
+
               <XAxis
                 dataKey="category"
-                stroke="#94a3b8"
-                tick={{ fill: "#cbd5e1", fontSize: 14 }}
+                stroke={ui.axisStroke}
+                tick={ui.tick}
               />
-              <YAxis
-                stroke="#94a3b8"
-                tick={{ fill: "#cbd5e1", fontSize: 14 }}
-              />
+              <YAxis stroke={ui.axisStroke} tick={ui.tick} />
+
               <Tooltip
-                formatter={(val) =>
-                  `RD$ ${Number(val || 0).toFixed(2)}`
-                }
-                contentStyle={{
-                  backgroundColor: "#020617",
-                  border: "1px solid #4b5563",
-                  color: "#e5e7eb",
-                  borderRadius: "0.5rem",
-                  boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
-                  fontSize: "1rem",
-                }}
-                itemStyle={{ color: "#e5e7eb" }}
-                labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+                formatter={(val) => money(val)}
+                contentStyle={ui.tooltip}
+                itemStyle={{ color: "var(--text)" }}
+                labelStyle={{ color: "var(--text)", fontWeight: 800 }}
+                cursor={{ fill: "color-mix(in srgb, var(--text) 6%, transparent)" }}
               />
+
               <Legend
-                wrapperStyle={{ color: "#e2e8f0" }}
+                wrapperStyle={ui.legendWrap}
                 formatter={(value) => (
-                  <span className="text-slate-200 text-xs sm:text-sm">
+                  <span style={{ color: "var(--text)" }} className="text-xs sm:text-sm">
                     {value}
                   </span>
                 )}
               />
+
               <Bar
                 dataKey="presupuesto"
-                fill="#3b82f6"
+                fill={ui.budgetFill}
                 name="Presupuesto"
-                radius={[4, 4, 0, 0]}
+                radius={[6, 6, 0, 0]}
               />
               <Bar
                 dataKey="gastado"
-                fill="#ef4444"
+                fill={ui.actualFill}
                 name="Gastado"
-                radius={[4, 4, 0, 0]}
+                radius={[6, 6, 0, 0]}
               />
             </BarChart>
           </ResponsiveContainer>

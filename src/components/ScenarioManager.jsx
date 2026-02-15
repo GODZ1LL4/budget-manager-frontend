@@ -626,9 +626,9 @@ function ScenarioManager({ token }) {
   );
 
   return (
-    <div className="p-6 space-y-6 text-slate-200">
-      <h2 className="text-2xl font-bold text-[#f6e652] flex items-center justify-between">
-        Escenarios
+    <div className="p-6 space-y-6 text-[var(--text)]">
+      <h2 className="ff-h2 flex items-center justify-between">
+        <span className="ff-heading-accent">Escenarios</span>
       </h2>
 
       <ScenarioForm
@@ -651,42 +651,44 @@ function ScenarioManager({ token }) {
       />
 
       <div className="mt-4">
-        <h3 className="text-lg font-semibold text-slate-100 mb-2">
+        <h3 className="text-lg font-semibold text-[var(--text)] mb-2">
           Escenarios guardados
         </h3>
+
         <ul className="space-y-2">
           {scenarios.map((sc) => {
             const isActive = selectedScenario?.id === sc.id;
             return (
               <li
                 key={sc.id}
-                className={`
-                  p-3 rounded-xl border
-                  bg-slate-900/70 border-slate-800
-                  hover:bg-slate-900 transition-colors
-                  cursor-pointer
-                  ${isActive ? "ring-1 ring-emerald-500/70" : ""}
-                `}
+                className="p-3 rounded-[var(--radius-lg)] border transition-colors cursor-pointer"
+                style={{
+                  background:
+                    "color-mix(in srgb, var(--panel) 75%, transparent)",
+                  borderColor: "var(--border-rgba)",
+                  boxShadow: "var(--glow-shadow)",
+                  outline: isActive
+                    ? `1px solid color-mix(in srgb, var(--primary) 55%, transparent)`
+                    : "none",
+                }}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div
                     className="flex-1"
                     onClick={() => handleSelectScenario(sc)}
                   >
-                    <p className="font-semibold text-slate-100">{sc.name}</p>
-                    <p className="text-xs text-slate-400">
+                    <p className="font-semibold text-[var(--text)]">
+                      {sc.name}
+                    </p>
+                    <p className="text-xs text-[var(--muted)]">
                       {sc.description || "Sin descripción"}
                     </p>
                   </div>
+
                   <div className="flex gap-2">
                     <button
-                      className="
-                        text-xs px-3 py-1.5 rounded-lg
-                        border border-slate-600
-                        bg-slate-950 text-slate-200
-                        hover:bg-slate-900 hover:border-slate-500
-                        transition-colors
-                      "
+                      type="button"
+                      className="ff-btn ff-btn-outline ff-btn-sm"
                       onClick={() => {
                         setScenarioForm({
                           name: sc.name,
@@ -698,14 +700,10 @@ function ScenarioManager({ token }) {
                     >
                       Editar
                     </button>
+
                     <button
-                      className="
-                        text-xs px-3 py-1.5 rounded-lg
-                        border border-rose-600/70
-                        bg-rose-900/30 text-rose-200
-                        hover:bg-rose-900/50
-                        transition-colors
-                      "
+                      type="button"
+                      className="ff-btn ff-btn-danger ff-btn-sm"
                       onClick={() => {
                         setScenarioToDelete(sc);
                         setConfirmDeleteScenarioOpen(true);
@@ -724,31 +722,41 @@ function ScenarioManager({ token }) {
       {selectedScenario && (
         <>
           {/* ✅ PANEL: Predicción avanzada */}
-          <div className="rounded-2xl p-4 bg-slate-950 border border-slate-800 shadow-[0_16px_40px_rgba(0,0,0,0.85)]">
+          <div className="ff-card p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-lg font-semibold text-slate-100">
+                <h3 className="text-lg font-semibold text-[var(--text)]">
                   Predicción avanzada (preview → registrar)
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-[var(--muted)]">
                   Ajusta parámetros, previsualiza en el calendario y luego
                   registra para importar a presupuesto.
                 </p>
+
                 {advMeta?.history_from && (
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p
+                    className="text-xs mt-1"
+                    style={{
+                      color:
+                        "color-mix(in srgb, var(--muted) 70%, transparent)",
+                    }}
+                  >
                     Histórico usado:{" "}
-                    <span className="text-slate-200 font-semibold">
+                    <span className="font-semibold text-[var(--text)]">
                       {advMeta.history_from}
                     </span>{" "}
                     →{" "}
-                    <span className="text-slate-200 font-semibold">
+                    <span className="font-semibold text-[var(--text)]">
                       {advMeta.history_to}
                     </span>
                   </p>
                 )}
               </div>
 
-              <label className="flex items-center gap-2 text-sm text-slate-200">
+              <label
+                className="flex items-center gap-2 text-sm"
+                style={{ color: "var(--text)" }}
+              >
                 <input
                   type="checkbox"
                   checked={advEnabled}
@@ -766,12 +774,12 @@ function ScenarioManager({ token }) {
                       );
                     }
                   }}
+                  style={{ accentColor: "var(--primary)" }}
                 />
                 Mostrar preview
               </label>
             </div>
 
-            {/* controles */}
             <div className="mt-4 grid grid-cols-2 md:grid-cols-6 gap-3">
               <FieldNumber
                 label="Meses"
@@ -819,7 +827,10 @@ function ScenarioManager({ token }) {
               />
 
               <div className="flex flex-col gap-2 justify-end">
-                <label className="flex items-center gap-2 text-xs text-slate-200">
+                <label
+                  className="flex items-center gap-2 text-xs"
+                  style={{ color: "var(--text)" }}
+                >
                   <input
                     type="checkbox"
                     checked={advParams.include_noise}
@@ -829,10 +840,15 @@ function ScenarioManager({ token }) {
                         include_noise: e.target.checked,
                       }))
                     }
+                    style={{ accentColor: "var(--primary)" }}
                   />
                   Incluir eventuales
                 </label>
-                <label className="flex items-center gap-2 text-xs text-slate-200">
+
+                <label
+                  className="flex items-center gap-2 text-xs"
+                  style={{ color: "var(--text)" }}
+                >
                   <input
                     type="checkbox"
                     checked={advParams.include_occasional}
@@ -842,6 +858,7 @@ function ScenarioManager({ token }) {
                         include_occasional: e.target.checked,
                       }))
                     }
+                    style={{ accentColor: "var(--primary)" }}
                   />
                   Incluir ocasionales
                 </label>
@@ -850,11 +867,8 @@ function ScenarioManager({ token }) {
 
             <div className="mt-4 flex flex-wrap items-center gap-2 justify-end">
               <button
-                className="
-                  px-4 py-2 rounded-lg text-sm font-semibold
-                  border border-slate-600 bg-slate-900 text-slate-200
-                  hover:bg-slate-800 active:scale-95 transition-all
-                "
+                type="button"
+                className="ff-btn ff-btn-outline"
                 disabled={!advEnabled || advLoading}
                 onClick={() =>
                   fetchAdvancedPreview(
@@ -868,12 +882,8 @@ function ScenarioManager({ token }) {
               </button>
 
               <button
-                className="
-                  px-4 py-2 rounded-lg text-sm font-semibold
-                  bg-emerald-500 text-slate-950
-                  hover:brightness-110 active:scale-95 transition-all
-                  disabled:opacity-50
-                "
+                type="button"
+                className="ff-btn ff-btn-primary"
                 disabled={
                   advLoading || !advEnabled || (advPreview?.length || 0) === 0
                 }
@@ -884,38 +894,31 @@ function ScenarioManager({ token }) {
             </div>
 
             {advEnabled && (
-              <div className="mt-2 text-xs text-slate-400">
+              <div className="mt-2 text-xs text-[var(--muted)]">
                 Preview actual:{" "}
-                <strong className="text-slate-200">{advPreview.length}</strong>{" "}
+                <strong className="text-[var(--text)]">
+                  {advPreview.length}
+                </strong>{" "}
                 eventos simulados.
               </div>
             )}
           </div>
 
           {/* Panel de estadísticas */}
-          <div
-            className="
-              mt-4 rounded-2xl p-4 md:p-5
-              bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900
-              border border-slate-800
-              shadow-[0_16px_40px_rgba(0,0,0,0.85)]
-            "
-          >
+          <div className="ff-card mt-4 p-4 md:p-5">
             <div className="flex items-center justify-between mb-3 gap-2">
               <div>
-                <h3 className="text-lg font-semibold text-slate-100">
+                <h3 className="text-lg font-semibold text-[var(--text)]">
                   Estadísticas del escenario
                 </h3>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-[var(--muted)]">
                   Resumen del mes visible en el calendario.
                 </p>
               </div>
+
               <button
-                className="
-                  bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm
-                  hover:brightness-110 active:scale-95
-                  transition-all
-                "
+                type="button"
+                className="ff-btn ff-btn-primary"
                 onClick={() => {
                   setImportScope("current");
                   setShowImportModal(true);
@@ -927,39 +930,54 @@ function ScenarioManager({ token }) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <p className="text-xs text-slate-400">Balance</p>
+              <div className="ff-surface p-3">
+                <p className="text-xs text-[var(--muted)]">Balance</p>
                 <p
-                  className={`text-xl font-bold mt-1 ${
-                    stats.balance >= 0 ? "text-emerald-300" : "text-rose-300"
-                  }`}
+                  className="text-xl font-bold mt-1"
+                  style={{
+                    color:
+                      stats.balance >= 0 ? "var(--success)" : "var(--danger)",
+                  }}
                 >
                   RD$ {stats.balance.toFixed(2)}
                 </p>
               </div>
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <p className="text-xs text-slate-400">Total ingresos</p>
-                <p className="text-xl font-bold mt-1 text-emerald-300">
+
+              <div className="ff-surface p-3">
+                <p className="text-xs text-[var(--muted)]">Total ingresos</p>
+                <p
+                  className="text-xl font-bold mt-1"
+                  style={{ color: "var(--success)" }}
+                >
                   RD$ {stats.totalIncome.toFixed(2)}
                 </p>
               </div>
-              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <p className="text-xs text-slate-400">Total gastos</p>
-                <p className="text-xl font-bold mt-1 text-rose-300">
+
+              <div className="ff-surface p-3">
+                <p className="text-xs text-[var(--muted)]">Total gastos</p>
+                <p
+                  className="text-xl font-bold mt-1"
+                  style={{ color: "var(--danger)" }}
+                >
                   RD$ {stats.totalExpense.toFixed(2)}
                 </p>
               </div>
             </div>
 
             <div className="mt-4">
-              <h4 className="text-sm font-semibold mb-2 text-slate-100">
+              <h4 className="text-sm font-semibold mb-2 text-[var(--text)]">
                 Gastos por categoría
               </h4>
-              <ul className="space-y-1 text-xs md:text-sm text-slate-200">
+
+              <ul className="space-y-1 text-xs md:text-sm text-[var(--text)]">
                 {Object.entries(stats.categoryTotals).map(([cat, total]) => (
                   <li
                     key={cat}
-                    className="flex justify-between border-b border-slate-800 py-1"
+                    className="flex justify-between py-1"
+                    style={{
+                      borderBottom:
+                        "var(--border-w) solid color-mix(in srgb, var(--border-rgba) 60%, transparent)",
+                    }}
                   >
                     <span>{cat}</span>
                     <span className="text-right font-medium">
@@ -967,8 +985,15 @@ function ScenarioManager({ token }) {
                     </span>
                   </li>
                 ))}
+
                 {Object.keys(stats.categoryTotals).length === 0 && (
-                  <li className="text-slate-500 italic">
+                  <li
+                    className="italic"
+                    style={{
+                      color:
+                        "color-mix(in srgb, var(--muted) 70%, transparent)",
+                    }}
+                  >
                     No hay gastos registrados
                   </li>
                 )}
@@ -1018,32 +1043,40 @@ function ScenarioManager({ token }) {
               {monthProjection.map((tx) => (
                 <li
                   key={`${tx.id}-${tx.date}`}
-                  className="
-                    p-3 rounded-xl
-                    bg-slate-900/70 border border-slate-800
-                    flex flex-col sm:flex-row sm:justify-between sm:items-center
-                  "
+                  className="ff-surface p-3 flex flex-col sm:flex-row sm:justify-between sm:items-center"
                 >
                   <div>
-                    <p className="font-medium text-slate-100">
+                    <p className="font-medium text-[var(--text)]">
                       <span
-                        className={
-                          tx.type === "income"
-                            ? "text-emerald-300"
-                            : "text-rose-300"
-                        }
+                        style={{
+                          color:
+                            tx.type === "income"
+                              ? "var(--success)"
+                              : "var(--danger)",
+                        }}
                       >
                         {tx.type === "income" ? "+" : "-"}RD$
                         {Number(tx.amount || 0).toFixed(2)}
                       </span>{" "}
                       — {tx.name}
                       {tx.source === "advanced_forecast" && (
-                        <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full border border-amber-500/40 text-amber-300 bg-amber-900/20">
+                        <span
+                          className="ml-2 text-[10px] px-2 py-0.5 rounded-full border"
+                          style={{
+                            borderColor:
+                              "color-mix(in srgb, var(--warning) 45%, var(--border-rgba))",
+                            background:
+                              "color-mix(in srgb, var(--warning) 12%, transparent)",
+                            color:
+                              "color-mix(in srgb, var(--warning) 90%, var(--text))",
+                          }}
+                        >
                           AI Preview
                         </span>
                       )}
                     </p>
-                    <p className="text-xs text-slate-400 mt-0.5">
+
+                    <p className="text-xs mt-0.5 text-[var(--muted)]">
                       {tx.date} — {tx.category_name || "Sin categoría"}
                     </p>
                   </div>
@@ -1105,34 +1138,33 @@ function ScenarioManager({ token }) {
         title="Eliminar transacción"
         message="Esta acción no se puede deshacer."
         details={
-          <div className="space-y-1">
+          <div className="space-y-1" style={{ color: "var(--text)" }}>
             <div>
               Vas a eliminar{" "}
-              <span className="font-semibold text-slate-100">
+              <span className="font-semibold text-[var(--text)]">
                 {txToDelete?.name || "esta transacción"}
               </span>
               .
             </div>
 
-            <div className="text-slate-300">
-
+            <div className="text-[var(--muted)]">
               {txToDelete?.type === "income" ? "Ingreso" : "Gasto"} ·{" "}
-              <span className="text-slate-200 font-semibold">
+              <span className="text-[var(--text)] font-semibold">
                 RD$ {Number(txToDelete?.amount || 0).toFixed(2)}
               </span>
             </div>
 
             {txToDelete?.start && (
-              <div className="text-slate-400">
+              <div className="text-[var(--muted)]">
                 Fecha:{" "}
-                <span className="text-slate-200 font-semibold">
+                <span className="text-[var(--text)] font-semibold">
                   {txToDelete.start}
                 </span>
                 {txToDelete?.end && txToDelete.end !== txToDelete.start ? (
                   <>
                     {" "}
                     →{" "}
-                    <span className="text-slate-200 font-semibold">
+                    <span className="text-[var(--text)] font-semibold">
                       {txToDelete.end}
                     </span>
                   </>
@@ -1156,18 +1188,12 @@ function ScenarioManager({ token }) {
         }}
         title="Editar escenario"
       >
-        <div className="space-y-4 text-slate-200">
+        <div className="space-y-4" style={{ color: "var(--text)" }}>
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-300">Nombre</label>
+            <label className="ff-label">Nombre</label>
             <input
               type="text"
-              className="
-                w-full rounded-lg px-3 py-2 text-sm
-                bg-slate-900 border border-slate-700
-                text-slate-100 placeholder:text-slate-500
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                transition-colors
-              "
+              className="ff-input"
               placeholder="Ej: Escenario base, Plan agresivo..."
               value={scenarioForm.name}
               onChange={(e) =>
@@ -1178,18 +1204,10 @@ function ScenarioManager({ token }) {
           </div>
 
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-300">
-              Descripción
-            </label>
+            <label className="ff-label">Descripción</label>
             <input
               type="text"
-              className="
-                w-full rounded-lg px-3 py-2 text-sm
-                bg-slate-900 border border-slate-700
-                text-slate-100 placeholder:text-slate-500
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                transition-colors
-              "
+              className="ff-input"
               placeholder="Descripción corta del escenario (opcional)"
               value={scenarioForm.description}
               onChange={(e) =>
@@ -1201,29 +1219,14 @@ function ScenarioManager({ token }) {
           <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
-              className="
-                px-4 py-2 text-sm font-semibold rounded-lg
-                bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
-                text-slate-950
-                shadow-[0_0_16px_rgba(16,185,129,0.6)]
-                hover:brightness-110
-                active:scale-95
-                transition-all
-              "
+              className="ff-btn ff-btn-primary"
               onClick={handleUpdateScenario}
             >
               Guardar
             </button>
             <button
               type="button"
-              className="
-                px-4 py-2 text-sm font-semibold rounded-lg
-                border border-slate-600
-                bg-slate-900 text-slate-300
-                hover:bg-slate-800 hover:border-slate-500
-                active:scale-95
-                transition-all
-              "
+              className="ff-btn ff-btn-outline"
               onClick={() => setShowEditScenario(false)}
             >
               Cancelar
@@ -1315,7 +1318,7 @@ Insertados: ${inserted}, Actualizados: ${updated}, Omitidos: ${skipped}`,
 function FieldNumber({ label, value, min, max, step = 1, onChange }) {
   return (
     <div className="flex flex-col">
-      <label className="text-xs text-slate-400 mb-1">{label}</label>
+      <label className="ff-label">{label}</label>
       <input
         type="number"
         value={value}
@@ -1323,13 +1326,7 @@ function FieldNumber({ label, value, min, max, step = 1, onChange }) {
         max={max}
         step={step}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="
-          w-full rounded-lg px-3 py-2 text-sm
-          bg-slate-900 border border-slate-700
-          text-slate-100 placeholder:text-slate-500
-          focus:outline-none focus:ring-2 focus:ring-amber-500/60 focus:border-amber-500
-          transition-colors
-        "
+        className="ff-input"
       />
     </div>
   );

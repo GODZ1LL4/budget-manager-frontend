@@ -1,9 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+
 import { HiMenu } from "react-icons/hi";
 
 function Navbar({ onLogout, setView }) {
   const [openSection, setOpenSection] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const navRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (navRef.current && !navRef.current.contains(event.target)) {
+        setOpenSection(null);
+        setMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const sections = [
     {
@@ -29,34 +47,50 @@ function Navbar({ onLogout, setView }) {
         { name: "Transacciones", view: "transactions" },
       ],
     },
+    {
+      title: "Configuración",
+      links: [{ name: "Tema", view: "theme" }],
+    },
   ];
 
   const handleToggle = (sectionTitle) => {
     setOpenSection((prev) => (prev === sectionTitle ? null : sectionTitle));
   };
 
+  // Helpers de estilo (tokens)
+  const navBase =
+    "sticky top-0 z-50 px-6 py-3 flex items-center justify-between flex-wrap backdrop-blur-md border-b";
+  const navColors =
+    "bg-[var(--panel)] border-[var(--border-rgba)] shadow-[0_10px_30px_rgba(0,0,0,0.55)]";
+
+  const linkBase =
+    "font-semibold text-xs md:text-sm tracking-[0.16em] uppercase px-3 py-1.5 rounded-full transition-all";
+  const linkIdle =
+    "text-[var(--text)] hover:text-[var(--primary)] hover:bg-[color-mix(in srgb,var(--panel-2)_75%,transparent)]";
+  const linkActive =
+    "text-[var(--primary)] bg-[color-mix(in srgb,var(--panel-2)_85%,transparent)]";
+
   return (
-    <nav
-      className="
-        sticky top-0 z-50
-        px-6 py-3
-        flex items-center justify-between flex-wrap
-        bg-slate-950/85
-        backdrop-blur-md
-        border-b border-slate-800
-        shadow-[0_10px_30px_rgba(0,0,0,0.8)]
-      "
-    >
+    <nav ref={navRef} className={`${navBase} ${navColors}`}>
       {/* Logo / Brand */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.7)]">
+        <div
+          className="
+            flex items-center justify-center
+            w-9 h-9 rounded-xl
+            bg-[var(--primary)]
+            shadow-[var(--glow-shadow)]
+          "
+          title="FinanceFlow"
+        >
           <span className="text-base">💸</span>
         </div>
+
         <div className="flex flex-col leading-tight">
-          <span className="text-sm font-semibold tracking-[0.16em] uppercase text-slate-200">
+          <span className="text-sm font-semibold tracking-[0.16em] uppercase text-[var(--text)]">
             FinanceFlow
           </span>
-          <span className="text-[11px] text-slate-500">
+          <span className="text-[11px] text-[var(--muted)]">
             Control financiero personal
           </span>
         </div>
@@ -65,13 +99,16 @@ function Navbar({ onLogout, setView }) {
       {/* Burger Button */}
       <button
         className="
-          md:hidden text-2xl text-slate-200
+          md:hidden text-2xl
           rounded-lg p-1.5
-          hover:bg-slate-900/80
-          focus:outline-none focus:ring-2 focus:ring-emerald-500/70
+          text-[var(--text)]
+          hover:bg-[color-mix(in srgb,var(--panel-2)_75%,transparent)]
+          focus:outline-none focus:ring-2
+          focus:ring-[var(--ring)]
           transition-colors
         "
         onClick={() => setMenuOpen((prev) => !prev)}
+        aria-label="Abrir menú"
       >
         <HiMenu />
       </button>
@@ -79,11 +116,7 @@ function Navbar({ onLogout, setView }) {
       {/* Menu */}
       <ul
         className={`
-          ${
-            menuOpen
-              ? "flex flex-col w-full mt-4 space-y-2"
-              : "hidden"
-          }
+          ${menuOpen ? "flex flex-col w-full mt-4 space-y-2" : "hidden"}
           md:flex md:flex-row md:gap-4 lg:gap-6 md:items-center md:ml-auto md:mt-0
         `}
       >
@@ -95,13 +128,7 @@ function Navbar({ onLogout, setView }) {
               setView("dashboard");
               setMenuOpen(false);
             }}
-            className="
-              font-semibold text-xs md:text-sm tracking-[0.16em] uppercase
-              text-slate-200
-              px-3 py-1.5 rounded-full
-              hover:text-emerald-300 hover:bg-slate-900/80
-              transition-colors
-            "
+            className={`${linkBase} ${linkIdle}`}
           >
             Dashboard
           </button>
@@ -115,25 +142,15 @@ function Navbar({ onLogout, setView }) {
             <li key={section.title} className="relative">
               <button
                 onClick={() => handleToggle(section.title)}
-                className={`
-                  flex items-center gap-1
-                  font-semibold text-xs md:text-sm tracking-[0.16em] uppercase
-                  px-3 py-1.5 rounded-full
-                  transition-colors
-                  ${
-                    isOpen
-                      ? "text-emerald-300 bg-slate-900/80"
-                      : "text-slate-200 hover:text-emerald-300 hover:bg-slate-900/70"
-                  }
-                `}
+                className={`${linkBase} ${
+                  isOpen ? linkActive : linkIdle
+                } flex items-center gap-1`}
               >
                 <span>{section.title}</span>
                 <span
-                  className={`
-                    text-[10px]
-                    transition-transform duration-200
-                    ${isOpen ? "rotate-180" : ""}
-                  `}
+                  className={`text-[10px] transition-transform duration-200 ${
+                    isOpen ? "rotate-180" : ""
+                  }`}
                 >
                   ▾
                 </span>
@@ -146,11 +163,12 @@ function Navbar({ onLogout, setView }) {
                     absolute left-0 mt-3
                     hidden md:block
                     min-w-[190px]
-                    rounded-xl
-                    bg-slate-950/95
-                    border border-slate-800
-                    shadow-[0_18px_40px_rgba(0,0,0,0.9)]
                     overflow-hidden
+                    rounded-xl
+                    border
+                    border-[var(--border-rgba)]
+                    bg-[color-mix(in srgb,var(--panel)_92%,transparent)]
+                    shadow-[0_18px_40px_rgba(0,0,0,0.65)]
                   "
                 >
                   {section.links.map((link) => (
@@ -163,8 +181,10 @@ function Navbar({ onLogout, setView }) {
                         className="
                           block w-full text-left
                           px-4 py-2.5
-                          text-sm text-slate-200
-                          hover:bg-slate-900 hover:text-emerald-300
+                          text-sm
+                          text-[var(--text)]
+                          hover:text-[var(--primary)]
+                          hover:bg-[color-mix(in srgb,var(--panel-2)_85%,transparent)]
                           transition-colors
                         "
                       >
@@ -190,10 +210,13 @@ function Navbar({ onLogout, setView }) {
                           className="
                             block w-full text-left
                             px-3 py-2
-                            text-sm text-slate-200
+                            text-sm
                             rounded-lg
-                            bg-slate-900/60
-                            hover:bg-slate-800 hover:text-emerald-300
+                            border border-[var(--border-rgba)]
+                            bg-[color-mix(in srgb,var(--panel-2)_70%,transparent)]
+                            text-[var(--text)]
+                            hover:text-[var(--primary)]
+                            hover:bg-[color-mix(in srgb,var(--panel-2)_85%,transparent)]
                             transition-colors
                           "
                         >
@@ -212,17 +235,16 @@ function Navbar({ onLogout, setView }) {
           <button
             onClick={onLogout}
             className="
-              mt-2 md:mt-0
-              rounded-full
-              px-4 py-1.5
-              text-xs md:text-sm font-semibold
-              bg-gradient-to-r from-rose-500 via-rose-500 to-rose-400
-              text-white
-              shadow-[0_0_18px_rgba(248,113,113,0.7)]
-              hover:brightness-110
-              active:scale-95
-              transition-all
-            "
+    mt-2 md:mt-0
+    rounded-full px-4 py-1.5
+    text-xs md:text-sm font-semibold
+    bg-[var(--danger)]
+    text-[color-mix(in srgb,var(--text)_10%,white)]
+    shadow-[0_0_18px_color-mix(in srgb,var(--danger)_70%,transparent)]
+    hover:brightness-110
+    active:scale-95
+    transition-all
+  "
           >
             Cerrar sesión
           </button>

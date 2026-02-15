@@ -19,7 +19,7 @@ function Modal({ isOpen, onClose, title, children, size = "md" }) {
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
-        {/* Overlay */}
+        {/* Overlay (podemos tokenizar luego si quieres) */}
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-200"
@@ -46,29 +46,50 @@ function Modal({ isOpen, onClose, title, children, size = "md" }) {
               <Dialog.Panel
                 className={`
                   w-full ${sizeClass}
-                  transform overflow-hidden rounded-2xl
-                  bg-slate-950/95
-                  border border-slate-700/80
-                  text-left align-middle
-                  shadow-[0_18px_60px_rgba(0,0,0,0.9)]
+                  transform overflow-hidden
+                  rounded-[var(--radius-lg)]
+                  bg-[color-mix(in_srgb,var(--panel)_92%,transparent)]
+                  border
                   transition-all
+                  text-left align-middle
+                  shadow-[0_18px_60px_rgba(0,0,0,0.65)]
                 `}
+                style={{
+                  borderWidth: "var(--border-w)",
+                  borderColor: "var(--border-rgba)",
+                }}
               >
-                {/* Borde interior sutil */}
+                {/* Borde interior sutil (tokenizado) */}
                 <div className="relative p-6">
-                  <div className="pointer-events-none absolute inset-0 rounded-2xl border border-white/5" />
+                  <div
+                    className="pointer-events-none absolute inset-0 rounded-[var(--radius-lg)]"
+                    style={{
+                      borderWidth: "1px",
+                      borderStyle: "solid",
+                      borderColor: "color-mix(in srgb, var(--border-rgba) 22%, transparent)",
+                    }}
+                  />
 
                   {/* Título */}
                   {title && (
-                    <Dialog.Title className="relative text-lg sm:text-xl font-semibold text-slate-100 mb-4">
-
+                    <Dialog.Title className="relative text-lg sm:text-xl font-semibold text-[var(--text)] mb-4">
                       {title}
                     </Dialog.Title>
                   )}
 
                   {/* Contenido */}
-                  <div className="relative text-base text-slate-200">{children}</div>
+                  <div className="relative text-base text-[var(--text)]">
+                    {children}
+                  </div>
 
+                  {/* Footer sombra glow (opcional): añade “aura” suave al modal */}
+                  <div
+                    className="pointer-events-none absolute inset-0 rounded-[var(--radius-lg)]"
+                    style={{
+                      boxShadow: "var(--glow-shadow)",
+                      opacity: 0.18,
+                    }}
+                  />
                 </div>
               </Dialog.Panel>
             </Transition.Child>

@@ -17,8 +17,16 @@ export default function ImportBudgetModal({
 }) {
   const items = preview?.items || [];
   const conflicts = preview?.conflicts || [];
-
   const hasItems = items.length > 0;
+
+  // ✅ tokens helpers
+  const border = "var(--border-rgba)";
+  const panel = "var(--panel)";
+  const text = "var(--text)";
+  const muted = "var(--muted)";
+  const primary = "var(--primary)";
+  const success = "var(--success)";
+  const warning = "var(--warning)";
 
   // Mapa de conflictos por clave "month::category_id"
   const conflictMap = useMemo(() => {
@@ -39,7 +47,6 @@ export default function ImportBudgetModal({
   const [selectedKeys, setSelectedKeys] = useState([]);
 
   // ✅ FIX: Al cambiar preview, selecciona por defecto SOLO los que NO tienen budget existente
-  // Sin loop: no dependemos de conflictMap y solo seteamos si realmente cambia.
   useEffect(() => {
     if (!items.length) {
       setSelectedKeys((prev) => (prev.length ? [] : prev));
@@ -59,7 +66,6 @@ export default function ImportBudgetModal({
       }
       return prev;
     });
-    // ⚠️ deps: usamos arrays base (items/conflicts) para evitar dependencia "conflictMap" inestable
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, conflicts]);
 
@@ -69,11 +75,8 @@ export default function ImportBudgetModal({
     selectedKeys.length > 0 && selectedKeys.length < allKeys.length;
 
   const toggleAll = () => {
-    if (allChecked) {
-      setSelectedKeys([]);
-    } else {
-      setSelectedKeys(allKeys);
-    }
+    if (allChecked) setSelectedKeys([]);
+    else setSelectedKeys(allKeys);
   };
 
   const toggleOne = (key) => {
@@ -82,100 +85,119 @@ export default function ImportBudgetModal({
     );
   };
 
-  const handleConfirm = () => {
-    onConfirm({ selectedKeys });
-  };
+  const handleConfirm = () => onConfirm({ selectedKeys });
+
+  const scopeBtnBase =
+    "px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors";
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Importar a presupuesto"
-      size="xl"
-    >
-      <div className="space-y-4 text-slate-200">
+    <Modal isOpen={isOpen} onClose={onClose} title="Importar a presupuesto" size="xl">
+      <div className="space-y-4" style={{ color: text }}>
         {/* Descripción */}
-        <div className="text-sm text-slate-300">
+        <div className="text-sm" style={{ color: "color-mix(in srgb, var(--text) 85%, transparent)" }}>
           Selecciona qué rango importar desde el escenario.
           <br />
-          <strong className="text-slate-100">Ingresos no se importan</strong>;
-          solo gastos por categoría.
+          <strong style={{ color: text }}>Ingresos no se importan</strong>; solo
+          gastos por categoría.
         </div>
 
         {/* Selector de alcance */}
         <div className="flex flex-wrap gap-2">
           <button
-            className={`
-              px-3 py-1.5 rounded-full text-xs font-semibold
-              border transition-colors
-              ${
-                scope === "current"
-                  ? "bg-slate-900 border-emerald-500 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
-                  : "bg-slate-900/40 border-slate-700 text-slate-300 hover:bg-slate-900/70"
-              }
-            `}
+            type="button"
+            className={scopeBtnBase}
             onClick={() => setScope("current")}
             disabled={loading}
-            type="button"
+            style={
+              scope === "current"
+                ? {
+                    background: `color-mix(in srgb, ${panel} 88%, transparent)`,
+                    borderColor: `color-mix(in srgb, ${success} 45%, ${border})`,
+                    color: success,
+                    boxShadow: "var(--glow-shadow)",
+                  }
+                : {
+                    background: `color-mix(in srgb, ${panel} 70%, transparent)`,
+                    borderColor: border,
+                    color: muted,
+                  }
+            }
           >
             Mes actual
           </button>
 
           <button
-            className={`
-              px-3 py-1.5 rounded-full text-xs font-semibold
-              border transition-colors
-              ${
-                scope === "all"
-                  ? "bg-slate-900 border-emerald-500 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
-                  : "bg-slate-900/40 border-slate-700 text-slate-300 hover:bg-slate-900/70"
-              }
-            `}
+            type="button"
+            className={scopeBtnBase}
             onClick={() => setScope("all")}
             disabled={loading}
-            type="button"
+            style={
+              scope === "all"
+                ? {
+                    background: `color-mix(in srgb, ${panel} 88%, transparent)`,
+                    borderColor: `color-mix(in srgb, ${success} 45%, ${border})`,
+                    color: success,
+                    boxShadow: "var(--glow-shadow)",
+                  }
+                : {
+                    background: `color-mix(in srgb, ${panel} 70%, transparent)`,
+                    borderColor: border,
+                    color: muted,
+                  }
+            }
           >
             Todo el escenario (hasta 31 dic)
           </button>
         </div>
 
         {/* Rango calculado */}
-        <div className="text-xs text-slate-400">
+        <div className="text-xs" style={{ color: muted }}>
           Rango efectivo:{" "}
-          <span className="text-slate-200">{preview?.from || "—"}</span> →{" "}
-          <span className="text-slate-200">{preview?.to || "—"}</span>
+          <span style={{ color: text, fontWeight: 600 }}>
+            {preview?.from || "—"}
+          </span>{" "}
+          →{" "}
+          <span style={{ color: text, fontWeight: 600 }}>
+            {preview?.to || "—"}
+          </span>
         </div>
 
         {/* Resumen rápido */}
         <div
-          className="
-            text-xs sm:text-sm text-slate-200
-            bg-slate-900/60 border border-slate-700
-            rounded-xl px-3 py-2
-            flex flex-wrap gap-3
-          "
+          className="rounded-xl px-3 py-2 flex flex-wrap gap-3 text-xs sm:text-sm"
+          style={{
+            background: `color-mix(in srgb, ${panel} 78%, transparent)`,
+            border: `var(--border-w) solid ${border}`,
+            color: text,
+          }}
         >
           <span>
-            Detectados: <span className="font-semibold">{items.length}</span>
+            Detectados: <span style={{ fontWeight: 700 }}>{items.length}</span>
           </span>
           <span>
             Con budget existente:{" "}
-            <span className="font-semibold">{conflicts.length}</span>
+            <span style={{ fontWeight: 700 }}>{conflicts.length}</span>
           </span>
           <span>
             Seleccionados:{" "}
-            <span className="font-semibold text-emerald-400">
+            <span style={{ fontWeight: 800, color: success }}>
               {selectedKeys.length}
             </span>
           </span>
         </div>
 
-        {/* Tabla de importación con checkboxes */}
-        <div className="border border-slate-800 rounded-lg p-2 bg-slate-950/40 max-h-60 overflow-auto">
-          {loading && <div className="text-sm text-slate-400">Cargando…</div>}
+        {/* Tabla */}
+        <div
+          className="rounded-lg p-2 max-h-60 overflow-auto"
+          style={{
+            border: `var(--border-w) solid ${border}`,
+            background: `color-mix(in srgb, ${panel} 70%, transparent)`,
+          }}
+        >
+          {loading && <div className="text-sm" style={{ color: muted }}>Cargando…</div>}
 
           {!loading && !hasItems && (
-            <div className="text-sm text-slate-400 italic">
+            <div className="text-sm italic" style={{ color: muted }}>
               No hay nada para importar con las reglas y fechas actuales.
             </div>
           )}
@@ -183,7 +205,13 @@ export default function ImportBudgetModal({
           {!loading && hasItems && (
             <table className="w-full text-xs sm:text-sm">
               <thead>
-                <tr className="text-left bg-slate-900/80 border-b border-slate-800">
+                <tr
+                  className="text-left border-b"
+                  style={{
+                    background: `color-mix(in srgb, ${panel} 86%, transparent)`,
+                    borderColor: border,
+                  }}
+                >
                   <th className="py-1 px-2 w-8">
                     <input
                       type="checkbox"
@@ -192,47 +220,70 @@ export default function ImportBudgetModal({
                         if (el) el.indeterminate = someChecked;
                       }}
                       onChange={toggleAll}
-                      className="accent-emerald-400"
+                      style={{ accentColor: primary }}
                     />
                   </th>
-                  <th className="py-1 px-2 text-slate-300">Mes</th>
-                  <th className="py-1 px-2 text-slate-300">Categoría</th>
-                  <th className="py-1 px-2 text-right text-slate-300">Monto</th>
+                  <th className="py-1 px-2" style={{ color: muted }}>
+                    Mes
+                  </th>
+                  <th className="py-1 px-2" style={{ color: muted }}>
+                    Categoría
+                  </th>
+                  <th className="py-1 px-2 text-right" style={{ color: muted }}>
+                    Monto
+                  </th>
                 </tr>
               </thead>
+
               <tbody>
                 {items.map((r, i) => {
                   const key = `${r.month}::${r.category_id}`;
                   const checked = selectedKeys.includes(key);
                   const hasConflict = conflictMap.has(key);
 
+                  const rowBg =
+                    i % 2 === 0
+                      ? `color-mix(in srgb, ${panel} 76%, transparent)`
+                      : `color-mix(in srgb, ${panel} 84%, transparent)`;
+
                   return (
                     <tr
                       key={key}
-                      className={
-                        i % 2 === 0
-                          ? "border-t border-slate-800 bg-slate-950/40"
-                          : "border-t border-slate-800 bg-slate-900/50"
-                      }
+                      style={{
+                        background: rowBg,
+                        borderTop: `1px solid color-mix(in srgb, ${border} 75%, transparent)`,
+                      }}
                     >
                       <td className="py-1 px-2 align-middle">
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleOne(key)}
-                          className="accent-emerald-400"
+                          style={{ accentColor: primary }}
                         />
                       </td>
-                      <td className="py-1 px-2 text-slate-200">{r.month}</td>
-                      <td className="py-1 px-2 text-slate-200">
+
+                      <td className="py-1 px-2" style={{ color: text }}>
+                        {r.month}
+                      </td>
+
+                      <td className="py-1 px-2" style={{ color: text }}>
                         {r.category_name || r.category_id}
                         {hasConflict && (
-                          <span className="ml-2 text-[10px] uppercase tracking-wide text-amber-300 bg-amber-900/30 px-1.5 py-0.5 rounded-full">
+                          <span
+                            className="ml-2 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-full border"
+                            style={{
+                              borderColor: `color-mix(in srgb, ${warning} 45%, ${border})`,
+                              background: `color-mix(in srgb, ${warning} 12%, transparent)`,
+                              color: warning,
+                            }}
+                          >
                             Existe
                           </span>
                         )}
                       </td>
-                      <td className="py-1 px-2 text-right text-slate-100">
+
+                      <td className="py-1 px-2 text-right" style={{ color: text, fontWeight: 600 }}>
                         {currency(r.amount)}
                       </td>
                     </tr>
@@ -245,16 +296,16 @@ export default function ImportBudgetModal({
 
         {/* Conflictos */}
         <div className="space-y-1">
-          <h4 className="font-semibold text-slate-200 text-sm">
+          <h4 className="font-semibold text-sm" style={{ color: text }}>
             Conflictos detectados
           </h4>
 
           {conflicts.length === 0 ? (
-            <div className="text-sm text-slate-400">
+            <div className="text-sm" style={{ color: muted }}>
               No hay conflictos. Se crearán nuevos presupuestos.
             </div>
           ) : (
-            <div className="text-sm text-slate-300 space-y-1">
+            <div className="text-sm space-y-1" style={{ color: "color-mix(in srgb, var(--text) 85%, transparent)" }}>
               <p>
                 Ya existen presupuestos para algunos <em>mes–categoría</em>. Por
                 defecto solo se seleccionan los que no tienen presupuesto; puedes
@@ -263,12 +314,13 @@ export default function ImportBudgetModal({
               <ul className="list-disc ml-5 mt-1 space-y-1">
                 {conflicts.map((c, i) => (
                   <li key={i}>
-                    <span className="text-slate-100">{c.month}</span> —{" "}
-                    <span className="text-slate-200">
+                    <span style={{ color: text, fontWeight: 700 }}>{c.month}</span>{" "}
+                    —{" "}
+                    <span style={{ color: text }}>
                       {c.category_name || c.category_id}
                     </span>
                     :{" "}
-                    <span className="text-slate-400">
+                    <span style={{ color: muted }}>
                       actual {currency(c.current_amount)} → nuevo{" "}
                       {currency(c.new_amount)}
                     </span>
@@ -279,40 +331,27 @@ export default function ImportBudgetModal({
           )}
         </div>
 
-        {/* Botones finales */}
+        {/* Botones */}
         <div className="flex items-center justify-between pt-2">
-          <div className="text-xs text-slate-500">
+          <div className="text-xs" style={{ color: muted }}>
             * No se importarán meses anteriores al actual.
           </div>
 
           <div className="flex gap-2">
-            <button
-              className="
-                px-3 py-2 rounded-lg text-sm font-semibold
-                border border-slate-600
-                bg-slate-900 text-slate-300
-                hover:bg-slate-800 hover:border-slate-500
-                transition-all
-              "
-              onClick={onClose}
-              type="button"
-            >
+            <button type="button" onClick={onClose} className="ff-btn ff-btn-outline">
               Cancelar
             </button>
 
             <button
-              className={`
-                px-3 py-2 rounded-lg text-sm font-semibold
-                ${
-                  loading || !hasItems || selectedKeys.length === 0
-                    ? "bg-slate-700 text-slate-400 cursor-not-allowed"
-                    : "bg-gradient-to-r from-emerald-500 to-emerald-400 text-slate-950 shadow-[0_0_16px_rgba(16,185,129,0.6)] hover:brightness-110 active:scale-95"
-                }
-                transition-all
-              `}
+              type="button"
               onClick={handleConfirm}
               disabled={loading || !hasItems || selectedKeys.length === 0}
-              type="button"
+              className="ff-btn ff-btn-primary"
+              style={
+                loading || !hasItems || selectedKeys.length === 0
+                  ? { opacity: 0.55, cursor: "not-allowed", boxShadow: "none" }
+                  : undefined
+              }
             >
               Importar seleccionados
             </button>

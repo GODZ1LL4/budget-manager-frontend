@@ -3,6 +3,7 @@ import axios from "axios";
 import Modal from "../components/Modal"; // ajusta la ruta según tu estructura
 import ImportShoppingListModal from "../components/ImportShoppingListModal";
 import ShoppingListQuickModal from "../components/ShoppingListQuickModal";
+import FFSelect from "../components/FFSelect";
 
 function Transactions({ token }) {
   const [amount, setAmount] = useState("");
@@ -418,20 +419,12 @@ function Transactions({ token }) {
   };
 
   return (
-    <div
-      className="
-        rounded-2xl p-6
-        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950
-        border border-slate-800
-        shadow-[0_18px_45px_rgba(0,0,0,0.9)]
-        text-slate-200 space-y-6
-      "
-    >
+    <div className="ff-card p-6 space-y-6">
       <div>
-        <h2 className="text-2xl font-bold mb-1 text-[#f6e652]">
-          Transacciones
+        <h2 className="ff-h2 mb-1">
+          <span className="ff-heading-accent">Transacciones</span>
         </h2>
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-[var(--muted)]">
           Registra tus ingresos y gastos, o marca como lista de compra para
           asociar artículos.
         </p>
@@ -442,26 +435,32 @@ function Transactions({ token }) {
         onSubmit={handleSubmit}
         className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3"
       >
-        <div className="col-span-full space-y-3 py-3 px-4 rounded-xl bg-slate-900/40 border border-slate-800">
+        <div
+          className="col-span-full space-y-3 py-3 px-4 rounded-xl border"
+          style={{
+            background: "color-mix(in srgb, var(--panel) 70%, transparent)",
+            borderColor: "var(--border-rgba)",
+            borderWidth: "var(--border-w)",
+            borderRadius: "var(--radius-lg)",
+          }}
+        >
           {/* Checkbox principal */}
           <label className="inline-flex items-center gap-3 cursor-pointer">
             <input
               type="checkbox"
               checked={isShoppingList}
               onChange={(e) => setIsShoppingList(e.target.checked)}
-              className="
-        h-4 w-4 rounded 
-        border-slate-600 bg-slate-900 
-        text-emerald-500 focus:ring-emerald-500/70
-      "
+              className="h-4 w-4 rounded"
+              style={{
+                accentColor: "var(--primary)",
+              }}
             />
-            <span className="text-sm font-medium text-slate-200">
+            <span className="text-sm font-medium text-[var(--text)]">
               Esta transacción es una{" "}
-              <span className="text-emerald-300">lista de compra</span>
+              <span style={{ color: "var(--primary)" }}>lista de compra</span>
             </span>
           </label>
 
-          {/* Contenido que aparece al activar */}
           {/* Lista de compra */}
           {isShoppingList && (
             <div className="pl-7 space-y-2">
@@ -469,14 +468,7 @@ function Transactions({ token }) {
                 <button
                   type="button"
                   onClick={() => setShowQuickShoppingModal(true)}
-                  className="
-          inline-flex items-center gap-2
-          px-3 py-2 text-sm font-semibold rounded-lg
-          bg-emerald-600 text-slate-100
-          shadow-[0_0_10px_rgba(16,185,129,0.4)]
-          hover:brightness-110 active:scale-95
-          transition-all
-        "
+                  className="ff-btn ff-btn-primary"
                 >
                   <span className="text-base">🛒</span>
                   <span>Crear lista de compra</span>
@@ -485,21 +477,21 @@ function Transactions({ token }) {
                 <button
                   type="button"
                   onClick={() => setShowImportShoppingModal(true)}
-                  className="
-          inline-flex items-center gap-2
-          px-3 py-2 text-sm font-semibold rounded-lg
-          bg-indigo-600 text-slate-100
-          shadow-[0_0_10px_rgba(99,102,241,0.4)]
-          hover:brightness-110 active:scale-95
-          transition-all
-        "
+                  className="ff-btn"
+                  style={{
+                    // “secundario” sin inventar un variant nuevo
+                    background:
+                      "color-mix(in srgb, var(--panel) 88%, var(--bg-1))",
+                    borderColor:
+                      "color-mix(in srgb, var(--primary) 25%, var(--border-rgba))",
+                  }}
                 >
                   <span className="text-base">📥</span>
                   <span>Importar lista de compra desde archivo</span>
                 </button>
               </div>
 
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-[var(--muted)]">
                 Puedes crear la lista desde el modal o importar desde CSV.
               </p>
             </div>
@@ -508,164 +500,116 @@ function Transactions({ token }) {
 
         {/* Monto */}
         <div className="flex flex-col space-y-1">
-          <label className="text-sm font-medium text-slate-300">Monto</label>
+          <label className="ff-label">Monto</label>
           <input
             type="number"
             step="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             readOnly={isShoppingList}
-            className={`
-      w-full rounded-lg px-3 py-2 text-sm border
-      ${
-        isShoppingList
-          ? "bg-slate-900/70 border-slate-800 text-slate-500"
-          : "bg-slate-900 border-slate-700 text-slate-100"
-      }
-      placeholder:text-slate-500
-      focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-      transition-colors
-    `}
+            className="ff-input"
+            style={
+              isShoppingList
+                ? {
+                    opacity: 0.65,
+                    cursor: "not-allowed",
+                    background:
+                      "color-mix(in srgb, var(--control-bg) 70%, transparent)",
+                  }
+                : undefined
+            }
             required
           />
         </div>
 
-        {/* Tipo */}
+        {/* Tipo (FFSelect) */}
         <div className="flex flex-col space-y-1">
-          <label className="text-sm font-medium text-slate-300">Tipo</label>
-          <select
+          <label className="ff-label">Tipo</label>
+          <FFSelect
             value={type}
-            onChange={(e) => setType(e.target.value)}
-            className="
-              w-full rounded-lg px-3 py-2 text-sm
-              bg-slate-900 border border-slate-700
-              text-slate-100
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            "
-          >
-            <option value="expense">Gasto</option>
-            <option value="income">Ingreso</option>
-          </select>
+            onChange={(v) => setType(v)}
+            options={[
+              { value: "expense", label: "Gasto" },
+              { value: "income", label: "Ingreso" },
+            ]}
+            placeholder="Selecciona..."
+            className=""
+          />
         </div>
 
         {/* Fecha */}
         <div className="flex flex-col space-y-1">
-          <label className="text-sm font-medium text-slate-300">Fecha</label>
+          <label className="ff-label">Fecha</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="
-              w-full rounded-lg px-3 py-2 text-sm
-              bg-slate-900 border border-slate-700
-              text-slate-100
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            "
+            className="ff-input"
             required
           />
         </div>
 
-        {/* Cuenta */}
+        {/* Cuenta (FFSelect) */}
         <div className="flex flex-col space-y-1">
-          <label className="text-sm font-medium text-slate-300">Cuenta</label>
-          <select
+          <label className="ff-label">Cuenta</label>
+          <FFSelect
             value={accountId}
-            onChange={(e) => setAccountId(e.target.value)}
-            className="
-              w-full rounded-lg px-3 py-2 text-sm
-              bg-slate-900 border border-slate-700
-              text-slate-100
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            "
-            required
-          >
-            <option value="">Selecciona una cuenta</option>
-            {accounts.map((acc) => (
-              <option key={acc.id} value={acc.id}>
-                {acc.name}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => setAccountId(v)}
+            options={accounts}
+            placeholder="Selecciona una cuenta"
+            getOptionValue={(acc) => acc.id}
+            getOptionLabel={(acc) => acc.name}
+          />
         </div>
 
-        {/* Categoría */}
+        {/* Categoría (FFSelect) */}
         <div className="flex flex-col space-y-1">
-          <label className="text-sm font-medium text-slate-300">
-            Categoría
-          </label>
-          <select
+          <label className="ff-label">Categoría</label>
+          <FFSelect
             value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="
-              w-full rounded-lg px-3 py-2 text-sm
-              bg-slate-900 border border-slate-700
-              text-slate-100
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            "
-            required
-          >
-            <option value="">Selecciona una categoría</option>
-            {categories
-              .filter((c) => c.type === type)
-              .map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-          </select>
+            onChange={(v) => setCategoryId(v)}
+            options={categories.filter((c) => c.type === type)}
+            placeholder="Selecciona una categoría"
+            getOptionValue={(cat) => cat.id}
+            getOptionLabel={(cat) => cat.name}
+          />
         </div>
 
-        {/* Recurrencia */}
+        {/* Recurrencia (FFSelect) */}
         <div className="flex flex-col space-y-1">
-          <label className="text-sm font-medium text-slate-300">Repetir</label>
-          <select
+          <label className="ff-label">Repetir</label>
+          <FFSelect
             value={recurrence}
-            onChange={(e) => setRecurrence(e.target.value)}
-            className="
-              w-full rounded-lg px-3 py-2 text-sm
-              bg-slate-900 border border-slate-700
-              text-slate-100
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            "
-          >
-            <option value="">Una vez</option>
-            <option value="monthly">Mensual</option>
-            <option value="biweekly">Quincenal</option>
-            <option value="weekly">Semanal</option>
-          </select>
+            onChange={(v) => {
+              setRecurrence(v);
+              if (!v) setRecurrenceEndDate("");
+            }}
+            options={[
+              { value: "", label: "Una vez" },
+              { value: "monthly", label: "Mensual" },
+              { value: "biweekly", label: "Quincenal" },
+              { value: "weekly", label: "Semanal" },
+            ]}
+            clearable={false}
+          />
         </div>
 
         {recurrence && (
           <div className="flex flex-col space-y-1">
-            <label className="text-sm font-medium text-slate-300">
-              Repetir hasta
-            </label>
+            <label className="ff-label">Repetir hasta</label>
             <input
               type="date"
               value={recurrenceEndDate}
               onChange={(e) => setRecurrenceEndDate(e.target.value)}
-              className="
-                w-full rounded-lg px-3 py-2 text-sm
-                bg-slate-900 border border-slate-700
-                text-slate-100
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                transition-colors
-              "
+              className="ff-input"
             />
           </div>
         )}
 
-        {/* Descuento (solo si es lista de compra) */}
+        {/* Descuento */}
         {isShoppingList && (
           <div className="flex flex-col space-y-1">
-            <label className="text-sm font-medium text-slate-300">
-              Descuento (%)
-            </label>
+            <label className="ff-label">Descuento (%)</label>
             <input
               type="number"
               value={discount}
@@ -673,197 +617,116 @@ function Transactions({ token }) {
               max="100"
               step="0.01"
               onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-              className="
-                      w-full rounded-lg px-3 py-2 text-sm
-                      bg-slate-900 border border-slate-700
-                      text-slate-100 placeholder:text-slate-500
-                      focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                      transition-colors
-                    "
+              className="ff-input"
               placeholder="Ej. 5"
             />
           </div>
         )}
+
         {/* Descripción */}
         <div className="flex flex-col md:col-span-3 space-y-1">
-          <label className="text-sm font-medium text-slate-300">
-            Descripción
-          </label>
+          <label className="ff-label">Descripción</label>
           <input
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Ejemplo: compra supermercado"
-            className="
-              w-full rounded-lg px-3 py-2 text-sm
-              bg-slate-900 border border-slate-700
-              text-slate-100 placeholder:text-slate-500
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition-colors
-            "
+            className="ff-input"
           />
         </div>
 
         <div className="md:col-span-3 mt-2">
-          <button
-            type="submit"
-            className="
-              w-full
-              inline-flex items-center justify-center
-              px-4 py-2.5 text-sm font-semibold rounded-lg
-              bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
-              text-slate-950
-              shadow-[0_0_18px_rgba(16,185,129,0.7)]
-              hover:brightness-110 active:scale-95
-              transition-all
-            "
-          >
+          <button type="submit" className="ff-btn ff-btn-primary w-full">
             Agregar transacción
           </button>
         </div>
       </form>
 
-      {/* Filtros de transacciones */}
-      <div className="mb-4 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-        <h3 className="text-sm font-semibold text-slate-200 mb-3">Filtros</h3>
+      {/* Filtros */}
+      <div className="ff-surface p-4">
+        <h3 className="text-sm font-semibold text-[var(--text)] mb-3">
+          Filtros
+        </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Descripción */}
           <div className="flex flex-col space-y-1">
-            <label className="text-[13px] font-medium text-slate-400">
-              Descripción
-            </label>
+            <label className="ff-label">Descripción</label>
             <input
               type="text"
               value={filterDescription}
               onChange={(e) => setFilterDescription(e.target.value)}
-              className="
-                w-full rounded-lg px-3 py-2 text-sm
-                bg-slate-900 border border-slate-700
-                text-slate-100 placeholder:text-slate-500
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                transition-colors
-              "
+              className="ff-input"
               placeholder="Buscar por descripción"
             />
           </div>
 
           {/* Tipo */}
           <div className="flex flex-col space-y-1">
-            <label className="text-[13px] font-medium text-slate-400">
-              Tipo
-            </label>
-            <select
+            <label className="ff-label">Tipo</label>
+            <FFSelect
               value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="
-                w-full rounded-lg px-3 py-2 text-sm
-                bg-slate-900 border border-slate-700
-                text-slate-100
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                transition-colors
-              "
-            >
-              <option value="all">Todos</option>
-              <option value="expense">Gasto</option>
-              <option value="income">Ingreso</option>
-              <option value="transfer">Transferencia</option>
-            </select>
+              onChange={(v) => setFilterType(v)}
+              options={[
+                { value: "all", label: "Todos" },
+                { value: "expense", label: "Gasto" },
+                { value: "income", label: "Ingreso" },
+                { value: "transfer", label: "Transferencia" },
+              ]}
+              clearable={false}
+            />
           </div>
 
           {/* Categoría */}
           <div className="flex flex-col space-y-1">
-            <label className="text-[13px] font-medium text-slate-400">
-              Categoría
-            </label>
-            <select
+            <label className="ff-label">Categoría</label>
+            <FFSelect
               value={filterCategoryId}
-              onChange={(e) => setFilterCategoryId(e.target.value)}
-              className="
-                w-full rounded-lg px-3 py-2 text-sm
-                bg-slate-900 border border-slate-700
-                text-slate-100
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                transition-colors
-              "
+              onChange={(v) => setFilterCategoryId(v)}
+              options={categories.filter((cat) => {
+                if (filterType === "all") return true;
+                if (filterType === "transfer") return false;
+                return cat.type === filterType;
+              })}
+              placeholder="Todas"
+              getOptionValue={(cat) => cat.id}
+              getOptionLabel={(cat) => cat.name}
               disabled={filterType === "transfer"}
-            >
-              <option value="">Todas</option>
-
-              {categories
-                .filter((cat) => {
-                  if (filterType === "all") return true;
-                  if (filterType === "transfer") return false;
-                  return cat.type === filterType;
-                })
-                .map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-            </select>
+            />
           </div>
 
           {/* Cuenta */}
           <div className="flex flex-col space-y-1">
-            <label className="text-[13px] font-medium text-slate-400">
-              Cuenta
-            </label>
-            <select
+            <label className="ff-label">Cuenta</label>
+            <FFSelect
               value={filterAccountId}
-              onChange={(e) => setFilterAccountId(e.target.value)}
-              className="
-                w-full rounded-lg px-3 py-2 text-sm
-                bg-slate-900 border border-slate-700
-                text-slate-100
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                transition-colors
-              "
-            >
-              <option value="">Todas</option>
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.name}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setFilterAccountId(v)}
+              options={accounts}
+              placeholder="Todas"
+              getOptionValue={(acc) => acc.id}
+              getOptionLabel={(acc) => acc.name}
+            />
           </div>
 
-          {/* Fecha desde */}
+          {/* Desde */}
           <div className="flex flex-col space-y-1">
-            <label className="text-[13px] font-medium text-slate-400">
-              Desde
-            </label>
+            <label className="ff-label">Desde</label>
             <input
               type="date"
               value={filterDateFrom}
               onChange={(e) => setFilterDateFrom(e.target.value)}
-              className="
-                w-full rounded-lg px-3 py-2 text-sm
-                bg-slate-900 border border-slate-700
-                text-slate-100
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                transition-colors
-              "
+              className="ff-input"
             />
           </div>
 
-          {/* Fecha hasta */}
+          {/* Hasta */}
           <div className="flex flex-col space-y-1">
-            <label className="text-[13px] font-medium text-slate-400">
-              Hasta
-            </label>
+            <label className="ff-label">Hasta</label>
             <input
               type="date"
               value={filterDateTo}
               onChange={(e) => setFilterDateTo(e.target.value)}
-              className="
-                w-full rounded-lg px-3 py-2 text-sm
-                bg-slate-900 border border-slate-700
-                text-slate-100
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                transition-colors
-              "
+              className="ff-input"
             />
           </div>
         </div>
@@ -872,14 +735,7 @@ function Transactions({ token }) {
           <button
             type="button"
             onClick={() => fetchTransactions()}
-            className="
-              w-full sm:w-auto
-              inline-flex items-center justify-center
-              px-4 py-2 text-sm font-semibold rounded-lg
-              bg-blue-600 text-white
-              hover:brightness-110 active:scale-95
-              transition-all
-            "
+            className="ff-btn ff-btn-primary w-full sm:w-auto"
           >
             Buscar
           </button>
@@ -911,30 +767,15 @@ function Transactions({ token }) {
                 dateTo: newDateTo,
               });
             }}
-            className="
-              w-full sm:w-auto
-              inline-flex items-center justify-center
-              px-4 py-2 text-sm font-semibold rounded-lg
-              border border-slate-600
-              bg-slate-900 text-slate-200
-              hover:bg-slate-800 hover:border-slate-500
-              active:scale-95
-              transition-all
-            "
+            className="ff-btn ff-btn-outline w-full sm:w-auto"
           >
             Limpiar filtros
           </button>
+
           <button
             type="button"
             onClick={handleExport}
-            className="
-    w-full sm:w-auto
-    inline-flex items-center justify-center
-    px-4 py-2 text-sm font-semibold rounded-lg
-    bg-emerald-600 text-white
-    hover:brightness-110 active:scale-95
-    transition-all
-  "
+            className="ff-btn w-full sm:w-auto"
           >
             Exportar Excel
           </button>
@@ -943,35 +784,29 @@ function Transactions({ token }) {
 
       {/* Historial */}
       <div>
-        <h3 className="text-lg font-semibold text-slate-100 mb-3">
+        <h3 className="text-lg font-semibold text-[var(--text)] mb-3">
           Historial reciente
         </h3>
+
         <ul className="space-y-3">
           {transactions.map((tx) => {
             const isShoppingListTx = tx.is_shopping_list === true;
+            const amountColor =
+              tx.type === "income"
+                ? "var(--success)"
+                : tx.type === "expense"
+                ? "var(--danger)"
+                : "var(--text)";
 
             return (
               <li
                 key={tx.id}
-                className="
-                  p-4 rounded-2xl
-                  border border-slate-800
-                  bg-slate-950/70
-                  shadow-[0_10px_30px_rgba(0,0,0,0.7)]
-                  flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2
-                "
+                className="ff-surface p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2"
+                style={{ boxShadow: "var(--tx-item-shadow)" }}
               >
                 <div>
-                  <p className="text-sm font-semibold text-slate-100 flex flex-wrap items-center gap-2">
-                    <span
-                      className={
-                        tx.type === "income"
-                          ? "text-emerald-400"
-                          : tx.type === "expense"
-                          ? "text-rose-400"
-                          : "text-slate-200"
-                      }
-                    >
+                  <p className="text-sm font-semibold text-[var(--text)] flex flex-wrap items-center gap-2">
+                    <span style={{ color: amountColor }}>
                       {tx.type === "income"
                         ? "+"
                         : tx.type === "expense"
@@ -980,7 +815,7 @@ function Transactions({ token }) {
                       {Number(tx.amount).toFixed(2)} DOP
                     </span>
 
-                    <span className="text-slate-200">
+                    <span className="text-[var(--text)]">
                       —{" "}
                       {tx.type === "transfer"
                         ? "Transferencia"
@@ -991,13 +826,14 @@ function Transactions({ token }) {
                       <button
                         type="button"
                         onClick={() => openDetail(tx)}
-                        className="
-                          inline-flex items-center
-                          text-[10px] uppercase tracking-wide
-                          bg-indigo-950/70 text-indigo-200
-                          px-2 py-0.5 rounded-full
-                          hover:bg-indigo-900 border border-indigo-800
-                        "
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wide border"
+                        style={{
+                          borderColor:
+                            "color-mix(in srgb, var(--primary) 35%, var(--border-rgba))",
+                          background:
+                            "color-mix(in srgb, var(--primary) 12%, transparent)",
+                          color: "var(--text)",
+                        }}
                         title="Ver detalle de la lista de compra"
                       >
                         <span className="mr-1">🛒</span>
@@ -1006,7 +842,7 @@ function Transactions({ token }) {
                     )}
                   </p>
 
-                  <p className="text-sm  text-slate-400 mt-1">
+                  <p className="text-sm text-[var(--muted)] mt-1">
                     {tx.description || "Sin descripción"} —{" "}
                     {tx.type === "transfer"
                       ? `${tx.account_from?.name || "¿?"} → ${
@@ -1021,11 +857,8 @@ function Transactions({ token }) {
                   {tx.type !== "transfer" && (
                     <button
                       onClick={() => openEdit(tx)}
-                      className="
-      text-sm font-semibold
-      text-blue-400 hover:text-blue-300
-      hover:underline transition-colors
-    "
+                      className="text-sm font-semibold"
+                      style={{ color: "var(--link)" }}
                     >
                       Editar
                     </button>
@@ -1033,11 +866,8 @@ function Transactions({ token }) {
 
                   <button
                     onClick={() => handleDelete(tx.id)}
-                    className="
-        text-sm font-semibold
-        text-rose-400 hover:text-rose-300
-        hover:underline transition-colors
-      "
+                    className="text-sm font-semibold"
+                    style={{ color: "var(--danger)" }}
                   >
                     Eliminar
                   </button>
@@ -1060,20 +890,32 @@ function Transactions({ token }) {
         size="lg"
       >
         {!selectedTx ? (
-          <p className="text-sm text-slate-300">Cargando...</p>
+          <p className="text-sm text-[var(--muted)]">Cargando...</p>
         ) : (
-          <div className="space-y-6 text-slate-200">
-            {/* === RESUMEN SUPERIOR === */}
+          <div className="space-y-6" style={{ color: "var(--text)" }}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <p
+                  className="text-[11px] font-semibold uppercase tracking-[0.18em]"
+                  style={{
+                    color: "color-mix(in srgb, var(--muted) 75%, transparent)",
+                  }}
+                >
                   Resumen de la transacción
                 </p>
-                <p className="mt-1 text-2xl font-extrabold text-emerald-300 leading-tight">
+
+                <p
+                  className="mt-1 text-2xl font-extrabold leading-tight"
+                  style={{ color: "var(--primary)" }}
+                >
                   {Number(selectedTx.amount).toFixed(2)} DOP
                 </p>
+
                 {selectedTx.discount_percent > 0 && (
-                  <p className="text-sm  text-emerald-300 mt-1 flex items-center gap-1">
+                  <p
+                    className="text-sm mt-1 flex items-center gap-1"
+                    style={{ color: "var(--primary)" }}
+                  >
                     <span className="text-[11px]">🔖</span>
                     Descuento aplicado:{" "}
                     <span className="font-semibold">
@@ -1081,39 +923,64 @@ function Transactions({ token }) {
                     </span>
                   </p>
                 )}
-                <p className="mt-2 text-sm  text-slate-400">
+
+                <p className="mt-2 text-sm text-[var(--muted)]">
                   {selectedTx.description || "Sin descripción"}
                 </p>
               </div>
 
               <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-[11px] text-slate-200">
-                  <span className="text-[13px]">📅</span>
-                  <span className="font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Fecha
+                {[
+                  { icon: "📅", label: "Fecha", value: selectedTx.date },
+                  {
+                    icon: "💼",
+                    label: "Cuenta",
+                    value: selectedTx.account?.name || "Sin cuenta",
+                  },
+                ].map((pill) => (
+                  <span
+                    key={pill.label}
+                    className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px]"
+                    style={{
+                      borderColor: "var(--border-rgba)",
+                      background:
+                        "color-mix(in srgb, var(--panel) 75%, transparent)",
+                      color: "var(--text)",
+                    }}
+                  >
+                    <span className="text-[13px]">{pill.icon}</span>
+                    <span
+                      className="font-semibold uppercase tracking-[0.16em]"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      {pill.label}
+                    </span>
+                    <span className="text-sm">{pill.value}</span>
                   </span>
-                  <span className="text-sm  text-slate-100">
-                    {selectedTx.date}
-                  </span>
-                </span>
-
-                <span className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/80 px-3 py-1 text-[11px] text-slate-200">
-                  <span className="text-[13px]">💼</span>
-                  <span className="font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Cuenta
-                  </span>
-                  <span className="text-sm  text-slate-100">
-                    {selectedTx.account?.name || "Sin cuenta"}
-                  </span>
-                </span>
+                ))}
 
                 {selectedTx.categories && (
-                  <span className="inline-flex items-center gap-2 rounded-full border border-fuchsia-600/60 bg-gradient-to-r from-fuchsia-900/70 via-purple-900/70 to-indigo-900/70 px-3 py-1 text-[11px] text-fuchsia-100">
+                  <span
+                    className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px]"
+                    style={{
+                      borderColor:
+                        "color-mix(in srgb, var(--primary) 45%, var(--border-rgba))",
+                      background:
+                        "color-mix(in srgb, var(--primary) 12%, transparent)",
+                      color: "var(--text)",
+                    }}
+                  >
                     <span className="text-[13px]">🏷️</span>
-                    <span className="font-semibold uppercase tracking-[0.16em] text-fuchsia-200">
+                    <span
+                      className="font-semibold uppercase tracking-[0.16em]"
+                      style={{
+                        color:
+                          "color-mix(in srgb, var(--text) 85%, transparent)",
+                      }}
+                    >
                       Categoría
                     </span>
-                    <span className="text-sm  text-fuchsia-50">
+                    <span className="text-sm">
                       {selectedTx.categories.name}
                     </span>
                   </span>
@@ -1121,17 +988,23 @@ function Transactions({ token }) {
               </div>
             </div>
 
-            <hr className="border-slate-800" />
+            <hr
+              style={{
+                borderColor:
+                  "color-mix(in srgb, var(--border-rgba) 70%, transparent)",
+              }}
+            />
 
-            {/* === TABLA DE ARTÍCULOS === */}
+            {/* Tabla de artículos */}
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-[var(--text)] flex items-center gap-2">
                   <span className="text-[15px]">🛒</span>
                   <span>Artículos comprados</span>
                 </h4>
+
                 {selectedTxItems.length > 0 && (
-                  <span className="text-[11px] text-slate-400">
+                  <span className="text-[11px] text-[var(--muted)]">
                     {selectedTxItems.length} ítem
                     {selectedTxItems.length > 1 ? "s" : ""}
                   </span>
@@ -1139,74 +1012,75 @@ function Transactions({ token }) {
               </div>
 
               {isLoadingItems && (
-                <p className="text-sm  text-slate-400 italic">
+                <p className="text-sm text-[var(--muted)] italic">
                   Cargando artículos...
                 </p>
               )}
-
               {!isLoadingItems && selectedTxItems.length === 0 && (
-                <p className="text-sm  text-slate-400 italic">
+                <p className="text-sm text-[var(--muted)] italic">
                   No hay artículos asociados a esta transacción.
                 </p>
               )}
 
               {!isLoadingItems && selectedTxItems.length > 0 && (
-                <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/60">
-                  <table className="min-w-full text-sm ">
-                    <thead className="bg-slate-900/80">
-                      <tr className="border-b border-slate-800">
-                        <th className="py-2 pl-4 pr-2 text-left font-semibold text-slate-300">
-                          #
-                        </th>
-                        <th className="py-2 px-2 text-left font-semibold text-slate-300">
-                          Artículo
-                        </th>
-                        <th className="py-2 px-2 text-center font-semibold text-slate-300">
+                <div className="overflow-x-auto">
+                  <table className="ff-table text-sm">
+                    <thead>
+                      <tr>
+                        <th className="ff-th">#</th>
+                        <th className="ff-th">Artículo</th>
+                        <th className="ff-th" style={{ textAlign: "center" }}>
                           Cantidad
                         </th>
-                        <th className="py-2 px-2 text-right font-semibold text-slate-300">
+                        <th className="ff-th" style={{ textAlign: "right" }}>
                           Precio unit.
                         </th>
-                        <th className="py-2 px-2 text-center font-semibold text-slate-300">
+                        <th className="ff-th" style={{ textAlign: "center" }}>
                           ITBIS
                         </th>
-                        <th className="py-2 pr-4 pl-2 text-right font-semibold text-slate-300">
+                        <th className="ff-th" style={{ textAlign: "right" }}>
                           Total línea
                         </th>
                       </tr>
                     </thead>
+
                     <tbody>
                       {selectedTxItems.map((item, idx) => {
                         const itemName =
                           item.items?.name || "Artículo sin nombre";
-
                         return (
-                          <tr
-                            key={item.id}
-                            className={
-                              idx % 2 === 0
-                                ? "bg-slate-950/40"
-                                : "bg-slate-900/50"
-                            }
-                          >
-                            <td className="py-2 pl-4 pr-2 text-slate-400">
+                          <tr key={item.id} className="ff-tr">
+                            <td
+                              className="ff-td"
+                              style={{ color: "var(--muted)" }}
+                            >
                               {idx + 1}
                             </td>
-                            <td className="py-2 px-2 text-slate-100">
-                              {itemName}
-                            </td>
-                            <td className="py-2 px-2 text-center text-slate-200">
+                            <td className="ff-td">{itemName}</td>
+                            <td
+                              className="ff-td"
+                              style={{ textAlign: "center" }}
+                            >
                               {item.quantity}
                             </td>
-                            <td className="py-2 px-2 text-right text-slate-200">
+                            <td
+                              className="ff-td"
+                              style={{ textAlign: "right" }}
+                            >
                               {Number(item.unit_price_net).toFixed(2)} DOP
                             </td>
-                            <td className="py-2 px-2 text-center text-slate-200">
+                            <td
+                              className="ff-td"
+                              style={{ textAlign: "center" }}
+                            >
                               {item.is_exempt_used
                                 ? "Exento"
                                 : `${item.tax_rate_used || 0}%`}
                             </td>
-                            <td className="py-2 pr-4 pl-2 text-right font-semibold text-slate-100">
+                            <td
+                              className="ff-td"
+                              style={{ textAlign: "right", fontWeight: 700 }}
+                            >
                               {Number(item.line_total_final).toFixed(2)} DOP
                             </td>
                           </tr>
@@ -1218,19 +1092,11 @@ function Transactions({ token }) {
               )}
             </div>
 
-            {/* === FOOTER === */}
             <div className="flex justify-end pt-2">
               <button
                 type="button"
                 onClick={closeDetail}
-                className="
-                  px-4 py-2 text-sm font-semibold rounded-lg
-                  border border-slate-600
-                  bg-slate-900 text-slate-100
-                  hover:bg-slate-800 hover:border-slate-500
-                  active:scale-95
-                  transition-all
-                "
+                className="ff-btn ff-btn-outline"
               >
                 Cerrar
               </button>
@@ -1253,8 +1119,6 @@ function Transactions({ token }) {
           discount,
         }}
         onImported={async (data) => {
-          // data.transaction tiene la transacción creada
-          // refrescamos la lista de transacciones y reseteamos el form
           await fetchTransactions();
           setAmount("");
           setDescription("");
@@ -1265,7 +1129,7 @@ function Transactions({ token }) {
         }}
       />
 
-      {/* Modal de edición de transacción */}
+      {/* Modal de edición */}
       <Modal
         isOpen={isEditOpen}
         onClose={closeEdit}
@@ -1277,11 +1141,24 @@ function Transactions({ token }) {
         size="md"
       >
         {!editingTx ? (
-          <p className="text-sm text-slate-300">Cargando...</p>
+          <p className="text-sm text-[var(--muted)]">Cargando...</p>
         ) : (
-          <form onSubmit={handleEditSubmit} className="space-y-4 text-sm">
+          <form
+            onSubmit={handleEditSubmit}
+            className="space-y-4 text-sm"
+            style={{ color: "var(--text)" }}
+          >
             {editingTx.is_shopping_list && (
-              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+              <div
+                className="rounded-lg border px-3 py-2 text-xs"
+                style={{
+                  borderColor:
+                    "color-mix(in srgb, var(--warning) 45%, transparent)",
+                  background:
+                    "color-mix(in srgb, var(--warning) 12%, transparent)",
+                  color: "color-mix(in srgb, var(--warning) 85%, var(--text))",
+                }}
+              >
                 🛒 Esta transacción es una <strong>lista de compra</strong>. El
                 monto total proviene del detalle de artículos y{" "}
                 <strong>no se puede editar aquí</strong>.
@@ -1290,183 +1167,101 @@ function Transactions({ token }) {
 
             {/* Monto */}
             <div className="flex flex-col space-y-1">
-              <label className="text-sm font-medium text-slate-300">
-                Monto
-              </label>
+              <label className="ff-label">Monto</label>
               <input
                 type="number"
                 step="0.01"
                 value={editForm.amount}
                 onChange={(e) => handleEditChange("amount", e.target.value)}
                 readOnly={editingTx.is_shopping_list === true}
-                className={`
-            w-full rounded-lg px-3 py-2 text-sm border
-            ${
-              editingTx.is_shopping_list
-                ? "bg-slate-900/70 border-slate-800 text-slate-500 cursor-not-allowed"
-                : "bg-slate-900 border-slate-700 text-slate-100"
-            }
-            placeholder:text-slate-500
-            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-            transition-colors
-          `}
+                className="ff-input"
+                style={
+                  editingTx.is_shopping_list
+                    ? { opacity: 0.65, cursor: "not-allowed" }
+                    : undefined
+                }
               />
             </div>
 
-            {/* Tipo */}
+            {/* Tipo (FFSelect) */}
             <div className="flex flex-col space-y-1">
-              <label className="text-sm font-medium text-slate-300">Tipo</label>
-              <select
+              <label className="ff-label">Tipo</label>
+              <FFSelect
                 value={editForm.type}
-                onChange={(e) => handleEditChange("type", e.target.value)}
+                onChange={(v) => handleEditChange("type", v)}
                 disabled={editingTx.is_shopping_list === true}
-                className={`
-            w-full rounded-lg px-3 py-2 text-sm
-            ${
-              editingTx.is_shopping_list
-                ? "bg-slate-900/70 border-slate-800 text-slate-500 cursor-not-allowed"
-                : "bg-slate-900 border-slate-700 text-slate-100"
-            }
-            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-            transition-colors
-          `}
-              >
-                {/* 👇 Solo gasto / ingreso, sin transferencia */}
-                <option value="expense">Gasto</option>
-                <option value="income">Ingreso</option>
-              </select>
+                options={[
+                  { value: "expense", label: "Gasto" },
+                  { value: "income", label: "Ingreso" },
+                ]}
+                clearable={false}
+              />
             </div>
 
             {/* Fecha */}
             <div className="flex flex-col space-y-1">
-              <label className="text-sm font-medium text-slate-300">
-                Fecha
-              </label>
+              <label className="ff-label">Fecha</label>
               <input
                 type="date"
                 value={editForm.date}
                 onChange={(e) => handleEditChange("date", e.target.value)}
-                className="
-            w-full rounded-lg px-3 py-2 text-sm
-            bg-slate-900 border border-slate-700
-            text-slate-100
-            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-            transition-colors
-          "
+                className="ff-input"
                 required
               />
             </div>
 
-            {/* Cuenta */}
+            {/* Cuenta (FFSelect) */}
             <div className="flex flex-col space-y-1">
-              <label className="text-sm font-medium text-slate-300">
-                Cuenta
-              </label>
-              <select
+              <label className="ff-label">Cuenta</label>
+              <FFSelect
                 value={editForm.account_id}
-                onChange={(e) => handleEditChange("account_id", e.target.value)}
-                className="
-            w-full rounded-lg px-3 py-2 text-sm
-            bg-slate-900 border border-slate-700
-            text-slate-100
-            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-            transition-colors
-          "
-                required
-              >
-                <option value="">Selecciona una cuenta</option>
-                {accounts.map((acc) => (
-                  <option key={acc.id} value={acc.id}>
-                    {acc.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => handleEditChange("account_id", v)}
+                options={accounts}
+                placeholder="Selecciona una cuenta"
+                getOptionValue={(acc) => acc.id}
+                getOptionLabel={(acc) => acc.name}
+              />
             </div>
 
-            {/* Categoría */}
+            {/* Categoría (FFSelect) */}
             <div className="flex flex-col space-y-1">
-              <label className="text-sm font-medium text-slate-300">
-                Categoría
-              </label>
-              <select
+              <label className="ff-label">Categoría</label>
+              <FFSelect
                 value={editForm.category_id}
-                onChange={(e) =>
-                  handleEditChange("category_id", e.target.value)
-                }
-                className="
-            w-full rounded-lg px-3 py-2 text-sm
-            bg-slate-900 border border-slate-700
-            text-slate-100
-            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-            transition-colors
-          "
-                required
-              >
-                <option value="">Selecciona una categoría</option>
-                {categories
-                  .filter((cat) => {
-                    // 👇 Ahora filtra según el tipo seleccionado en el modal
-                    if (!editForm.type) return true;
-                    return cat.type === editForm.type;
-                  })
-                  .map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-              </select>
+                onChange={(v) => handleEditChange("category_id", v)}
+                options={categories.filter((cat) => {
+                  if (!editForm.type) return true;
+                  return cat.type === editForm.type;
+                })}
+                placeholder="Selecciona una categoría"
+                getOptionValue={(cat) => cat.id}
+                getOptionLabel={(cat) => cat.name}
+              />
             </div>
 
             {/* Descripción */}
             <div className="flex flex-col space-y-1">
-              <label className="text-sm font-medium text-slate-300">
-                Descripción
-              </label>
+              <label className="ff-label">Descripción</label>
               <input
                 type="text"
                 value={editForm.description}
                 onChange={(e) =>
                   handleEditChange("description", e.target.value)
                 }
-                className="
-            w-full rounded-lg px-3 py-2 text-sm
-            bg-slate-900 border border-slate-700
-            text-slate-100 placeholder:text-slate-500
-            focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-            transition-colors
-          "
+                className="ff-input"
                 placeholder="Ejemplo: compra supermercado"
               />
             </div>
 
-            {/* Botones */}
             <div className="flex justify-end gap-2 pt-2">
-              {/* ✅ Guardar primero */}
-              <button
-                type="submit"
-                className="
-            px-4 py-2 text-sm font-semibold rounded-lg
-            bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
-            text-slate-950
-            shadow-[0_0_14px_rgba(16,185,129,0.7)]
-            hover:brightness-110 active:scale-95
-            transition-all
-          "
-              >
+              <button type="submit" className="ff-btn ff-btn-primary">
                 Guardar cambios
               </button>
 
               <button
                 type="button"
                 onClick={closeEdit}
-                className="
-            px-4 py-2 text-sm font-semibold rounded-lg
-            border border-slate-600
-            bg-slate-900 text-slate-100
-            hover:bg-slate-800 hover:border-slate-500
-            active:scale-95
-            transition-all
-          "
+                className="ff-btn ff-btn-outline"
               >
                 Cancelar
               </button>
@@ -1474,6 +1269,7 @@ function Transactions({ token }) {
           </form>
         )}
       </Modal>
+
       <ShoppingListQuickModal
         isOpen={showQuickShoppingModal}
         onClose={() => setShowQuickShoppingModal(false)}

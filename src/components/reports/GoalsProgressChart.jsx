@@ -35,45 +35,54 @@ function GoalsProgressChart({ token }) {
       })
       .catch((err) => {
         console.error("Error al cargar progreso de metas:", err);
-        setError(
-          err.response?.data?.error || "Error al cargar progreso de metas"
-        );
+        setError(err.response?.data?.error || "Error al cargar progreso de metas");
       })
       .finally(() => setLoading(false));
   }, [token, api]);
 
   return (
     <div
-      className="
-        rounded-2xl p-6
-        bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950
-        border border-slate-800
-        shadow-[0_16px_40px_rgba(0,0,0,0.85)]
-        space-y-4
-      "
+      className="rounded-2xl p-6 space-y-4 border"
+      style={{
+        borderColor: "var(--border-rgba)",
+        background:
+          "linear-gradient(to bottom right, var(--bg-1), color-mix(in srgb, var(--panel) 45%, transparent), var(--bg-1))",
+        boxShadow: "0 16px 40px rgba(0,0,0,0.55)",
+      }}
     >
       <div>
-        <h3 className="text-lg font-semibold text-slate-100">
+        <h3 className="text-lg font-semibold text-[var(--text)]">
           Progreso de metas de ahorro
         </h3>
-        <p className="text-sm text-slate-400 mt-1">
+        <p className="text-sm mt-1 text-[color-mix(in srgb,var(--text)_70%,transparent)]">
           Visualiza cuánto has avanzado en cada una de tus metas activas.
         </p>
       </div>
 
       {/* Estados */}
       {loading && (
-        <p className="text-sm text-slate-400 italic">
+        <p className="text-sm italic text-[color-mix(in srgb,var(--text)_70%,transparent)]">
           Cargando progreso de metas…
         </p>
       )}
 
       {!loading && error && (
-        <p className="text-sm text-rose-400">{error}</p>
+        <div
+          className="text-sm rounded-xl p-3 border"
+          style={{
+            borderColor: "color-mix(in srgb, var(--danger) 30%, transparent)",
+            background: "color-mix(in srgb, var(--danger) 12%, transparent)",
+            color: "color-mix(in srgb, var(--danger) 85%, var(--text))",
+          }}
+        >
+          {error}
+        </div>
       )}
 
       {!loading && !error && goals.length === 0 && (
-        <p className="text-sm text-slate-500 italic">No hay metas definidas.</p>
+        <p className="text-sm italic text-[color-mix(in srgb,var(--text)_60%,transparent)]">
+          No hay metas definidas.
+        </p>
       )}
 
       {/* Lista */}
@@ -94,18 +103,25 @@ function GoalsProgressChart({ token }) {
             const safeProgress = Math.min(Math.max(safeProgressRaw, 0), 100);
             const completed = safeProgressRaw >= 100;
 
+            const progressBg = completed
+              ? "linear-gradient(to right, color-mix(in srgb, var(--success) 85%, white), var(--success))"
+              : "linear-gradient(to right, color-mix(in srgb, var(--success) 55%, transparent), var(--success))";
+
             return (
               <div key={g?.id || name} className="space-y-1.5">
                 {/* Título y porcentaje */}
                 <div className="flex justify-between text-sm gap-3">
-                  <span className="font-medium text-slate-200 truncate">
+                  <span className="font-medium truncate text-[color-mix(in srgb,var(--text)_88%,transparent)]">
                     {name}
                   </span>
 
                   <span
-                    className={`font-semibold whitespace-nowrap ${
-                      completed ? "text-emerald-400" : "text-slate-300"
-                    }`}
+                    className="font-semibold whitespace-nowrap"
+                    style={{
+                      color: completed
+                        ? "color-mix(in srgb, var(--success) 90%, var(--text))"
+                        : "color-mix(in srgb, var(--text) 70%, transparent)",
+                    }}
                     title={
                       safeTarget > 0
                         ? `${safeProgressRaw.toFixed(1)}%`
@@ -117,19 +133,27 @@ function GoalsProgressChart({ token }) {
                 </div>
 
                 {/* Barra de progreso */}
-                <div className="w-full bg-slate-800 rounded-full h-4 overflow-hidden">
+                <div
+                  className="w-full rounded-full h-4 overflow-hidden border"
+                  style={{
+                    borderColor: "color-mix(in srgb, var(--border-rgba) 70%, transparent)",
+                    background: "color-mix(in srgb, var(--panel) 65%, transparent)",
+                  }}
+                >
                   <div
-                    className={`h-4 transition-all duration-500 rounded-full ${
-                      completed
-                        ? "bg-gradient-to-r from-emerald-400 to-emerald-300"
-                        : "bg-gradient-to-r from-emerald-600 to-emerald-400"
-                    }`}
-                    style={{ width: `${safeProgress}%` }}
+                    className="h-4 transition-all duration-500 rounded-full"
+                    style={{
+                      width: `${safeProgress}%`,
+                      background: progressBg,
+                      boxShadow: completed
+                        ? "0 12px 35px color-mix(in srgb, var(--success) 22%, transparent)"
+                        : "0 10px 28px color-mix(in srgb, var(--success) 14%, transparent)",
+                    }}
                   />
                 </div>
 
                 {/* Cantidad acumulada */}
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-[color-mix(in srgb,var(--text)_65%,transparent)]">
                   {formatCurrencyDOP(safeCurrent)} / {formatCurrencyDOP(safeTarget)}
                 </p>
               </div>

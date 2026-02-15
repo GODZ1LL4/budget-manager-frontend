@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+//frontend\src\components\ShoppingListQuickModal.jsx
+import { useEffect, useMemo, useState } from "react";
+import FFSelect from "./FFSelect";
 import axios from "axios";
 import Modal from "./Modal";
 
@@ -11,12 +12,6 @@ function currency(n) {
 function toNum(x, fallback = 0) {
   const n = Number(x);
   return Number.isFinite(n) ? n : fallback;
-}
-
-function normalize(s) {
-  return String(s || "")
-    .toLowerCase()
-    .trim();
 }
 
 function round2(n) {
@@ -38,80 +33,7 @@ function computeGrossFromLatest(item, qty) {
 /**
  * Dropdown renderizado en document.body (portal) para evitar que se recorte
  * por overflow del modal / contenedores.
- *
- * Mejora: si no hay espacio abajo, se abre arriba del input.
  */
-function TypeaheadDropdown({ anchorEl, open, onClose, children }) {
-  const [style, setStyle] = useState(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const update = () => {
-      if (!anchorEl) return;
-      const rect = anchorEl.getBoundingClientRect();
-
-      const gap = 6;
-      const padding = 12;
-      const desired = 320; // un poco más alto
-      const minH = 160;
-
-      const spaceBelow = window.innerHeight - rect.bottom - gap - padding;
-      const spaceAbove = rect.top - gap - padding;
-
-      const shouldOpenUp = spaceBelow < 220 && spaceAbove > spaceBelow;
-
-      const maxH = Math.max(
-        minH,
-        Math.min(desired, shouldOpenUp ? spaceAbove : spaceBelow)
-      );
-
-      const top = shouldOpenUp
-        ? Math.max(padding, rect.top - gap - maxH)
-        : rect.bottom + gap;
-
-      setStyle({
-        position: "fixed",
-        top,
-        left: rect.left,
-        width: rect.width,
-        maxHeight: maxH,
-        zIndex: 9999,
-      });
-    };
-
-    update();
-    window.addEventListener("resize", update);
-    window.addEventListener("scroll", update, true);
-
-    return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("scroll", update, true);
-    };
-  }, [open, anchorEl]);
-
-  if (!open || !style) return null;
-
-  return createPortal(
-    <>
-      <button
-        type="button"
-        onClick={onClose}
-        className="fixed inset-0 z-[9998] cursor-default"
-        aria-label="close"
-        tabIndex={-1}
-      />
-      {/* IMPORTANTE: este contenedor ES el que scrollea */}
-      <div
-        style={style}
-        className="z-[9999] overflow-y-auto overscroll-contain rounded-lg border border-slate-700 bg-slate-950 shadow-xl"
-      >
-        {children}
-      </div>
-    </>,
-    document.body
-  );
-}
 
 export default function ShoppingListQuickModal({
   isOpen,
@@ -130,11 +52,6 @@ export default function ShoppingListQuickModal({
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [loadingCreate, setLoadingCreate] = useState(false);
 
-  // Typeahead states
-  const [itemQueries, setItemQueries] = useState([""]);
-  const [openDropdownIdx, setOpenDropdownIdx] = useState(null);
-  const itemInputRefs = useRef([]); // refs por fila
-
   // Reset modal when open/close changes
   useEffect(() => {
     if (!isOpen) return;
@@ -145,52 +62,14 @@ export default function ShoppingListQuickModal({
     setError("");
     setLoadingPreview(false);
     setLoadingCreate(false);
-
-    setItemQueries([""]);
-    setOpenDropdownIdx(null);
-    itemInputRefs.current = [];
   }, [isOpen]);
-
-  // Mantener itemQueries sincronizado con rows (add/remove)
-  useEffect(() => {
-    setItemQueries((prev) => {
-      const next = [...prev];
-      while (next.length < rows.length) next.push("");
-      while (next.length > rows.length) next.pop();
-      return next;
-    });
-  }, [rows.length]);
-
-  // Si una fila ya tiene item_id y el input está vacío, rellenar con el nombre
-  useEffect(() => {
-    setItemQueries((prev) => {
-      let changed = false;
-      const next = [...prev];
-
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row?.item_id) continue;
-
-        const it = items?.find((x) => x.id === row.item_id);
-        if (!it) continue;
-
-        if (!next[i] || normalize(next[i]) === "") {
-          next[i] = it.name;
-          changed = true;
-        }
-      }
-
-      return changed ? next : prev;
-    });
-  }, [rows, items]);
 
   const canPreview = useMemo(() => {
     if (!meta?.date) return false;
-    const valid = rows.some(
+    return rows.some(
       (r) =>
         r.item_id && toNum(r.quantity, 0) > 0 && toNum(r.gross_total, 0) > 0
     );
-    return valid;
   }, [rows, meta?.date]);
 
   const addRow = () =>
@@ -201,15 +80,6 @@ export default function ShoppingListQuickModal({
 
   const removeRow = (idx) => {
     setRows((prev) => prev.filter((_, i) => i !== idx));
-    setItemQueries((prev) => prev.filter((_, i) => i !== idx));
-    itemInputRefs.current = itemInputRefs.current.filter((_, i) => i !== idx);
-
-    setOpenDropdownIdx((cur) => {
-      if (cur == null) return cur;
-      if (cur === idx) return null;
-      // si quitas una fila antes, desplaza el índice
-      return cur > idx ? cur - 1 : cur;
-    });
   };
 
   const updateRow = (idx, field, value) => {
@@ -233,97 +103,51 @@ export default function ShoppingListQuickModal({
         gross_total: toNum(r.gross_total, 0),
       }));
 
-  const filteredItemsForRow = (idx) => {
-    const q = normalize(itemQueries[idx]);
-    if (!q) return items;
-    return items.filter((it) => normalize(it.name).includes(q));
-  };
-
-  const selectItemForRow = (idx, it) => {
-    // Al seleccionar: set item_id y AUTOCALCULAR gross_total (con ITBIS) usando latest_price
-    setRows((prev) => {
-      const copy = [...prev];
-      const current = copy[idx] || {
-        item_id: "",
-        quantity: 1,
-        gross_total: "",
-        gross_touched: false,
+      const handleQtyChange = (idx, newQty) => {
+        const safeQty = Math.max(0, toNum(newQty, 0)); 
+      
+        setRows((prev) => {
+          const copy = [...prev];
+          const row = copy[idx];
+          if (!row) return prev;
+      
+          const nextRow = { ...row, quantity: safeQty };
+      
+          if (!row.gross_touched && row.item_id) {
+            const it = items?.find((x) => x.id === row.item_id);
+            if (it) nextRow.gross_total = computeGrossFromLatest(it, safeQty);
+          }
+      
+          copy[idx] = nextRow;
+          return copy;
+        });
       };
+      
 
-      const nextQty = toNum(current.quantity, 1);
-      const autoGross = computeGrossFromLatest(it, nextQty);
-
-      copy[idx] = {
-        ...current,
-        item_id: it.id,
-        // modo auto: no tocado manualmente
-        gross_touched: false,
-        gross_total: autoGross,
+      const handleGrossChange = (idx, v) => {
+        const safe = Math.max(0, toNum(v, 0)); 
+      
+        setRows((prev) => {
+          const copy = [...prev];
+          const row = copy[idx];
+          if (!row) return prev;
+      
+          const nextRow = {
+            ...row,
+            gross_total: safe,
+            gross_touched: safe > 0,
+          };
+      
+          if (safe === 0 && row.item_id) {
+            const it = items?.find((x) => x.id === row.item_id);
+            if (it) nextRow.gross_total = computeGrossFromLatest(it, row.quantity);
+          }
+      
+          copy[idx] = nextRow;
+          return copy;
+        });
       };
-      return copy;
-    });
-
-    setItemQueries((prev) => {
-      const copy = [...prev];
-      copy[idx] = it.name;
-      return copy;
-    });
-
-    setOpenDropdownIdx(null);
-  };
-
-  const handleQtyChange = (idx, newQty) => {
-    setRows((prev) => {
-      const copy = [...prev];
-      const row = copy[idx];
-      if (!row) return prev;
-
-      const qtyVal = newQty;
-
-      // siempre actualizamos quantity
-      const nextRow = { ...row, quantity: qtyVal };
-
-      // si NO está tocado manualmente, recalculamos total con latest_price
-      if (!row.gross_touched && row.item_id) {
-        const it = items?.find((x) => x.id === row.item_id);
-        if (it) {
-          nextRow.gross_total = computeGrossFromLatest(it, qtyVal);
-        }
-      }
-
-      copy[idx] = nextRow;
-      return copy;
-    });
-  };
-
-  const handleGrossChange = (idx, v) => {
-    // Si el usuario escribe en total, eso prevalece.
-    // Si lo deja vacío => vuelve a modo auto (gross_touched=false) y (si hay item) recalcula.
-    setRows((prev) => {
-      const copy = [...prev];
-      const row = copy[idx];
-      if (!row) return prev;
-
-      const trimmed = String(v ?? "");
-      const isEmpty = trimmed.trim() === "";
-
-      const nextRow = {
-        ...row,
-        gross_total: trimmed,
-        gross_touched: !isEmpty,
-      };
-
-      if (isEmpty && row.item_id) {
-        const it = items?.find((x) => x.id === row.item_id);
-        if (it) {
-          nextRow.gross_total = computeGrossFromLatest(it, row.quantity);
-        }
-      }
-
-      copy[idx] = nextRow;
-      return copy;
-    });
-  };
+      
 
   const handlePreview = async () => {
     if (!meta?.date) {
@@ -348,10 +172,6 @@ export default function ShoppingListQuickModal({
       const data = res.data?.data;
       const lines = data?.lines || [];
 
-      // resolución por defecto:
-      // - conflict => use_existing
-      // - same_as_existing => use_existing
-      // - insert_new => insert_new
       const normalized = lines.map((l) => {
         let resolution = l.default_resolution || "insert_new";
         if (l.price_status === "conflict") resolution = "use_existing";
@@ -360,10 +180,7 @@ export default function ShoppingListQuickModal({
         return { ...l, resolution };
       });
 
-      setPreview({
-        ...data,
-        lines: normalized,
-      });
+      setPreview({ ...data, lines: normalized });
     } catch (e) {
       console.error("❌ Preview error:", e);
       setError(
@@ -374,14 +191,12 @@ export default function ShoppingListQuickModal({
     }
   };
 
-  // Toggle resolución en preview (solo conflict)
   const toggleResolution = (item_id) => {
     setPreview((prev) => {
       if (!prev) return prev;
       const lines = prev.lines.map((l) => {
         if (l.item_id !== item_id) return l;
         if (l.price_status !== "conflict") return l;
-
         const next =
           l.resolution === "use_existing" ? "update_existing" : "use_existing";
         return { ...l, resolution: next };
@@ -489,145 +304,154 @@ export default function ShoppingListQuickModal({
       title="Lista de compra rápida"
       size="xl"
     >
-      <div className="space-y-4 text-slate-200">
+      <div className="space-y-4" style={{ color: "var(--text)" }}>
         {!meta?.date && (
-          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+          <div
+            className="rounded-lg border px-3 py-2 text-xs"
+            style={{
+              borderColor:
+                "color-mix(in srgb, var(--warning) 45%, transparent)",
+              background: "color-mix(in srgb, var(--warning) 12%, transparent)",
+              color: "color-mix(in srgb, var(--warning) 85%, var(--text))",
+            }}
+          >
             ⚠️ Selecciona una <strong>fecha</strong> en el formulario antes de
             abrir el preview.
           </div>
         )}
 
-        {error && <p className="text-xs text-rose-400">{error}</p>}
+        {error && (
+          <p className="text-xs" style={{ color: "var(--danger)" }}>
+            {error}
+          </p>
+        )}
 
         {/* Editor de filas */}
-        <div className="border border-slate-800 rounded-xl bg-slate-950/40 p-3 space-y-2">
-          <div className="text-xs text-slate-400">
+        <div className="ff-surface p-3 space-y-2">
+          <div className="text-xs" style={{ color: "var(--muted)" }}>
             Escribe el <strong>total pagado (con ITBIS)</strong> por línea. La
             app calcula el neto.
           </div>
 
           {rows.map((r, idx) => {
-            const item = items.find((it) => it.id === r.item_id);
-            const anchorEl = itemInputRefs.current[idx] || null;
+            const item = items.find(
+              (it) => String(it.id) === String(r.item_id)
+            );
 
             return (
               <div
                 key={idx}
-                className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center border-t border-slate-800 pt-2"
+                className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center pt-2"
+                style={{
+                  borderTop:
+                    "var(--border-w) solid color-mix(in srgb, var(--border-rgba) 70%, transparent)",
+                }}
               >
-                {/* Typeahead input (buscable) */}
                 <div className="sm:col-span-5 w-full">
-                  <input
-                    ref={(el) => (itemInputRefs.current[idx] = el)}
-                    value={itemQueries[idx] ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value;
-
-                      setItemQueries((prev) => {
-                        const copy = [...prev];
-                        copy[idx] = v;
-                        return copy;
-                      });
-
-                      setOpenDropdownIdx(idx);
-
-                      // si borra, limpiamos selección real + reseteamos modo auto
-                      if (!v) {
+                  <FFSelect
+                    value={r.item_id}
+                    onChange={(val, opt) => {
+                      // Limpieza
+                      if (!val) {
                         updateRow(idx, "item_id", "");
                         updateRow(idx, "gross_total", "");
                         updateRow(idx, "gross_touched", false);
+                        return;
+                      }
+
+                      // Selección
+                      updateRow(idx, "item_id", String(val));
+                      updateRow(idx, "gross_touched", false);
+
+                      const it =
+                        opt || items.find((x) => String(x.id) === String(val));
+                      if (it) {
+                        const nextGross = computeGrossFromLatest(
+                          it,
+                          r.quantity
+                        );
+                        updateRow(idx, "gross_total", nextGross);
                       }
                     }}
-                    onFocus={() => setOpenDropdownIdx(idx)}
+                    options={items}
                     placeholder="Escribe para buscar artículo..."
-                    className="w-full rounded-lg px-3 py-2 text-sm bg-slate-900 border border-slate-700 text-slate-100"
-                  />
-
-                  {/* Dropdown en portal (NO se corta por el modal) */}
-                  <TypeaheadDropdown
-                    anchorEl={anchorEl}
-                    open={openDropdownIdx === idx}
-                    onClose={() => setOpenDropdownIdx(null)}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        updateRow(idx, "item_id", "");
-                        setItemQueries((prev) => {
-                          const copy = [...prev];
-                          copy[idx] = "";
-                          return copy;
-                        });
-                        setOpenDropdownIdx(null);
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs text-slate-300 hover:bg-slate-800/60 border-b border-slate-800"
-                    >
-                      — Limpiar selección —
-                    </button>
-
-                    {filteredItemsForRow(idx)
-                      .slice(0, 50)
-                      .map((it) => (
-                        <button
-                          key={it.id}
-                          type="button"
-                          onClick={() => selectItemForRow(idx, it)}
-                          className="w-full text-left px-3 py-2 text-sm text-slate-100 hover:bg-slate-800/60"
+                    searchable
+                    clearable
+                    maxVisible={50}
+                    getOptionValue={(it) => it.id}
+                    getOptionLabel={(it) => it.name}
+                    renderOption={(it, { isActive, isDisabled }) => (
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="truncate">{it.name}</span>
+                        <span
+                          className="text-xs"
+                          style={{ color: "var(--muted)" }}
                         >
-                          {it.name}
-                          <span className="ml-2 text-xs text-slate-400">
-                            ({currency(it.latest_price)})
-                          </span>
-                        </button>
-                      ))}
-
-                    {filteredItemsForRow(idx).length === 0 && (
-                      <div className="px-3 py-2 text-xs text-slate-400">
-                        No hay resultados.
+                          ({currency(it.latest_price)})
+                        </span>
                       </div>
                     )}
-                  </TypeaheadDropdown>
+                  />
                 </div>
 
                 <input
                   type="number"
                   step="0.0001"
+                  min="0"
                   value={r.quantity}
-                  onChange={(e) => handleQtyChange(idx, e.target.value)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (Number(v) < 0) return; 
+                    handleQtyChange(idx, v);
+                  }}
                   placeholder="Cantidad"
-                  className="sm:col-span-2 w-full rounded-lg px-3 py-2 text-sm bg-slate-900 border border-slate-700 text-slate-100"
+                  className="ff-input sm:col-span-2"
                 />
 
                 <input
                   type="number"
                   step="0.01"
+                  min="0"
                   value={r.gross_total}
-                  onChange={(e) => handleGrossChange(idx, e.target.value)}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (Number(v) < 0) return; 
+                    handleGrossChange(idx, v);
+                  }}
                   placeholder="Total pagado"
-                  className="sm:col-span-3 w-full rounded-lg px-3 py-2 text-sm bg-slate-900 border border-slate-700 text-slate-100"
+                  className="ff-input sm:col-span-3"
                 />
 
                 <button
                   type="button"
                   onClick={() => removeRow(idx)}
-                  className="sm:col-span-2 px-3 py-2 rounded-lg text-sm font-semibold bg-rose-600/90 hover:brightness-110 active:scale-95 transition-all"
+                  className="ff-btn ff-btn-danger sm:col-span-2"
                 >
                   Quitar
                 </button>
 
                 {item && (
-                  <div className="sm:col-span-12 text-[11px] text-slate-400">
+                  <div
+                    className="sm:col-span-12 text-[11px]"
+                    style={{ color: "var(--muted)" }}
+                  >
                     latest_price:{" "}
-                    <span className="text-emerald-300 font-semibold">
+                    <span style={{ color: "var(--success)", fontWeight: 700 }}>
                       {currency(item.latest_price)}
                     </span>{" "}
                     • ITBIS:{" "}
-                    <span className="text-slate-200 font-semibold">
+                    <span style={{ color: "var(--text)", fontWeight: 700 }}>
                       {item.is_exempt
                         ? "Exento"
                         : `${Number(item.tax_rate || 0)}%`}
                     </span>
-                    <span className="ml-2 text-[10px] text-slate-500">
+                    <span
+                      className="ml-2 text-[10px]"
+                      style={{
+                        color:
+                          "color-mix(in srgb, var(--muted) 70%, transparent)",
+                      }}
+                    >
                       {r.gross_touched ? "• Manual" : "• Auto"}
                     </span>
                   </div>
@@ -640,7 +464,7 @@ export default function ShoppingListQuickModal({
             <button
               type="button"
               onClick={addRow}
-              className="px-3 py-2 rounded-lg text-sm font-semibold bg-blue-600 text-white hover:brightness-110 active:scale-95 transition-all"
+              className="ff-btn ff-btn-outline"
             >
               Agregar línea
             </button>
@@ -649,39 +473,51 @@ export default function ShoppingListQuickModal({
               type="button"
               disabled={!canPreview || loadingPreview}
               onClick={handlePreview}
-              className={`px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
-                !canPreview || loadingPreview
-                  ? "bg-slate-700 text-slate-400 cursor-not-allowed"
-                  : "bg-indigo-600 text-white hover:brightness-110 active:scale-95"
+              className={`ff-btn ${
+                !canPreview || loadingPreview ? "" : "ff-btn-primary"
               }`}
+              style={
+                !canPreview || loadingPreview
+                  ? {
+                      opacity: 0.55,
+                      cursor: "not-allowed",
+                      boxShadow: "none",
+                    }
+                  : undefined
+              }
             >
               {loadingPreview ? "Generando preview..." : "Preview"}
             </button>
           </div>
         </div>
 
-        {/* Preview tabla */}
+        {/* Preview */}
         {preview?.lines?.length > 0 && (
-          <div className="border border-slate-800 rounded-xl bg-slate-950/40 p-3 space-y-3">
-            <div className="flex flex-wrap gap-3 text-xs text-slate-200">
+          <div className="ff-surface p-3 space-y-3">
+            <div
+              className="flex flex-wrap gap-3 text-xs"
+              style={{ color: "var(--text)" }}
+            >
               <span>
-                Fecha: <span className="font-semibold">{preview.date}</span>
+                Fecha: <span style={{ fontWeight: 700 }}>{preview.date}</span>
               </span>
               <span>
                 Descuento:{" "}
-                <span className="font-semibold">{preview.discount || 0}%</span>
+                <span style={{ fontWeight: 700 }}>
+                  {preview.discount || 0}%
+                </span>
               </span>
               {previewTotals && (
                 <>
                   <span>
                     Total (antes):{" "}
-                    <span className="font-semibold text-emerald-300">
+                    <span style={{ fontWeight: 700, color: "var(--success)" }}>
                       {currency(previewTotals.totalBeforeDiscount)}
                     </span>
                   </span>
                   <span>
                     Total (con desc):{" "}
-                    <span className="font-semibold text-emerald-300">
+                    <span style={{ fontWeight: 700, color: "var(--success)" }}>
                       {currency(previewTotals.totalAfterDiscount)}
                     </span>
                   </span>
@@ -689,25 +525,53 @@ export default function ShoppingListQuickModal({
               )}
             </div>
 
-            <div className="max-h-64 overflow-auto border border-slate-800 rounded-lg">
+            <div
+              className="max-h-64 overflow-auto rounded-lg"
+              style={{
+                border: "var(--border-w) solid var(--border-rgba)",
+                background: "color-mix(in srgb, var(--panel) 70%, transparent)",
+              }}
+            >
               <table className="w-full text-xs sm:text-sm">
                 <thead>
-                  <tr className="text-left bg-slate-900/80 border-b border-slate-800">
-                    <th className="py-1 px-2 text-slate-300">Artículo</th>
-                    <th className="py-1 px-2 text-right text-slate-300">
+                  <tr
+                    className="text-left border-b"
+                    style={{
+                      background:
+                        "color-mix(in srgb, var(--panel) 85%, transparent)",
+                      borderColor: "var(--border-rgba)",
+                    }}
+                  >
+                    <th className="py-1 px-2" style={{ color: "var(--muted)" }}>
+                      Artículo
+                    </th>
+                    <th
+                      className="py-1 px-2 text-right"
+                      style={{ color: "var(--muted)" }}
+                    >
                       Cant
                     </th>
-                    <th className="py-1 px-2 text-right text-slate-300">
+                    <th
+                      className="py-1 px-2 text-right"
+                      style={{ color: "var(--muted)" }}
+                    >
                       Neto calc
                     </th>
-                    <th className="py-1 px-2 text-right text-slate-300">
+                    <th
+                      className="py-1 px-2 text-right"
+                      style={{ color: "var(--muted)" }}
+                    >
                       Existente día
                     </th>
-                    <th className="py-1 px-2 text-right text-slate-300">
+                    <th
+                      className="py-1 px-2 text-right"
+                      style={{ color: "var(--muted)" }}
+                    >
                       Acción
                     </th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {preview.lines.map((l, i) => {
                     const it = items.find((x) => x.id === l.item_id);
@@ -717,47 +581,89 @@ export default function ShoppingListQuickModal({
                     return (
                       <tr
                         key={`${l.item_id}-${i}`}
-                        className={
-                          i % 2 === 0 ? "bg-slate-950/40" : "bg-slate-900/50"
-                        }
+                        style={{
+                          background:
+                            i % 2 === 0
+                              ? "color-mix(in srgb, var(--panel) 78%, transparent)"
+                              : "color-mix(in srgb, var(--panel) 86%, transparent)",
+                        }}
                       >
-                        <td className="py-1 px-2 text-slate-100">
+                        <td
+                          className="py-1 px-2"
+                          style={{ color: "var(--text)" }}
+                        >
                           {it?.name || l.item_id}
-                          <div className="text-[10px] text-slate-400">
+                          <div
+                            className="text-[10px]"
+                            style={{ color: "var(--muted)" }}
+                          >
                             latest: {currency(l.latest_price)} • ITBIS:{" "}
                             {l.is_exempt
                               ? "Exento"
                               : `${Number(l.tax_rate || 0)}%`}
                           </div>
                         </td>
-                        <td className="py-1 px-2 text-right text-slate-100">
+
+                        <td
+                          className="py-1 px-2 text-right"
+                          style={{ color: "var(--text)" }}
+                        >
                           {l.quantity}
                         </td>
-                        <td className="py-1 px-2 text-right text-emerald-300 font-semibold">
+
+                        <td
+                          className="py-1 px-2 text-right"
+                          style={{ color: "var(--success)", fontWeight: 700 }}
+                        >
                           {currency(l.computed?.unit_price_net)}
                         </td>
-                        <td className="py-1 px-2 text-right text-sky-300 font-semibold">
+
+                        <td
+                          className="py-1 px-2 text-right"
+                          style={{
+                            color:
+                              "color-mix(in srgb, var(--primary) 65%, var(--text))",
+                            fontWeight: 700,
+                          }}
+                        >
                           {hasExisting
                             ? currency(l.existing_price_on_date)
                             : "—"}
                         </td>
+
                         <td className="py-1 px-2 text-right">
                           {isConflict ? (
                             <button
                               type="button"
                               onClick={() => toggleResolution(l.item_id)}
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border"
+                              style={
                                 l.resolution === "update_existing"
-                                  ? "border-emerald-500/70 bg-emerald-500/10 text-emerald-300"
-                                  : "border-sky-500/70 bg-sky-500/10 text-sky-300"
-                              }`}
+                                  ? {
+                                      borderColor:
+                                        "color-mix(in srgb, var(--success) 55%, var(--border-rgba))",
+                                      background:
+                                        "color-mix(in srgb, var(--success) 12%, transparent)",
+                                      color: "var(--success)",
+                                    }
+                                  : {
+                                      borderColor:
+                                        "color-mix(in srgb, var(--primary) 45%, var(--border-rgba))",
+                                      background:
+                                        "color-mix(in srgb, var(--primary) 12%, transparent)",
+                                      color: "var(--text)",
+                                    }
+                              }
                             >
                               {l.resolution === "update_existing"
                                 ? "Actualizar"
                                 : "Usar existente"}
                             </button>
                           ) : (
-                            <span className="text-[11px] text-slate-400">
+                            <span
+                              className="text-[11px]"
+                              style={{ color: "var(--muted)" }}
+                            >
                               {l.price_status === "same_as_existing"
                                 ? "OK"
                                 : l.price_status === "insert_new"
@@ -774,7 +680,7 @@ export default function ShoppingListQuickModal({
             </div>
 
             {hasUnresolvedConflicts && (
-              <div className="text-xs text-amber-300">
+              <div className="text-xs" style={{ color: "var(--warning)" }}>
                 ⚠️ Hay conflictos sin resolver.
               </div>
             )}
@@ -784,11 +690,12 @@ export default function ShoppingListQuickModal({
                 type="button"
                 disabled={loadingCreate}
                 onClick={handleCreate}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                className="ff-btn ff-btn-primary"
+                style={
                   loadingCreate
-                    ? "bg-slate-700 text-slate-400 cursor-not-allowed"
-                    : "bg-gradient-to-r from-emerald-500 to-emerald-400 text-slate-950 shadow-[0_0_16px_rgba(16,185,129,0.6)] hover:brightness-110 active:scale-95"
-                }`}
+                    ? { opacity: 0.65, cursor: "not-allowed" }
+                    : undefined
+                }
               >
                 {loadingCreate ? "Creando..." : "Crear transacción"}
               </button>
@@ -796,7 +703,7 @@ export default function ShoppingListQuickModal({
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 rounded-lg text-sm font-semibold border border-slate-600 bg-slate-900 text-slate-200 hover:bg-slate-800 hover:border-slate-500 transition-all"
+                className="ff-btn ff-btn-outline"
               >
                 Cancelar
               </button>

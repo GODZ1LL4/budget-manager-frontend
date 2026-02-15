@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Modal from "../components/Modal";
+import FFSelect from "../components/FFSelect";
 import { toast } from "react-toastify";
 
 function Budgets({ token }) {
@@ -28,11 +29,8 @@ function Budgets({ token }) {
   const fetchBudgets = async () => {
     try {
       const params = new URLSearchParams();
-      if (filterType === "month") {
-        params.append("month", filterValue);
-      } else {
-        params.append("year", filterValue);
-      }
+      if (filterType === "month") params.append("month", filterValue);
+      else params.append("year", filterValue);
 
       const res = await axios.get(`${api}/budgets?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -57,6 +55,19 @@ function Budgets({ token }) {
 
   const handleCreate = async (e) => {
     e.preventDefault();
+
+    // ✅ FFSelect no soporta required: validación explícita
+    if (!categoryId) {
+      toast.error("Selecciona una categoría");
+      return;
+    }
+
+    const n = Number(limitAmount);
+    if (!Number.isFinite(n) || n < 0) {
+      toast.error("Ingresa un límite válido");
+      return;
+    }
+
     try {
       await axios.post(
         `${api}/budgets`,
@@ -98,32 +109,38 @@ function Budgets({ token }) {
     importItems.length > 0 && importItems.every((it) => it.selected);
 
   useEffect(() => {
-    if (token) {
-      fetchCategories();
-    }
+    if (token) fetchCategories();
   }, [token]);
 
   useEffect(() => {
-    if (token) {
-      fetchBudgets();
-    }
+    if (token) fetchBudgets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, filterType, filterValue]);
 
+  const categoryOptions = useMemo(
+    () =>
+      categories.map((cat) => ({
+        value: cat.id,
+        label: cat.name,
+      })),
+    [categories]
+  );
+
+  const filterTypeOptions = useMemo(
+    () => [
+      { value: "month", label: "Mes" },
+      { value: "year", label: "Año" },
+    ],
+    []
+  );
+
   return (
-    <div
-      className="
-        rounded-2xl p-6
-        bg-slate-950/70
-        border border-slate-800
-        shadow-[0_18px_40px_rgba(0,0,0,0.7)]
-        text-slate-100
-        space-y-4
-      "
-    >
-      <h2 className="text-2xl font-bold mb-1 text-[#f6e652]">
+    <div className="ff-card p-6 space-y-4">
+      <h2 className="text-2xl font-bold mb-1 text-[var(--heading-accent)]">
         Flujos Personales
       </h2>
-      <p className="text-sm text-slate-400 mb-4">
+
+      <p className="text-sm text-[var(--muted)] mb-4">
         Establece un límite de gasto por categoría cada mes. El sistema te
         mostrará cuánto has utilizado.
       </p>
@@ -134,43 +151,23 @@ function Budgets({ token }) {
         className="grid gap-4 mb-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3"
       >
         <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1 text-slate-300">
-            Categoría
-          </label>
-          <select
+          <label className="ff-label mb-1">Categoría</label>
+
+          <FFSelect
             value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="
-              border border-slate-700 bg-slate-900
-              text-slate-100 text-sm
-              px-3 py-2 rounded-lg
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition
-            "
-            required
-          >
-            <option value="">Selecciona una categoría</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => setCategoryId(v)}
+            options={categoryOptions}
+            placeholder="Selecciona una categoría"
+          />
         </div>
 
         <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1 text-slate-300">Mes</label>
+          <label className="ff-label mb-1">Mes</label>
           <input
             type="month"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className="
-              border border-slate-700 bg-slate-900
-              text-slate-100 text-sm
-              px-3 py-2 rounded-lg
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition
-            "
+            className="ff-input"
             required
           />
         </div>
@@ -181,47 +178,31 @@ function Budgets({ token }) {
             id="repeat"
             checked={repeatYearly}
             onChange={() => setRepeatYearly(!repeatYearly)}
-            className="mr-2 h-4 w-4 text-emerald-500 bg-slate-900 border-slate-600 rounded"
+            className="mr-2 h-4 w-4 rounded"
+            style={{
+              accentColor: "var(--primary)",
+            }}
           />
-          <label htmlFor="repeat" className="text-sm text-slate-300">
+          <label htmlFor="repeat" className="text-sm text-[var(--muted)]">
             Repetir este presupuesto para todo el año
           </label>
         </div>
 
         <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1 text-slate-300">
-            Límite mensual
-          </label>
+          <label className="ff-label mb-1">Límite mensual</label>
           <input
             type="number"
             min="0"
             placeholder="Ej: 500.00"
             value={limitAmount}
             onChange={(e) => setLimitAmount(e.target.value)}
-            className="
-              border border-slate-700 bg-slate-900
-              text-slate-100 text-sm
-              px-3 py-2 rounded-lg
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition
-            "
+            className="ff-input"
             required
           />
         </div>
 
         <div className="col-span-full flex flex-wrap gap-2 mt-2">
-          <button
-            type="submit"
-            className="
-              w-full md:w-auto
-              bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
-              text-slate-950 font-semibold
-              px-4 py-2 rounded-lg text-sm
-              shadow-[0_0_16px_rgba(16,185,129,0.6)]
-              hover:brightness-110 active:scale-95
-              transition
-            "
-          >
+          <button type="submit" className="ff-btn ff-btn-primary">
             Agregar Flujo
           </button>
 
@@ -233,9 +214,7 @@ function Budgets({ token }) {
                 setImportLoading(true);
                 const res = await axios.get(
                   `${api}/budgets/history-import-preview?month=${month}`,
-                  {
-                    headers: { Authorization: `Bearer ${token}` },
-                  }
+                  { headers: { Authorization: `Bearer ${token}` } }
                 );
 
                 const preview = res.data.data;
@@ -248,26 +227,15 @@ function Budgets({ token }) {
                 );
                 setShowImportModal(true);
               } catch {
-                toast.error(
-                  "Error al obtener sugerencias desde el mes anterior"
-                );
+                toast.error("Error al obtener sugerencias desde el mes anterior");
               } finally {
                 setImportLoading(false);
               }
             }}
-            className="
-              bg-slate-900 text-slate-200 text-sm
-              px-3 py-2 rounded-lg
-              border border-slate-600
-              hover:bg-slate-800 hover:border-slate-500
-              active:scale-95
-              transition
-            "
+            className="ff-btn ff-btn-outline"
             disabled={importLoading}
           >
-            {importLoading
-              ? "Cargando sugerencias..."
-              : "Sugerir desde mes anterior"}
+            {importLoading ? "Cargando sugerencias..." : "Sugerir desde mes anterior"}
           </button>
         </div>
       </form>
@@ -275,52 +243,35 @@ function Budgets({ token }) {
       {/* 🔍 Filtro por mes o año */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:items-end mb-4">
         <div className="flex flex-col">
-          <label className="text-sm font-medium mb-1 text-slate-300">
-            Ver por:
-          </label>
-          <select
+          <label className="ff-label mb-1">Ver por:</label>
+
+          <FFSelect
             value={filterType}
-            onChange={(e) => {
-              const type = e.target.value;
+            onChange={(v) => {
+              const type = v;
               setFilterType(type);
               const now = new Date();
               setFilterValue(
                 type === "month"
-                  ? `${now.getFullYear()}-${String(
-                      now.getMonth() + 1
-                    ).padStart(2, "0")}`
+                  ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
                   : `${now.getFullYear()}`
               );
             }}
-            className="
-              border border-slate-700 bg-slate-900
-              text-slate-100 text-sm
-              px-3 py-2 rounded-lg
-              focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-              transition
-            "
-          >
-            <option value="month">Mes</option>
-            <option value="year">Año</option>
-          </select>
+            options={filterTypeOptions}
+          />
         </div>
 
         <div className="flex flex-col md:col-span-2">
-          <label className="text-sm font-medium mb-1 text-slate-300">
+          <label className="ff-label mb-1">
             {filterType === "month" ? "Seleccionar mes" : "Seleccionar año"}
           </label>
+
           {filterType === "month" ? (
             <input
               type="month"
               value={filterValue}
               onChange={(e) => setFilterValue(e.target.value)}
-              className="
-                border border-slate-700 bg-slate-900
-                text-slate-100 text-sm
-                px-3 py-2 rounded-lg
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                transition
-              "
+              className="ff-input"
             />
           ) : (
             <input
@@ -329,75 +280,79 @@ function Budgets({ token }) {
               max="2100"
               value={filterValue}
               onChange={(e) => setFilterValue(e.target.value)}
-              className="
-                border border-slate-700 bg-slate-900
-                text-slate-100 text-sm
-                px-3 py-2 rounded-lg
-                focus:outline-none focus:ring-2 focus:ring-emerald-500/70 focus:border-emerald-500
-                transition
-              "
+              className="ff-input"
               placeholder="Año"
             />
           )}
         </div>
       </div>
 
-      <h3 className="text-lg font-semibold mb-3 text-slate-200">Resumen</h3>
+      <h3 className="text-lg font-semibold mb-3 text-[var(--heading)]">
+        Resumen
+      </h3>
+
       <ul className="space-y-4">
         {budgets.map((b) => {
           const percent = b.spent / b.limit;
           const over = percent >= 1;
 
+          const accent = over ? "var(--danger)" : "var(--success)";
+
           return (
             <li
               key={b.id}
-              className={`
-                p-4 rounded-xl border
-                ${
-                  over
-                    ? "border-rose-500/70 bg-rose-950/40"
-                    : "border-emerald-500/70 bg-emerald-950/40"
-                }
-                shadow-[0_10px_30px_rgba(0,0,0,0.45)]
-              `}
+              className="p-4 rounded-xl"
+              style={{
+                border: "var(--border-w) solid",
+                borderColor: `color-mix(in srgb, ${accent} 55%, var(--border-rgba))`,
+                background: `color-mix(in srgb, ${accent} 16%, transparent)`,
+                boxShadow: "var(--glow-shadow)",
+              }}
             >
               <div className="flex justify-between items-center mb-2 gap-3">
                 <div>
-                  <p className="font-semibold text-slate-100">
+                  <p className="font-semibold text-[var(--text)]">
                     {b.category_name} —{" "}
-                    <span className="text-slate-300">{b.month}</span>
+                    <span className="text-[var(--muted)]">{b.month}</span>
                   </p>
-                  <p className="text-sm text-slate-300">
+
+                  <p className="text-sm text-[var(--muted)]">
                     Gasto:{" "}
-                    <span className="font-semibold text-slate-100">
+                    <span className="font-semibold text-[var(--text)]">
                       {b.spent.toFixed(2)}
                     </span>{" "}
                     / {b.limit.toFixed(2)}
                   </p>
                 </div>
+
                 <button
                   onClick={() => handleDelete(b.id)}
-                  className="
-                    text-xs font-semibold
-                    text-rose-300 hover:text-rose-200
-                    underline underline-offset-2
-                  "
+                  className="text-xs font-semibold underline underline-offset-2"
+                  style={{
+                    color: `color-mix(in srgb, ${accent} 70%, var(--text))`,
+                  }}
                 >
                   Eliminar
                 </button>
               </div>
-              <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
+
+              <div
+                className="w-full h-2 rounded-full overflow-hidden"
+                style={{
+                  background: "color-mix(in srgb, var(--panel) 70%, transparent)",
+                  border: "var(--border-w) solid",
+                  borderColor: "color-mix(in srgb, var(--border-rgba) 55%, transparent)",
+                }}
+              >
                 <div
-                  className={`
-                    h-2 rounded-full
-                    ${
-                      over
-                        ? "bg-gradient-to-r from-rose-500 via-rose-400 to-rose-300"
-                        : "bg-gradient-to-r from-emerald-500 via-emerald-400 to-emerald-300"
-                    }
-                  `}
+                  className="h-2 rounded-full"
                   style={{
                     width: `${Math.min(100, percent * 100)}%`,
+                    background: `linear-gradient(
+                      90deg,
+                      color-mix(in srgb, ${accent} 92%, #000) 0%,
+                      color-mix(in srgb, ${accent} 72%, #000) 100%
+                    )`,
                   }}
                 />
               </div>
@@ -406,7 +361,7 @@ function Budgets({ token }) {
         })}
       </ul>
 
-      {/* Modal de importación desde mes anterior (ya dark) */}
+      {/* Modal de importación desde mes anterior */}
       <Modal
         isOpen={showImportModal}
         onClose={() => {
@@ -418,37 +373,33 @@ function Budgets({ token }) {
         size="lg"
       >
         {!importPreview || importItems.length === 0 ? (
-          <p className="text-sm text-slate-300">
+          <p className="text-sm text-[var(--muted)]">
             {importPreview
               ? `No se encontraron gastos en ${importPreview.from_month} para sugerir presupuestos.`
               : "Cargando información..."}
           </p>
         ) : (
           <>
-            {/* Texto + Marcar/Desmarcar todos */}
-            <div className="flex justify-between items-center mb-3 gap-3 text-slate-200">
-              <p className="text-sm text-slate-300">
+            <div className="flex justify-between items-center mb-3 gap-3">
+              <p className="text-sm text-[var(--muted)]">
                 Basado en tus gastos de{" "}
-                <strong className="text-slate-100">
+                <strong className="text-[var(--text)]">
                   {importPreview.from_month}
                 </strong>
                 , se sugieren presupuestos para el mes{" "}
-                <strong className="text-slate-100">
+                <strong className="text-[var(--text)]">
                   {importPreview.to_month}
                 </strong>
                 . Las categorías seleccionadas sin presupuesto se crearán con
                 ese monto y, si una categoría ya tiene presupuesto, se{" "}
-                <strong className="text-slate-100">actualizará</strong> al
+                <strong className="text-[var(--text)]">actualizará</strong> al
                 valor sugerido del mes anterior.
               </p>
+
               <button
                 type="button"
-                className="
-                  text-[11px] font-semibold
-                  text-emerald-300 hover:text-emerald-200
-                  underline underline-offset-2
-                  shrink-0
-                "
+                className="text-[11px] font-semibold underline underline-offset-2 shrink-0"
+                style={{ color: "var(--primary)" }}
                 onClick={() => {
                   const newValue = !allSelected;
                   setImportItems((prev) =>
@@ -460,34 +411,25 @@ function Budgets({ token }) {
               </button>
             </div>
 
-            {/* Tabla */}
-            <div className="max-h-96 overflow-y-auto border border-slate-800 rounded-lg mb-4 bg-slate-950/40">
-              <table className="w-full text-xs sm:text-sm">
-                <thead className="bg-slate-900/80 border-b border-slate-800">
+            <div className="max-h-96 overflow-y-auto mb-4">
+              <table className="ff-table">
+                <thead>
                   <tr>
-                    <th className="p-2 text-left text-slate-300">
-                      Seleccionar
-                    </th>
-                    <th className="p-2 text-left text-slate-300">Categoría</th>
-                    <th className="p-2 text-right text-slate-300">
+                    <th className="ff-th">Seleccionar</th>
+                    <th className="ff-th">Categoría</th>
+                    <th className="ff-th" style={{ textAlign: "right" }}>
                       Gasto {importPreview.from_month}
                     </th>
-                    <th className="p-2 text-right text-slate-300">
+                    <th className="ff-th" style={{ textAlign: "right" }}>
                       Presupuesto actual {importPreview.to_month}
                     </th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {importItems.map((item, idx) => (
-                    <tr
-                      key={item.category_id}
-                      className={
-                        idx % 2 === 0
-                          ? "border-t border-slate-800 bg-slate-950/40 hover:bg-slate-900/70"
-                          : "border-t border-slate-800 bg-slate-900/60 hover:bg-slate-900"
-                      }
-                    >
-                      <td className="p-2">
+                    <tr key={item.category_id} className="ff-tr">
+                      <td className="ff-td">
                         <input
                           type="checkbox"
                           checked={item.selected}
@@ -499,15 +441,19 @@ function Budgets({ token }) {
                               )
                             );
                           }}
+                          style={{ accentColor: "var(--primary)" }}
                         />
                       </td>
-                      <td className="p-2 text-slate-200">
+
+                      <td className="ff-td">
                         {item.category_name || "Sin nombre"}
                       </td>
-                      <td className="p-2 text-right text-slate-100">
+
+                      <td className="ff-td" style={{ textAlign: "right" }}>
                         {item.spent_last_month.toFixed(2)}
                       </td>
-                      <td className="p-2 text-right text-slate-100">
+
+                      <td className="ff-td" style={{ textAlign: "right" }}>
                         {item.existing_budget_limit != null
                           ? item.existing_budget_limit.toFixed(2)
                           : "—"}
@@ -518,26 +464,15 @@ function Budgets({ token }) {
               </table>
             </div>
 
-            {/* Botones: acción primero, cancelar al final */}
             <div className="flex justify-end gap-2 pt-1">
               <button
-                className="
-                  px-4 py-2 text-sm font-semibold rounded-lg
-                  bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-400
-                  text-slate-950
-                  shadow-[0_0_16px_rgba(16,185,129,0.6)]
-                  hover:brightness-110
-                  active:scale-95
-                  transition-all
-                "
+                className="ff-btn ff-btn-primary"
                 type="button"
                 onClick={async () => {
                   const selected = importItems.filter((it) => it.selected);
 
                   if (selected.length === 0) {
-                    toast.error(
-                      "Selecciona al menos una categoría para importar."
-                    );
+                    toast.error("Selecciona al menos una categoría para importar.");
                     return;
                   }
 
@@ -551,16 +486,12 @@ function Budgets({ token }) {
                           limit_amount: it.spent_last_month,
                         })),
                       },
-                      {
-                        headers: { Authorization: `Bearer ${token}` },
-                      }
+                      { headers: { Authorization: `Bearer ${token}` } }
                     );
 
                     const { insertedCount, updatedCount } = res.data || {};
                     toast.success(
-                      `Presupuestos procesados. Nuevos: ${
-                        insertedCount || 0
-                      }, actualizados: ${updatedCount || 0}.`
+                      `Presupuestos procesados. Nuevos: ${insertedCount || 0}, actualizados: ${updatedCount || 0}.`
                     );
 
                     setShowImportModal(false);
@@ -568,9 +499,7 @@ function Budgets({ token }) {
                     setImportItems([]);
                     fetchBudgets();
                   } catch {
-                    toast.error(
-                      "Error al importar presupuestos desde el mes anterior."
-                    );
+                    toast.error("Error al importar presupuestos desde el mes anterior.");
                   }
                 }}
               >
@@ -579,14 +508,7 @@ function Budgets({ token }) {
 
               <button
                 type="button"
-                className="
-                  px-4 py-2 text-sm font-semibold rounded-lg
-                  border border-slate-600
-                  bg-slate-900 text-slate-300
-                  hover:bg-slate-800 hover:border-slate-500
-                  active:scale-95
-                  transition-all
-                "
+                className="ff-btn ff-btn-ghost"
                 onClick={() => {
                   setShowImportModal(false);
                   setImportPreview(null);

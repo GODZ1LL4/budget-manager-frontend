@@ -1,0 +1,287 @@
+/*frontend\src\styles\theme.css*/
+:root {
+  /* ====== Global (semantic) ====== */
+  --bg-1: #0c0f14;
+  --bg-2: #0f1115;
+  --bg-3: #0a0c10;
+
+  --panel: rgba(2, 6, 23, 0.55);
+  --panel-2: rgba(15, 23, 42, 0.55);
+
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+
+  /* ====== Headings / Titles ====== */
+  --heading: var(--text);
+  --heading-muted: color-mix(in srgb, var(--heading) 70%, transparent);
+  --heading-accent: var(--primary);
+
+  /* ====== Mix helpers (tints) ====== */
+  --tint-8:  color-mix(in srgb, var(--primary) 8%,  transparent);
+  --tint-12: color-mix(in srgb, var(--primary) 12%, transparent);
+  --tint-16: color-mix(in srgb, var(--primary) 16%, transparent);
+  --tint-22: color-mix(in srgb, var(--primary) 22%, transparent);
+
+  --tx-item-shadow: none;
+  /* Border is a COLOR; opacity is controlled separately */
+  --border: #94a3b8;
+  --border-alpha: 0.22;
+  --border-w: 1px;
+
+  --ring: #10b981;
+
+  --primary: #10b981;
+  --danger: #fb7185;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --on-danger: #ffffff; /* o color-mix si quieres dinámico */
+  --danger-shadow: 0 0 18px color-mix(in srgb, var(--danger) 70%, transparent);
+  
+  /* ====== Radii ====== */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+
+  /* ====== Glow / Neon ====== */
+  --glow-color: var(--primary);
+  --glow-alpha: 0.7;
+  --glow-blur: 18px;
+  --glow-spread: 0px;
+
+  /* ====== Controls (inputs/selects) ======
+     Controls deben ser más opacos que paneles. */
+  --control-bg: color-mix(in srgb, var(--bg-1) 88%, #000);
+  --control-bg-2: color-mix(in srgb, var(--bg-2) 88%, #000);
+  --control-text: var(--text);
+  --control-muted: var(--muted);
+
+  --control-border: var(--border-rgba);
+  --control-border-hover: color-mix(in srgb, var(--primary) 45%, var(--border-rgba));
+  --control-border-focus: color-mix(in srgb, var(--primary) 55%, var(--border-rgba));
+  --control-focus-shadow: var(--glow-shadow);
+
+  /* ====== Component overrides ====== */
+  --btn-radius: var(--radius-md);
+  --btn-border-w: var(--border-w);
+  --btn-glow-alpha: var(--glow-alpha);
+  --btn-glow-blur: 18px;
+
+  /* ====== Button system ====== */
+  --btn-pad-y: 10px;
+  --btn-pad-x: 14px;
+  --btn-font-size: 14px;
+  --btn-font-weight: 600;
+
+  --btn-bg: color-mix(in srgb, var(--panel) 85%, var(--bg-1));
+  --btn-text: var(--text);
+  --btn-border: var(--border-rgba);
+
+  --btn-hover-bg: color-mix(in srgb, var(--panel) 92%, var(--bg-1));
+  --btn-hover-border: color-mix(in srgb, var(--primary) 45%, var(--border-rgba));
+
+  /* Variants */
+  --btn-primary-bg: var(--primary);
+  --btn-primary-text: var(--text-on-primary, #061018);
+
+  --btn-danger-bg: var(--danger);
+  --btn-danger-text: var(--text-on-danger, #ffffff);
+
+  --btn-warning-bg: var(--warning);
+  --btn-warning-text: var(--text-on-warning, #1a1205);
+
+  --btn-success-bg: var(--success);
+  --btn-success-text: var(--text-on-success, #04140d);
+
+  /* Ghost / outline */
+  --btn-ghost-bg: transparent;
+  --btn-ghost-text: var(--text);
+  --btn-ghost-hover-bg: color-mix(in srgb, var(--panel) 65%, transparent);
+
+  --btn-outline-bg: transparent;
+  --btn-outline-text: var(--text);
+  --btn-outline-border: var(--border-rgba);
+
+  /* Link buttons */
+  --link: color-mix(in srgb, var(--primary) 70%, var(--text));
+  --link-hover: color-mix(in srgb, var(--primary) 85%, var(--text));
+  
+  /* ====== Select (custom dropdown) ====== */
+  --select-radius: var(--radius-md);
+  --select-border-w: var(--border-w);
+
+  --select-bg: var(--control-bg);
+  --select-text: var(--control-text);
+  --select-border: var(--control-border);
+
+  --select-hover-bg: color-mix(in srgb, var(--primary) 10%, var(--control-bg));
+  --select-active-bg: color-mix(in srgb, var(--primary) 16%, var(--control-bg));
+
+  --select-muted: var(--control-muted);
+  --select-item-radius: var(--radius-sm);
+  --select-shadow: var(--glow-shadow);
+  --select-max-h: 260px;
+
+  --btn-hover-text: var(--btn-text);
+
+  --btn-primary-hover-text: var(--btn-primary-text);
+  --btn-success-hover-text: var(--btn-success-text);
+  --btn-warning-hover-text: var(--btn-warning-text);
+  --btn-danger-hover-text: var(--btn-danger-text);
+  --btn-outline-hover-text: var(--btn-outline-text);
+  --btn-ghost-hover-text: var(--btn-ghost-text);
+}
+
+html[data-theme="ironman"] {
+  --bg-1: #09060a;
+  --bg-2: #12060b;
+  --bg-3: #050409;
+
+  --panel: rgba(35, 9, 9, 0.62);
+  --panel-2: rgba(55, 12, 12, 0.55);
+
+  --text: #fff7ed;
+  --muted: #fca5a5;
+
+  --primary: #fbbf24; /* dorado */
+  --danger: #ff3355;  /* rojo */
+  --ring: #fbbf24;
+
+  --border: #fbbf24;
+  --border-alpha: 0.18;
+
+  --glow-color: #ff3355;
+  --glow-alpha: 0.55;
+  --glow-blur: 22px;
+}
+
+/* =========================
+   Ferrari Corsa (Preset)
+   ========================= */
+   html[data-theme="ferrari-corsa"] {
+    /* Global */
+    --bg-1: #07070a;
+    --bg-2: #0b0b10;
+    --bg-3: #050509;
+  
+    /* Paneles MÁS opacos (menos transparencia) */
+    --panel: rgba(18, 18, 22, 0.92);
+    --panel-2: rgba(24, 24, 30, 0.90);
+  
+    --text: #f8fafc;
+    --muted: #b6bdc9;
+  
+    /* Headings */
+    --heading: #ffffff;
+    --heading-muted: color-mix(in srgb, var(--heading) 72%, transparent);
+    --heading-accent: var(--primary);
+  
+    /* Border */
+    --border: #d7dbe3;     /* color base (se mezcla con alpha en derived) */
+    --border-alpha: 0.18;
+    --border-w: 1px;
+  
+    /* Semantic colors */
+    --primary: #f9d456;    /* Amarillito*/
+    --danger: #ff2d3d;     /* rojo más brillante */
+    --success: #2ee59d;    /* verde menta “premium” */
+    --warning: #ffd34d;    /* amarillo/dorado */
+  
+    --ring: #ffd34d;       /* foco dorado */
+  
+    /* Glow / Neon */
+    --glow-color: #d5001c;
+    --glow-alpha: 0.55;
+    --glow-blur: 20px;
+    --glow-spread: 0px;
+  
+    /* Controls (más opacos que panel) */
+    --control-bg: #0f0f14;
+    --control-bg-2: #14141a;
+    --control-text: var(--text);
+    --control-muted: color-mix(in srgb, var(--muted) 92%, transparent);
+  
+    --control-border: var(--border-rgba);
+    --control-border-hover: color-mix(in srgb, var(--primary) 50%, var(--border-rgba));
+    --control-border-focus: color-mix(in srgb, var(--warning) 55%, var(--border-rgba));
+    --control-focus-shadow: var(--glow-shadow);
+  
+    /* Radii */
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 18px;
+  
+    /* Buttons system (base) */
+    --btn-radius: var(--radius-md);
+    --btn-border-w: var(--border-w);
+    --btn-pad-y: 10px;
+    --btn-pad-x: 14px;
+    --btn-font-size: 14px;
+    --btn-font-weight: 650;
+  
+    --btn-bg: color-mix(in srgb, var(--panel) 92%, #000);
+    --btn-text: var(--text);
+    --btn-border: var(--border-rgba);
+  
+    --btn-hover-bg: color-mix(in srgb, var(--panel-2) 96%, #000);
+    --btn-hover-border: color-mix(in srgb, var(--primary) 55%, var(--border-rgba));
+    --btn-hover-text: #ffffff;
+  
+    /* Variants */
+    --btn-primary-bg: var(--primary);
+    --btn-primary-text: #1a1a1a;
+    --btn-primary-hover-text: #ffffff;
+  
+    --btn-danger-bg: var(--danger);
+    --btn-danger-text: #ffffff;
+    --btn-danger-hover-text: #ffffff;
+  
+    --btn-warning-bg: var(--warning);
+    --btn-warning-text: #1a1a1a;
+    --btn-warning-hover-text: #ffffff; /* si quieres blanco al hover */
+  
+    --btn-success-bg: var(--success);
+    --btn-success-text: #06130e;
+    --btn-success-hover-text: #ffffff;
+  
+    /* Ghost / outline */
+    --btn-ghost-bg: transparent;
+    --btn-ghost-text: var(--text);
+    --btn-ghost-hover-bg: color-mix(in srgb, var(--primary) 12%, transparent);
+  
+    --btn-outline-bg: transparent;
+    --btn-outline-text: var(--text);
+    --btn-outline-border: color-mix(in srgb, var(--border-rgba) 92%, transparent);
+  
+    /* Button glow controls */
+    --btn-glow-alpha: 0.42;
+    --btn-glow-blur: 18px;
+  
+    /* Links */
+    --link: color-mix(in srgb, var(--warning) 78%, var(--text));
+    --link-hover: color-mix(in srgb, var(--warning) 92%, #fff);
+  
+    /* Select (FFSelect) */
+    --select-radius: var(--radius-md);
+    --select-border-w: var(--border-w);
+  
+    --select-bg: var(--control-bg);
+    --select-text: var(--control-text);
+    --select-border: var(--control-border);
+  
+    --select-hover-bg: color-mix(in srgb, var(--primary) 12%, var(--control-bg));
+    --select-active-bg: color-mix(in srgb, var(--primary) 18%, var(--control-bg));
+  
+    --select-muted: var(--control-muted);
+    --select-item-radius: var(--radius-sm);
+    --select-shadow: var(--glow-shadow);
+    --select-max-h: 280px;
+  }
+  
+
+/* ====== Derived tokens (computed in JS) ====== */
+:root {
+  --border-rgba: rgba(148, 163, 184, 0.22);
+  --glow-rgba: rgba(16, 185, 129, 0.7);
+  --glow-shadow: 0 0 18px 0 rgba(16, 185, 129, 0.7);
+  --btn-glow-shadow: 0 0 18px 0 rgba(16, 185, 129, 0.7);
+}

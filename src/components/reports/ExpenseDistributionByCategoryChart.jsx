@@ -4,9 +4,20 @@ import axios from "axios";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import Modal from "../Modal";
 
+// ✅ Paleta “tema-friendly” (usa tokens). Recharts acepta CSS vars en fill.
 const COLORS = [
-  "#6366f1", "#10b981", "#f59e0b", "#ef4444", "#3b82f6", "#8b5cf6",
-  "#ec4899", "#14b8a6", "#f43f5e", "#a855f7", "#0ea5e9", "#84cc16",
+  "var(--primary)",
+  "var(--success)",
+  "var(--warning)",
+  "var(--danger)",
+  "color-mix(in srgb, var(--primary) 55%, #4f46e5)", // indigo-ish
+  "color-mix(in srgb, var(--primary) 45%, #3b82f6)", // blue-ish
+  "color-mix(in srgb, var(--danger) 55%, #ec4899)",  // pink-ish
+  "color-mix(in srgb, var(--primary) 35%, #14b8a6)", // teal-ish
+  "color-mix(in srgb, var(--warning) 55%, #a855f7)", // violet-ish
+  "color-mix(in srgb, var(--success) 55%, #0ea5e9)", // sky-ish
+  "color-mix(in srgb, var(--primary) 30%, #84cc16)", // lime-ish
+  "color-mix(in srgb, var(--danger) 35%, #f43f5e)",  // rose-ish
 ];
 
 function ExpenseDistributionByCategoryChart({
@@ -25,7 +36,7 @@ function ExpenseDistributionByCategoryChart({
       Object.entries(expensesByCategory).map(([catId, value]) => ({
         categoryId: catId,
         name: categoryNameMap?.[catId] || `Categoría ${catId}`,
-        value,
+        value: Number(value || 0),
       })),
     [expensesByCategory, categoryNameMap]
   );
@@ -53,12 +64,15 @@ function ExpenseDistributionByCategoryChart({
   };
 
   if (!pieData.length) {
-    return <p className="text-sm text-slate-500 italic">No hay gastos registrados para el período actual.</p>;
+    return (
+      <p className="text-sm italic" style={{ color: "var(--muted)" }}>
+        No hay gastos registrados para el período actual.
+      </p>
+    );
   }
 
   return (
-    <div className="space-y-3">
-
+    <div className="space-y-3" style={{ color: "var(--text)" }}>
       {/* PieChart – mismo tamaño original */}
       <div style={{ width: "100%", height: 300 }}>
         <ResponsiveContainer>
@@ -81,32 +95,36 @@ function ExpenseDistributionByCategoryChart({
                 />
               ))}
             </Pie>
+
+            {/* ✅ Tooltip tokenizado */}
             <Tooltip
-              formatter={(value) => `RD$ ${Number(value).toFixed(2)}`}
+              formatter={(value) => `RD$ ${Number(value || 0).toFixed(2)}`}
               labelFormatter={(label) => `Categoría: ${label}`}
               contentStyle={{
-                backgroundColor: "#020617",
-                border: "1px solid #4b5563",
-                color: "#e5e7eb",
-                borderRadius: "0.5rem",
+                background: "color-mix(in srgb, var(--bg-3) 78%, transparent)",
+                border: "1px solid var(--border-rgba)",
+                color: "var(--text)",
+                borderRadius: "var(--radius-md)",
                 boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
+                padding: "10px 12px",
+                backdropFilter: "blur(10px)",
               }}
-              itemStyle={{ color: "#e5e7eb" }}
-              labelStyle={{ color: "#e5e7eb", fontWeight: 600 }}
+              itemStyle={{ color: "var(--text)" }}
+              labelStyle={{ color: "var(--heading)", fontWeight: 700 }}
             />
           </PieChart>
         </ResponsiveContainer>
       </div>
 
-      <p className="text-sm text-slate-300 leading-relaxed">
+      <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
         Este gráfico muestra el porcentaje del total de gastos del mes actual,
         distribuidos por categoría.{" "}
-        <span className="text-slate-400">
+        <span style={{ color: "var(--heading-muted)" }}>
           Haz clic en una categoría para ver sus transacciones.
         </span>
       </p>
 
-      {/* MODAL: ancho grande + sin scroll horizontal + fuente mínima sm */}
+      {/* MODAL: ancho grande + sin scroll horizontal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => {
@@ -114,21 +132,19 @@ function ExpenseDistributionByCategoryChart({
           setSelectedCategory(null);
           setCategoryTransactions([]);
         }}
-        title={selectedCategory ? `Transacciones: ${selectedCategory}` : "Transacciones por categoría"}
+        title={
+          selectedCategory
+            ? `Transacciones: ${selectedCategory}`
+            : "Transacciones por categoría"
+        }
         size="lg"
       >
         <div
-          className="
-            space-y-2 
-            max-h-96 
-            overflow-y-auto 
-            overflow-x-hidden 
-            text-sm
-            pr-1
-          "
+          className="space-y-2 max-h-96 overflow-y-auto overflow-x-hidden text-sm pr-1"
+          style={{ color: "var(--text)" }}
         >
           {categoryTransactions.length === 0 ? (
-            <p className="text-sm text-slate-400">
+            <p className="text-sm" style={{ color: "var(--muted)" }}>
               Sin transacciones registradas.
             </p>
           ) : (
@@ -138,25 +154,32 @@ function ExpenseDistributionByCategoryChart({
                 className="
                   flex items-center justify-between gap-3
                   py-2
-                  border-b border-slate-800 last:border-b-0
-                  text-sm
-                  text-slate-200
-                  hover:bg-slate-900/70
+                  border-b last:border-b-0
                   rounded-md
                   px-2 -mx-2
                   transition-colors
                 "
+                style={{
+                  borderColor: "var(--border-rgba)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background =
+                    "color-mix(in srgb, var(--panel) 70%, transparent)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "transparent";
+                }}
               >
-                <span className="text-slate-400 w-20 shrink-0">
+                <span className="w-20 shrink-0" style={{ color: "var(--muted)" }}>
                   {tx.date}
                 </span>
 
-                <span className="flex-1 truncate text-slate-200">
+                <span className="flex-1 truncate" style={{ color: "var(--text)" }}>
                   {tx.description || "Sin descripción"}
                 </span>
 
-                <span className="font-semibold text-rose-400 shrink-0">
-                  RD$ {parseFloat(tx.amount).toFixed(2)}
+                <span className="font-semibold shrink-0" style={{ color: "var(--danger)" }}>
+                  RD$ {Number(tx.amount || 0).toFixed(2)}
                 </span>
               </div>
             ))
