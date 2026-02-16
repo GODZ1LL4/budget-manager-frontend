@@ -160,16 +160,16 @@ function Navbar({ onLogout, setView }) {
               {isOpen && (
                 <ul
                   className="
-                    absolute left-0 mt-3
-                    hidden md:block
-                    min-w-[190px]
-                    overflow-hidden
-                    rounded-xl
-                    border
-                    border-[var(--border-rgba)]
-                    bg-[color-mix(in srgb,var(--panel)_92%,transparent)]
-                    shadow-[0_18px_40px_rgba(0,0,0,0.65)]
-                  "
+      absolute left-0 mt-3
+      hidden md:block
+      min-w-[190px]
+      overflow-hidden
+      rounded-xl
+      border
+      border-[var(--border-rgba)]
+      bg-[var(--panel-2)]
+      shadow-[0_18px_40px_rgba(0,0,0,0.65)]
+    "
                 >
                   {section.links.map((link) => (
                     <li key={link.view}>
@@ -179,14 +179,14 @@ function Navbar({ onLogout, setView }) {
                           setOpenSection(null);
                         }}
                         className="
-                          block w-full text-left
-                          px-4 py-2.5
-                          text-sm
-                          text-[var(--text)]
-                          hover:text-[var(--primary)]
-                          hover:bg-[color-mix(in srgb,var(--panel-2)_85%,transparent)]
-                          transition-colors
-                        "
+            block w-full text-left
+            px-4 py-2.5
+            text-sm
+            text-[var(--text)]
+            hover:text-[var(--primary)]
+            hover:bg-[color-mix(in srgb,var(--panel-2)_92%,#000)]
+            transition-colors
+          "
                       >
                         {link.name}
                       </button>

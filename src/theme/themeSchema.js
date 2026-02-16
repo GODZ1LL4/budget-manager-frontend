@@ -3,6 +3,11 @@ export const THEME_PRESETS = [
   { id: "default", name: "FinanceFlow (Default)" },
   { id: "ironman", name: "Iron Man (Dev)" },
   { id: "ferrari-corsa", name: "Ferrari Corsa" },
+  { id: "white", name: "White Quartz (Light) PRO" },
+  { id: "black-gold", name: "BlackGold × Rolex PRO v2" },
+  { id: "gulf", name: "Gulf Racing 🏁" },
+  { id: "gulf-blue", name: "Gulf Heritage Blue 🏁" },
+
 ];
 
 export const THEME_SECTIONS = [
@@ -26,20 +31,19 @@ export const THEME_SECTIONS = [
       { key: "--primary", label: "Primary", type: "color" },
       { key: "--danger", label: "Danger", type: "color" },
       { key: "--success", label: "Success", type: "color" },
-      { key: "--warning", label: "Warning", type: "color" },
-    ],
+      { key: "--warning", label: "Warning", type: "color" }
+    ]
   },
 
   {
     id: "headings",
     title: "Títulos",
-    description:
-      "Colores para encabezados (h1/h2/h3) sin afectar el body text.",
+    description: "Colores para encabezados (h1/h2/h3) sin afectar el body text.",
     fields: [
       { key: "--heading", label: "Heading", type: "color" },
       { key: "--heading-muted", label: "Heading muted", type: "color" },
-      { key: "--heading-accent", label: "Heading accent", type: "color" },
-    ],
+      { key: "--heading-accent", label: "Heading accent", type: "color" }
+    ]
   },
 
   {
@@ -49,19 +53,14 @@ export const THEME_SECTIONS = [
     fields: [
       { key: "--border-rgba", label: "Border RGBA", type: "derived" },
       { key: "--glow-shadow", label: "Glow shadow", type: "derived" },
-      {
-        key: "--btn-glow-shadow",
-        label: "Button glow shadow",
-        type: "derived",
-      },
-    ],
+      { key: "--btn-glow-shadow", label: "Button glow shadow", type: "derived" }
+    ]
   },
 
   {
     id: "controls",
     title: "Controles (Inputs / Selects)",
-    description:
-      "Fondo y borde de controles interactivos (más opacos que paneles).",
+    description: "Fondo y borde de controles interactivos (más opacos que paneles).",
     fields: [
       { key: "--control-bg", label: "BG control", type: "color" },
       { key: "--control-bg-2", label: "BG control secundario", type: "color" },
@@ -70,8 +69,8 @@ export const THEME_SECTIONS = [
 
       { key: "--control-border", label: "Borde control", type: "color" },
       { key: "--control-border-hover", label: "Borde hover", type: "color" },
-      { key: "--control-border-focus", label: "Borde focus", type: "color" },
-    ],
+      { key: "--control-border-focus", label: "Borde focus", type: "color" }
+    ]
   },
 
   {
@@ -86,7 +85,7 @@ export const THEME_SECTIONS = [
         min: 0,
         max: 18,
         step: 1,
-        unit: "px",
+        unit: "px"
       },
       {
         key: "--radius-md",
@@ -95,7 +94,7 @@ export const THEME_SECTIONS = [
         min: 0,
         max: 24,
         step: 1,
-        unit: "px",
+        unit: "px"
       },
       {
         key: "--radius-lg",
@@ -104,7 +103,7 @@ export const THEME_SECTIONS = [
         min: 0,
         max: 32,
         step: 1,
-        unit: "px",
+        unit: "px"
       },
 
       {
@@ -114,7 +113,7 @@ export const THEME_SECTIONS = [
         min: 0,
         max: 3,
         step: 1,
-        unit: "px",
+        unit: "px"
       },
       {
         key: "--border-alpha",
@@ -123,9 +122,9 @@ export const THEME_SECTIONS = [
         min: 0.05,
         max: 1,
         step: 0.05,
-        unit: "",
-      },
-    ],
+        unit: ""
+      }
+    ]
   },
 
   {
@@ -141,7 +140,7 @@ export const THEME_SECTIONS = [
         min: 0,
         max: 1,
         step: 0.05,
-        unit: "",
+        unit: ""
       },
       {
         key: "--glow-blur",
@@ -150,7 +149,7 @@ export const THEME_SECTIONS = [
         min: 0,
         max: 40,
         step: 1,
-        unit: "px",
+        unit: "px"
       },
       {
         key: "--glow-spread",
@@ -159,9 +158,9 @@ export const THEME_SECTIONS = [
         min: 0,
         max: 20,
         step: 1,
-        unit: "px",
-      },
-    ],
+        unit: "px"
+      }
+    ]
   },
 
   {
@@ -176,7 +175,7 @@ export const THEME_SECTIONS = [
         min: 0,
         max: 32,
         step: 1,
-        unit: "px",
+        unit: "px"
       },
       {
         key: "--btn-border-w",
@@ -185,7 +184,7 @@ export const THEME_SECTIONS = [
         min: 0,
         max: 3,
         step: 1,
-        unit: "px",
+        unit: "px"
       },
 
       {
@@ -195,7 +194,7 @@ export const THEME_SECTIONS = [
         min: 4,
         max: 18,
         step: 1,
-        unit: "px",
+        unit: "px"
       },
       {
         key: "--btn-pad-x",
@@ -204,7 +203,7 @@ export const THEME_SECTIONS = [
         min: 6,
         max: 26,
         step: 1,
-        unit: "px",
+        unit: "px"
       },
       {
         key: "--btn-font-size",
@@ -213,7 +212,7 @@ export const THEME_SECTIONS = [
         min: 11,
         max: 18,
         step: 1,
-        unit: "px",
+        unit: "px"
       },
       {
         key: "--btn-font-weight",
@@ -222,7 +221,7 @@ export const THEME_SECTIONS = [
         min: 400,
         max: 800,
         step: 50,
-        unit: "",
+        unit: ""
       },
 
       { key: "--btn-bg", label: "BG base", type: "color" },
@@ -245,7 +244,6 @@ export const THEME_SECTIONS = [
       { key: "--btn-danger-text", label: "Danger texto", type: "color" },
 
       { key: "--btn-ghost-hover-bg", label: "Ghost hover BG", type: "color" },
-
       { key: "--btn-outline-border", label: "Outline borde", type: "color" },
 
       { key: "--btn-hover-text", label: "Texto hover (base)", type: "color" },
@@ -253,22 +251,43 @@ export const THEME_SECTIONS = [
       {
         key: "--btn-primary-hover-text",
         label: "Primary texto hover",
-        type: "color",
+        type: "color"
       },
       {
         key: "--btn-success-hover-text",
         label: "Success texto hover",
-        type: "color",
+        type: "color"
       },
       {
         key: "--btn-warning-hover-text",
         label: "Warning texto hover",
-        type: "color",
+        type: "color"
       },
       {
         key: "--btn-danger-hover-text",
         label: "Danger texto hover",
-        type: "color",
+        type: "color"
+      },
+
+      {
+        key: "--btn-primary-hover-bg",
+        label: "Primary hover BG (gradient)",
+        type: "text"
+      },
+      {
+        key: "--btn-success-hover-bg",
+        label: "Success hover BG (gradient)",
+        type: "text"
+      },
+      {
+        key: "--btn-warning-hover-bg",
+        label: "Warning hover BG (gradient)",
+        type: "text"
+      },
+      {
+        key: "--btn-danger-hover-bg",
+        label: "Danger hover BG (gradient)",
+        type: "text"
       },
 
       {
@@ -278,7 +297,7 @@ export const THEME_SECTIONS = [
         min: 0,
         max: 1,
         step: 0.05,
-        unit: "",
+        unit: ""
       },
       {
         key: "--btn-glow-blur",
@@ -287,19 +306,20 @@ export const THEME_SECTIONS = [
         min: 0,
         max: 50,
         step: 1,
-        unit: "px",
+        unit: "px"
       },
+
       {
         key: "--btn-outline-hover-text",
         label: "Outline texto hover",
-        type: "color",
+        type: "color"
       },
       {
         key: "--btn-ghost-hover-text",
         label: "Ghost texto hover",
-        type: "color",
-      },
-    ],
+        type: "color"
+      }
+    ]
   },
 
   {
@@ -314,7 +334,7 @@ export const THEME_SECTIONS = [
         min: 0,
         max: 32,
         step: 1,
-        unit: "px",
+        unit: "px"
       },
       {
         key: "--select-border-w",
@@ -323,7 +343,7 @@ export const THEME_SECTIONS = [
         min: 0,
         max: 3,
         step: 1,
-        unit: "px",
+        unit: "px"
       },
 
       { key: "--select-bg", label: "BG trigger", type: "color" },
@@ -340,10 +360,10 @@ export const THEME_SECTIONS = [
         min: 120,
         max: 420,
         step: 10,
-        unit: "px",
-      },
-    ],
-  },
+        unit: "px"
+      }
+    ]
+  }
 ];
 
 export const ALL_THEME_KEYS = THEME_SECTIONS.flatMap((s) =>

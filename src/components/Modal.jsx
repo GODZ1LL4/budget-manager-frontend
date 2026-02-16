@@ -48,7 +48,7 @@ function Modal({ isOpen, onClose, title, children, size = "md" }) {
                   w-full ${sizeClass}
                   transform overflow-hidden
                   rounded-[var(--radius-lg)]
-                  bg-[color-mix(in_srgb,var(--panel)_92%,transparent)]
+                  bg-[color-mix(in srgb,var(--panel)_92%,transparent)]
                   border
                   transition-all
                   text-left align-middle

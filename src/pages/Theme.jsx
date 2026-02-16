@@ -278,7 +278,15 @@ export default function Theme() {
           <div className="sm:col-span-7">
             <FFSelect
               value={theme.preset || "default"}
-              onChange={(v) => setTheme((prev) => ({ ...prev, preset: v }))}
+              onChange={(v) =>
+                setTheme((prev) => {
+                  const next = { ...prev, preset: v };
+                  saveTheme(next);
+                  applyTheme(next);
+                  return next;
+                })
+              }
+              
               options={THEME_PRESETS.map((p) => ({
                 value: p.id,
                 label: p.name,
@@ -291,10 +299,17 @@ export default function Theme() {
             <button
               type="button"
               onClick={() => {
-                setTheme((prev) => ({ ...prev, vars: {} }));
+                setTheme((prev) => {
+                  const next = { ...prev, vars: {} };
+                  saveTheme(next);
+                  applyTheme(next);
+                  return next;
+                });
+              
                 setToast("🔁 Overrides limpiados (volviste al preset).");
                 window.setTimeout(() => setToast(""), 1800);
               }}
+              
               className="ff-btn ff-btn-outline"
             >
               Limpiar overrides

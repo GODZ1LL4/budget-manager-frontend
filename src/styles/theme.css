@@ -1,200 +1,443 @@
-/*frontend\src\styles\theme.css*/
-:root {
-  /* ====== Global (semantic) ====== */
-  --bg-1: #0c0f14;
-  --bg-2: #0f1115;
-  --bg-3: #0a0c10;
-
-  --panel: rgba(2, 6, 23, 0.55);
-  --panel-2: rgba(15, 23, 42, 0.55);
-
-  --text: #e2e8f0;
-  --muted: #94a3b8;
-
-  /* ====== Headings / Titles ====== */
-  --heading: var(--text);
-  --heading-muted: color-mix(in srgb, var(--heading) 70%, transparent);
-  --heading-accent: var(--primary);
-
-  /* ====== Mix helpers (tints) ====== */
-  --tint-8:  color-mix(in srgb, var(--primary) 8%,  transparent);
-  --tint-12: color-mix(in srgb, var(--primary) 12%, transparent);
-  --tint-16: color-mix(in srgb, var(--primary) 16%, transparent);
-  --tint-22: color-mix(in srgb, var(--primary) 22%, transparent);
-
-  --tx-item-shadow: none;
-  /* Border is a COLOR; opacity is controlled separately */
-  --border: #94a3b8;
-  --border-alpha: 0.22;
-  --border-w: 1px;
-
-  --ring: #10b981;
-
-  --primary: #10b981;
-  --danger: #fb7185;
-  --success: #34d399;
-  --warning: #fbbf24;
-  --on-danger: #ffffff; /* o color-mix si quieres dinámico */
-  --danger-shadow: 0 0 18px color-mix(in srgb, var(--danger) 70%, transparent);
-  
-  /* ====== Radii ====== */
-  --radius-sm: 10px;
-  --radius-md: 14px;
-  --radius-lg: 18px;
-
-  /* ====== Glow / Neon ====== */
-  --glow-color: var(--primary);
-  --glow-alpha: 0.7;
-  --glow-blur: 18px;
-  --glow-spread: 0px;
-
-  /* ====== Controls (inputs/selects) ======
-     Controls deben ser más opacos que paneles. */
-  --control-bg: color-mix(in srgb, var(--bg-1) 88%, #000);
-  --control-bg-2: color-mix(in srgb, var(--bg-2) 88%, #000);
-  --control-text: var(--text);
-  --control-muted: var(--muted);
-
-  --control-border: var(--border-rgba);
-  --control-border-hover: color-mix(in srgb, var(--primary) 45%, var(--border-rgba));
-  --control-border-focus: color-mix(in srgb, var(--primary) 55%, var(--border-rgba));
-  --control-focus-shadow: var(--glow-shadow);
-
-  /* ====== Component overrides ====== */
-  --btn-radius: var(--radius-md);
-  --btn-border-w: var(--border-w);
-  --btn-glow-alpha: var(--glow-alpha);
-  --btn-glow-blur: 18px;
-
-  /* ====== Button system ====== */
-  --btn-pad-y: 10px;
-  --btn-pad-x: 14px;
-  --btn-font-size: 14px;
-  --btn-font-weight: 600;
-
-  --btn-bg: color-mix(in srgb, var(--panel) 85%, var(--bg-1));
-  --btn-text: var(--text);
-  --btn-border: var(--border-rgba);
-
-  --btn-hover-bg: color-mix(in srgb, var(--panel) 92%, var(--bg-1));
-  --btn-hover-border: color-mix(in srgb, var(--primary) 45%, var(--border-rgba));
-
-  /* Variants */
-  --btn-primary-bg: var(--primary);
-  --btn-primary-text: var(--text-on-primary, #061018);
-
-  --btn-danger-bg: var(--danger);
-  --btn-danger-text: var(--text-on-danger, #ffffff);
-
-  --btn-warning-bg: var(--warning);
-  --btn-warning-text: var(--text-on-warning, #1a1205);
-
-  --btn-success-bg: var(--success);
-  --btn-success-text: var(--text-on-success, #04140d);
-
-  /* Ghost / outline */
-  --btn-ghost-bg: transparent;
-  --btn-ghost-text: var(--text);
-  --btn-ghost-hover-bg: color-mix(in srgb, var(--panel) 65%, transparent);
-
-  --btn-outline-bg: transparent;
-  --btn-outline-text: var(--text);
-  --btn-outline-border: var(--border-rgba);
-
-  /* Link buttons */
-  --link: color-mix(in srgb, var(--primary) 70%, var(--text));
-  --link-hover: color-mix(in srgb, var(--primary) 85%, var(--text));
-  
-  /* ====== Select (custom dropdown) ====== */
-  --select-radius: var(--radius-md);
-  --select-border-w: var(--border-w);
-
-  --select-bg: var(--control-bg);
-  --select-text: var(--control-text);
-  --select-border: var(--control-border);
-
-  --select-hover-bg: color-mix(in srgb, var(--primary) 10%, var(--control-bg));
-  --select-active-bg: color-mix(in srgb, var(--primary) 16%, var(--control-bg));
-
-  --select-muted: var(--control-muted);
-  --select-item-radius: var(--radius-sm);
-  --select-shadow: var(--glow-shadow);
-  --select-max-h: 260px;
-
-  --btn-hover-text: var(--btn-text);
-
-  --btn-primary-hover-text: var(--btn-primary-text);
-  --btn-success-hover-text: var(--btn-success-text);
-  --btn-warning-hover-text: var(--btn-warning-text);
-  --btn-danger-hover-text: var(--btn-danger-text);
-  --btn-outline-hover-text: var(--btn-outline-text);
-  --btn-ghost-hover-text: var(--btn-ghost-text);
-}
-
-html[data-theme="ironman"] {
-  --bg-1: #09060a;
-  --bg-2: #12060b;
-  --bg-3: #050409;
-
-  --panel: rgba(35, 9, 9, 0.62);
-  --panel-2: rgba(55, 12, 12, 0.55);
-
-  --text: #fff7ed;
-  --muted: #fca5a5;
-
-  --primary: #fbbf24; /* dorado */
-  --danger: #ff3355;  /* rojo */
-  --ring: #fbbf24;
-
-  --border: #fbbf24;
-  --border-alpha: 0.18;
-
-  --glow-color: #ff3355;
-  --glow-alpha: 0.55;
-  --glow-blur: 22px;
-}
+/* frontend/src/styles/theme.css */
 
 /* =========================
-   Ferrari Corsa (Preset)
+   Base tokens (Default preset)
    ========================= */
-   html[data-theme="ferrari-corsa"] {
-    /* Global */
+   :root {
+    /* ====== Global (semantic) ====== */
+    --bg-1: #0c0f14;
+    --bg-2: #0f1115;
+    --bg-3: #0a0c10;
+  
+    --panel: rgba(2, 6, 23, 0.55);
+    --panel-2: rgba(15, 23, 42, 0.55);
+  
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+  
+    /* ====== Headings / Titles ====== */
+    --heading: var(--text);
+    --heading-muted: color-mix(in srgb, var(--heading) 70%, transparent);
+    --heading-accent: var(--primary);
+  
+    /* ====== Mix helpers (tints) ====== */
+    --tint-8:  color-mix(in srgb, var(--primary) 8%,  transparent);
+    --tint-12: color-mix(in srgb, var(--primary) 12%, transparent);
+    --tint-16: color-mix(in srgb, var(--primary) 16%, transparent);
+    --tint-22: color-mix(in srgb, var(--primary) 22%, transparent);
+  
+    --tx-item-shadow: none;
+  
+    /* ====== Border ====== */
+    --border: #94a3b8;
+    --border-alpha: 0.22;
+    --border-w: 1px;
+  
+    /* ====== Semantic colors ====== */
+    --primary: #10b981;
+    --ring: var(--primary);
+  
+    --danger: #fb7185;
+    --success: #34d399;
+    --warning: #fbbf24;
+  
+    --on-danger: #ffffff;
+    --danger-shadow: 0 0 18px color-mix(in srgb, var(--danger) 70%, transparent);
+  
+    /* ====== Radii ====== */
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 18px;
+  
+    /* ====== Glow / Neon ====== */
+    --glow-color: var(--primary);
+    --glow-alpha: 0.7;
+    --glow-blur: 18px;
+    --glow-spread: 0px;
+  
+    /* ====== Controls (inputs/selects) ====== */
+    --control-bg: color-mix(in srgb, var(--bg-1) 88%, #000);
+    --control-bg-2: color-mix(in srgb, var(--bg-2) 88%, #000);
+    --control-text: var(--text);
+    --control-muted: var(--muted);
+  
+    --control-border: var(--border-rgba);
+    --control-border-hover: color-mix(in srgb, var(--primary) 45%, var(--border-rgba));
+    --control-border-focus: color-mix(in srgb, var(--primary) 55%, var(--border-rgba));
+    --control-focus-shadow: var(--glow-shadow);
+  
+    /* ====== Button system ====== */
+    --btn-radius: var(--radius-md);
+    --btn-border-w: var(--border-w);
+  
+    --btn-pad-y: 10px;
+    --btn-pad-x: 14px;
+    --btn-font-size: 14px;
+    --btn-font-weight: 600;
+  
+    --btn-bg: color-mix(in srgb, var(--panel) 85%, var(--bg-1));
+    --btn-text: var(--text);
+    --btn-border: var(--border-rgba);
+  
+    --btn-hover-bg: color-mix(in srgb, var(--panel) 92%, var(--bg-1));
+    --btn-hover-border: color-mix(in srgb, var(--primary) 45%, var(--border-rgba));
+    --btn-hover-text: var(--btn-text);
+  
+    /* Variants */
+    --btn-primary-bg: var(--primary);
+    --btn-primary-text: var(--text-on-primary, #061018);
+  
+    --btn-danger-bg: var(--danger);
+    --btn-danger-text: var(--text-on-danger, #ffffff);
+  
+    --btn-warning-bg: var(--warning);
+    --btn-warning-text: var(--text-on-warning, #1a1205);
+  
+    --btn-success-bg: var(--success);
+    --btn-success-text: var(--text-on-success, #04140d);
+  
+    /* Variant hover BG tokens (used by your PRO button CSS) */
+    --btn-primary-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--btn-primary-bg) 88%, #ffffff) 0%,
+      color-mix(in srgb, var(--btn-primary-bg) 74%, #ffffff) 100%
+    );
+    --btn-success-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--btn-success-bg) 88%, #ffffff) 0%,
+      color-mix(in srgb, var(--btn-success-bg) 74%, #ffffff) 100%
+    );
+    --btn-warning-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--btn-warning-bg) 90%, #ffffff) 0%,
+      color-mix(in srgb, var(--btn-warning-bg) 78%, #ffffff) 100%
+    );
+    --btn-danger-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--btn-danger-bg) 88%, #ffffff) 0%,
+      color-mix(in srgb, var(--btn-danger-bg) 74%, #ffffff) 100%
+    );
+  
+    --btn-primary-hover-text: var(--btn-primary-text);
+    --btn-success-hover-text: var(--btn-success-text);
+    --btn-warning-hover-text: var(--btn-warning-text);
+    --btn-danger-hover-text: var(--btn-danger-text);
+  
+    /* Ghost / outline */
+    --btn-ghost-bg: transparent;
+    --btn-ghost-text: var(--text);
+    --btn-ghost-hover-bg: color-mix(in srgb, var(--panel) 65%, transparent);
+    --btn-ghost-hover-text: var(--btn-ghost-text);
+  
+    --btn-outline-bg: transparent;
+    --btn-outline-text: var(--text);
+    --btn-outline-border: var(--border-rgba);
+    --btn-outline-hover-text: var(--btn-outline-text);
+  
+    /* Button glow controls */
+    --btn-glow-alpha: var(--glow-alpha);
+    --btn-glow-blur: 18px;
+  
+    /* Links */
+    --link: color-mix(in srgb, var(--primary) 70%, var(--text));
+    --link-hover: color-mix(in srgb, var(--primary) 85%, var(--text));
+  
+    /* ====== Select (custom dropdown) ====== */
+    --select-radius: var(--radius-md);
+    --select-border-w: var(--border-w);
+  
+    --select-bg: var(--control-bg);
+    --select-text: var(--control-text);
+    --select-border: var(--control-border);
+  
+    --select-hover-bg: color-mix(in srgb, var(--primary) 10%, var(--control-bg));
+    --select-active-bg: color-mix(in srgb, var(--primary) 16%, var(--control-bg));
+  
+    --select-muted: var(--control-muted);
+    --select-item-radius: var(--radius-sm);
+    --select-shadow: var(--glow-shadow);
+    --select-max-h: 260px;
+  
+    /* =========================
+       Scrollbar Tokens
+       ========================= */
+    --scrollbar-size: 10px;
+    --scrollbar-track: color-mix(in srgb, var(--panel) 55%, var(--bg-1));
+    --scrollbar-thumb: color-mix(in srgb, var(--border) 55%, transparent);
+    --scrollbar-thumb-hover: color-mix(in srgb, var(--border) 75%, transparent);
+    --scrollbar-border: color-mix(in srgb, var(--panel) 60%, transparent);
+  }
+  
+  /* =========================
+     Preset: White (Light)
+     ========================= */
+  html[data-theme="white"] {
+    --bg-1: #ffffff;
+    --bg-2: #f8fafc;
+    --bg-3: #f1f5f9;
+  
+    --panel: rgba(255, 255, 255, 0.82);
+    --panel-2: rgba(255, 255, 255, 0.92);
+  
+    --text: #0f172a;
+    --muted: #475569;
+  
+    --heading: #0b1220;
+    --heading-muted: color-mix(in srgb, var(--heading) 70%, transparent);
+    --heading-accent: var(--primary);
+  
+    --border: #94a3b8;
+    --border-alpha: 0.28;
+    --border-w: 1px;
+  
+    --primary: #111827;
+    --ring: var(--primary);
+  
+    --danger: #e11d48;
+    --success: #059669;
+    --warning: #f59e0b;
+  
+    --glow-color: var(--primary);
+    --glow-alpha: 0.12;
+    --glow-blur: 14px;
+  
+    --control-bg: #ffffff;
+    --control-bg-2: #f8fafc;
+    --control-text: var(--text);
+    --control-muted: var(--muted);
+  
+    --control-border: rgba(148, 163, 184, 0.45);
+    --control-border-hover: color-mix(in srgb, var(--primary) 25%, rgba(148, 163, 184, 0.45));
+    --control-border-focus: color-mix(in srgb, var(--primary) 40%, rgba(148, 163, 184, 0.45));
+  
+    --btn-bg: rgba(255, 255, 255, 0.92);
+    --btn-text: var(--text);
+    --btn-border: rgba(148, 163, 184, 0.45);
+  
+    --btn-hover-bg: color-mix(in srgb, var(--primary) 4%, #ffffff);
+    --btn-hover-border: color-mix(in srgb, var(--primary) 25%, rgba(148, 163, 184, 0.45));
+    --btn-hover-text: var(--btn-text);
+  
+    --btn-primary-bg: var(--primary);
+    --btn-primary-text: #ffffff;
+  
+    --btn-success-bg: var(--success);
+    --btn-success-text: #ffffff;
+  
+    --btn-warning-bg: var(--warning);
+    --btn-warning-text: #1f2937;
+  
+    --btn-danger-bg: var(--danger);
+    --btn-danger-text: #ffffff;
+  
+    --btn-primary-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--btn-primary-bg) 88%, #ffffff) 0%,
+      color-mix(in srgb, var(--btn-primary-bg) 74%, #ffffff) 100%
+    );
+    --btn-success-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--btn-success-bg) 88%, #ffffff) 0%,
+      color-mix(in srgb, var(--btn-success-bg) 74%, #ffffff) 100%
+    );
+    --btn-warning-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--btn-warning-bg) 90%, #ffffff) 0%,
+      color-mix(in srgb, var(--btn-warning-bg) 78%, #ffffff) 100%
+    );
+    --btn-danger-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--btn-danger-bg) 88%, #ffffff) 0%,
+      color-mix(in srgb, var(--btn-danger-bg) 74%, #ffffff) 100%
+    );
+  
+    --btn-outline-border: rgba(148, 163, 184, 0.55);
+  
+    --btn-ghost-hover-bg: color-mix(in srgb, var(--primary) 8%, #ffffff);
+  
+    --select-bg: var(--control-bg);
+    --select-text: var(--control-text);
+    --select-border: var(--control-border);
+    --select-hover-bg: color-mix(in srgb, var(--select-bg) 88%, #ffffff);
+    --select-active-bg: color-mix(in srgb, var(--select-bg) 78%, #ffffff);
+  
+    --select-shadow: 0 18px 45px rgba(2, 6, 23, 0.08);
+    --select-max-h: 280px;
+  
+    --scrollbar-track: color-mix(in srgb, var(--panel) 70%, #ffffff);
+    --scrollbar-thumb: color-mix(in srgb, var(--border) 55%, #ffffff);
+    --scrollbar-thumb-hover: color-mix(in srgb, var(--border) 70%, #ffffff);
+    --scrollbar-border: color-mix(in srgb, var(--panel) 70%, #ffffff);
+  
+    --btn-glow-alpha: 0.0;
+    --btn-glow-blur: 0px;
+
+  }
+  
+
+  /* =========================
+   Preset: Iron Man (Mark III Gold Edition)
+   ========================= */
+   html[data-theme="ironman"] {
+    --bg-1: #220406;
+    --bg-2: #30060A;
+    --bg-3: #160305;
+  
+    --panel: linear-gradient(180deg, rgba(90,10,14,0.92) 0%, rgba(35,5,7,0.95) 100%);
+    --panel-2: linear-gradient(180deg, rgba(70,8,12,0.95) 0%, rgba(25,4,6,0.97) 100%);
+  
+    --text: rgba(255,255,255,0.94);
+    --muted: rgba(255,255,255,0.72);
+  
+    --heading: rgba(255,255,255,0.98);
+    --heading-accent: #FFD37A;
+  
+    --border: #D6A43A;
+    --border-alpha: 0.40;
+    --border-w: 1px;
+  
+    --primary: #FFD37A;
+    --ring: #FFD37A;
+  
+    --success: #22D3EE;
+    --warning: #FFD37A;
+    --danger: #FB7185;
+  
+    --glow-color: #FFD37A;
+    --glow-alpha: 0.28;
+    --glow-blur: 28px;
+    --glow-spread: 0px;
+  
+    --control-bg: rgba(35,5,7,0.78);
+    --control-bg-2: rgba(25,4,6,0.82);
+    --control-text: rgba(255,255,255,0.94);
+    --control-muted: rgba(255,255,255,0.70);
+  
+    --control-border: rgba(255,215,128,0.55);
+    --control-border-hover: rgba(255,215,128,0.75);
+    --control-border-focus: rgba(255,215,128,0.92);
+  
+    /* ===================== */
+    /* BOTONES METÁLICOS PRO */
+    /* ===================== */
+  
+    --btn-bg: linear-gradient(180deg, rgba(90,10,14,0.82) 0%, rgba(30,5,7,0.78) 100%);
+    --btn-text: rgba(255,255,255,0.95);
+    --btn-border: rgba(255,215,128,0.60);
+  
+    --btn-hover-bg: linear-gradient(180deg, rgba(120,14,18,0.90) 0%, rgba(40,6,8,0.86) 100%);
+    --btn-hover-border: rgba(255,215,128,0.90);
+    --btn-hover-text: #ffffff;
+  
+    --btn-primary-bg: #FFD37A;
+    --btn-primary-text: #1A1205;
+    --btn-primary-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, #FFD37A 92%, #ffffff) 0%,
+      color-mix(in srgb, #FFD37A 78%, #ffffff) 100%
+    );
+  
+    --btn-success-bg: #22D3EE;
+    --btn-success-text: #061318;
+    --btn-success-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, #22D3EE 90%, #ffffff) 0%,
+      color-mix(in srgb, #22D3EE 76%, #ffffff) 100%
+    );
+  
+    --btn-warning-bg: #FFD37A;
+    --btn-warning-text: #1A1205;
+  
+    --btn-danger-bg: #FB7185;
+    --btn-danger-text: #2A0A12;
+    --btn-danger-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, #FB7185 90%, #ffffff) 0%,
+      color-mix(in srgb, #FB7185 76%, #ffffff) 100%
+    );
+  
+    --btn-outline-bg: linear-gradient(
+      180deg,
+      color-mix(in srgb, rgba(90,10,14,0.68) 92%, #000) 0%,
+      color-mix(in srgb, rgba(70,8,12,0.72) 92%, #000) 100%
+    );
+    --btn-outline-border: rgba(255,215,128,0.80);
+    --btn-outline-text: rgba(255,255,255,0.95);
+    --btn-outline-hover-text: #ffffff;
+  
+    --btn-ghost-bg: linear-gradient(
+      180deg,
+      color-mix(in srgb, rgba(90,10,14,0.68) 78%, transparent) 0%,
+      color-mix(in srgb, rgba(70,8,12,0.72) 78%, transparent) 100%
+    );
+    --btn-ghost-text: rgba(255,255,255,0.95);
+    --btn-ghost-hover-bg: linear-gradient(
+      180deg,
+      color-mix(in srgb, rgba(90,10,14,0.68) 86%, transparent) 0%,
+      color-mix(in srgb, rgba(70,8,12,0.72) 86%, transparent) 100%
+    );
+  
+    --btn-glow-alpha: 0.32;
+    --btn-glow-blur: 32px;
+  
+    /* ===================== */
+    /* SELECT */
+    /* ===================== */
+  
+    --select-bg: rgba(30,5,7,0.82);
+    --select-text: rgba(255,255,255,0.94);
+    --select-border: rgba(255,215,128,0.65);
+    --select-hover-bg: rgba(255,215,128,0.16);
+    --select-active-bg: rgba(255,215,128,0.26);
+    --select-radius: 14px;
+    --select-border-w: 1px;
+    --select-max-h: 280px;
+  
+    /* ===================== */
+    /* SCROLLBAR */
+    /* ===================== */
+  
+    --scrollbar-track: color-mix(in srgb, rgba(30,5,7,0.85) 85%, #000);
+    --scrollbar-thumb: color-mix(in srgb, #FFD37A 65%, transparent);
+    --scrollbar-thumb-hover: color-mix(in srgb, #FFD37A 88%, transparent);
+    --scrollbar-border: rgba(255,215,128,0.32);
+  }
+  
+
+  
+  /* =========================
+     Preset: Ferrari Corsa (improved)
+     ========================= */
+  html[data-theme="ferrari-corsa"] {
     --bg-1: #07070a;
     --bg-2: #0b0b10;
     --bg-3: #050509;
   
-    /* Paneles MÁS opacos (menos transparencia) */
     --panel: rgba(18, 18, 22, 0.92);
     --panel-2: rgba(24, 24, 30, 0.90);
   
     --text: #f8fafc;
     --muted: #b6bdc9;
   
-    /* Headings */
     --heading: #ffffff;
     --heading-muted: color-mix(in srgb, var(--heading) 72%, transparent);
     --heading-accent: var(--primary);
   
-    /* Border */
-    --border: #d7dbe3;     /* color base (se mezcla con alpha en derived) */
+    --border: #d7dbe3;
     --border-alpha: 0.18;
     --border-w: 1px;
   
-    /* Semantic colors */
-    --primary: #f9d456;    /* Amarillito*/
-    --danger: #ff2d3d;     /* rojo más brillante */
-    --success: #2ee59d;    /* verde menta “premium” */
-    --warning: #ffd34d;    /* amarillo/dorado */
+    --primary: #f9d456;
+    --danger: #ff2d3d;
+    --success: #2ee59d;
+    --warning: #ffd34d;
   
-    --ring: #ffd34d;       /* foco dorado */
+    --ring: #ffd34d;
   
-    /* Glow / Neon */
     --glow-color: #d5001c;
     --glow-alpha: 0.55;
     --glow-blur: 20px;
-    --glow-spread: 0px;
   
-    /* Controls (más opacos que panel) */
     --control-bg: #0f0f14;
     --control-bg-2: #14141a;
     --control-text: var(--text);
@@ -203,20 +446,6 @@ html[data-theme="ironman"] {
     --control-border: var(--border-rgba);
     --control-border-hover: color-mix(in srgb, var(--primary) 50%, var(--border-rgba));
     --control-border-focus: color-mix(in srgb, var(--warning) 55%, var(--border-rgba));
-    --control-focus-shadow: var(--glow-shadow);
-  
-    /* Radii */
-    --radius-sm: 10px;
-    --radius-md: 14px;
-    --radius-lg: 18px;
-  
-    /* Buttons system (base) */
-    --btn-radius: var(--radius-md);
-    --btn-border-w: var(--border-w);
-    --btn-pad-y: 10px;
-    --btn-pad-x: 14px;
-    --btn-font-size: 14px;
-    --btn-font-weight: 650;
   
     --btn-bg: color-mix(in srgb, var(--panel) 92%, #000);
     --btn-text: var(--text);
@@ -226,41 +455,48 @@ html[data-theme="ironman"] {
     --btn-hover-border: color-mix(in srgb, var(--primary) 55%, var(--border-rgba));
     --btn-hover-text: #ffffff;
   
-    /* Variants */
     --btn-primary-bg: var(--primary);
     --btn-primary-text: #1a1a1a;
-    --btn-primary-hover-text: #ffffff;
   
     --btn-danger-bg: var(--danger);
     --btn-danger-text: #ffffff;
-    --btn-danger-hover-text: #ffffff;
   
     --btn-warning-bg: var(--warning);
     --btn-warning-text: #1a1a1a;
-    --btn-warning-hover-text: #ffffff; /* si quieres blanco al hover */
   
     --btn-success-bg: var(--success);
     --btn-success-text: #06130e;
-    --btn-success-hover-text: #ffffff;
   
-    /* Ghost / outline */
-    --btn-ghost-bg: transparent;
-    --btn-ghost-text: var(--text);
+    --btn-primary-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--btn-primary-bg) 82%, #ffffff) 0%,
+      color-mix(in srgb, var(--btn-primary-bg) 68%, #ffffff) 100%
+    );
+    --btn-success-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--btn-success-bg) 82%, #ffffff) 0%,
+      color-mix(in srgb, var(--btn-success-bg) 68%, #ffffff) 100%
+    );
+    --btn-warning-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--btn-warning-bg) 84%, #ffffff) 0%,
+      color-mix(in srgb, var(--btn-warning-bg) 72%, #ffffff) 100%
+    );
+    --btn-danger-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--btn-danger-bg) 82%, #ffffff) 0%,
+      color-mix(in srgb, var(--btn-danger-bg) 68%, #ffffff) 100%
+    );
+  
     --btn-ghost-hover-bg: color-mix(in srgb, var(--primary) 12%, transparent);
-  
-    --btn-outline-bg: transparent;
-    --btn-outline-text: var(--text);
     --btn-outline-border: color-mix(in srgb, var(--border-rgba) 92%, transparent);
   
-    /* Button glow controls */
     --btn-glow-alpha: 0.42;
     --btn-glow-blur: 18px;
   
-    /* Links */
     --link: color-mix(in srgb, var(--warning) 78%, var(--text));
     --link-hover: color-mix(in srgb, var(--warning) 92%, #fff);
   
-    /* Select (FFSelect) */
     --select-radius: var(--radius-md);
     --select-border-w: var(--border-w);
   
@@ -276,12 +512,373 @@ html[data-theme="ironman"] {
     --select-shadow: var(--glow-shadow);
     --select-max-h: 280px;
   }
-  
 
-/* ====== Derived tokens (computed in JS) ====== */
-:root {
-  --border-rgba: rgba(148, 163, 184, 0.22);
-  --glow-rgba: rgba(16, 185, 129, 0.7);
-  --glow-shadow: 0 0 18px 0 rgba(16, 185, 129, 0.7);
-  --btn-glow-shadow: 0 0 18px 0 rgba(16, 185, 129, 0.7);
+  html[data-theme="black-gold"] {
+    --bg-1: #070707;
+    --bg-2: #0b0b0b;
+    --bg-3: #050505;
+  
+    --panel: rgba(14, 14, 14, 0.88);
+    --panel-2: rgba(20, 20, 20, 0.92);
+  
+    --text: #f5f5f5;
+    --muted: #a1a1aa;
+  
+    --heading: #ffffff;
+    --heading-muted: color-mix(in srgb, var(--heading) 72%, transparent);
+    --heading-accent: #d4af37;
+  
+    --border: #d4af37;
+    --border-alpha: 0.22;
+    --border-w: 1px;
+  
+    --primary: #0a5a43;
+    --success: #19c37d;
+    --warning: #f5c451;
+    --danger: #e5484d;
+  
+    --ring: #d4af37;
+  
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 18px;
+  
+    --glow-color: #d4af37;
+    --glow-alpha: 0.28;
+    --glow-blur: 22px;
+    --glow-spread: 0px;
+  
+    --control-bg: color-mix(in srgb, #0b0b0b 82%, #000);
+    --control-bg-2: color-mix(in srgb, #0f0f0f 82%, #000);
+    --control-text: var(--text);
+    --control-muted: var(--muted);
+  
+    --control-border: rgba(212, 175, 55, 0.38);
+    --control-border-hover: rgba(212, 175, 55, 0.60);
+    --control-border-focus: rgba(212, 175, 55, 0.78);
+  
+    --btn-bg: color-mix(in srgb, var(--panel) 92%, #000);
+    --btn-text: color-mix(in srgb, var(--text) 92%, #ffffff);
+    --btn-border: rgba(212, 175, 55, 0.40);
+  
+    --btn-hover-bg: color-mix(in srgb, var(--btn-bg) 86%, #000);
+    --btn-hover-border: rgba(212, 175, 55, 0.72);
+    --btn-hover-text: #ffffff;
+  
+    --btn-primary-bg: var(--primary);
+    --btn-primary-text: #ffffff;
+  
+    --btn-success-bg: var(--success);
+    --btn-success-text: #04140d;
+  
+    --btn-warning-bg: var(--warning);
+    --btn-warning-text: #1a1205;
+  
+    --btn-danger-bg: var(--danger);
+    --btn-danger-text: #ffffff;
+  
+    --btn-primary-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--btn-primary-bg) 86%, #000) 0%,
+      color-mix(in srgb, var(--btn-primary-bg) 72%, #000) 100%
+    );
+    --btn-success-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--btn-success-bg) 86%, #000) 0%,
+      color-mix(in srgb, var(--btn-success-bg) 72%, #000) 100%
+    );
+    --btn-warning-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--btn-warning-bg) 88%, #000) 0%,
+      color-mix(in srgb, var(--btn-warning-bg) 74%, #000) 100%
+    );
+    --btn-danger-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--btn-danger-bg) 86%, #000) 0%,
+      color-mix(in srgb, var(--btn-danger-bg) 72%, #000) 100%
+    );
+  
+    --btn-primary-hover-text: #ffffff;
+    --btn-success-hover-text: #ffffff;
+    --btn-warning-hover-text: #ffffff;
+    --btn-danger-hover-text: #ffffff;
+  
+    --btn-ghost-bg: transparent;
+    --btn-ghost-text: var(--text);
+    --btn-ghost-hover-bg: color-mix(in srgb, #d4af37 14%, transparent);
+  
+    --btn-outline-bg: transparent;
+    --btn-outline-text: var(--text);
+    --btn-outline-border: rgba(212, 175, 55, 0.55);
+    --btn-outline-hover-text: var(--text);
+  
+    --btn-glow-alpha: 0.22;
+    --btn-glow-blur: 22px;
+  
+    --select-bg: var(--control-bg);
+    --select-text: var(--control-text);
+    --select-border: rgba(212, 175, 55, 0.55);
+    --select-hover-bg: color-mix(in srgb, #d4af37 14%, transparent);
+    --select-active-bg: color-mix(in srgb, #d4af37 22%, transparent);
+    --select-radius: 14px;
+    --select-border-w: 1px;
+    --select-max-h: 280px;
+  
+    --scrollbar-size: 10px;
+    --scrollbar-track: color-mix(in srgb, var(--panel) 55%, var(--bg-1));
+    --scrollbar-thumb: color-mix(in srgb, var(--border) 55%, transparent);
+    --scrollbar-thumb-hover: color-mix(in srgb, var(--border) 78%, transparent);
+    --scrollbar-border: color-mix(in srgb, var(--panel) 60%, transparent);
+  }
+  
+  /* =========================
+   Preset: Gulf Racing (Light)
+   ========================= */
+html[data-theme="gulf"] {
+  --bg-1: #ffffff;
+  --bg-2: #f5f9fc;
+  --bg-3: #edf3f8;
+
+  --panel: rgba(255, 255, 255, 0.94);
+  --panel-2: rgba(248, 251, 255, 0.98);
+
+  --text: #0f1e2e;
+  --muted: #5c6f82;
+
+  --heading: #0b1a29;
+  --heading-muted: color-mix(in srgb, var(--heading) 70%, transparent);
+  --heading-accent: var(--primary);
+
+  --border: #5fa8d3;
+  --border-alpha: 0.35;
+  --border-w: 1px;
+
+  --primary: #0f4c81;     /* azul Gulf */
+  --success: #0ea5e9;
+  --warning: #ff7a1a;     /* naranja Gulf */
+  --danger: #e63946;
+
+  --ring: #ff7a1a;
+
+  --glow-color: #ff7a1a;
+  --glow-alpha: 0.25;
+  --glow-blur: 24px;
+  --glow-spread: 0px;
+
+  --control-bg: #ffffff;
+  --control-bg-2: #f5f9fc;
+  --control-text: var(--text);
+  --control-muted: var(--muted);
+
+  --control-border: rgba(15, 76, 129, 0.35);
+  --control-border-hover: rgba(255, 122, 26, 0.55);
+  --control-border-focus: rgba(255, 122, 26, 0.75);
+
+  --btn-bg: rgba(255, 255, 255, 0.96);
+  --btn-text: var(--text);
+  --btn-border: rgba(15, 76, 129, 0.35);
+
+  --btn-hover-bg: color-mix(in srgb, var(--primary) 6%, #ffffff);
+  --btn-hover-border: color-mix(in srgb, var(--warning) 45%, rgba(15, 76, 129, 0.35));
+  --btn-hover-text: var(--text);
+
+  --btn-primary-bg: #0f4c81;
+  --btn-primary-text: #ffffff;
+
+  --btn-success-bg: #0ea5e9;
+  --btn-success-text: #ffffff;
+
+  --btn-warning-bg: #ff7a1a;
+  --btn-warning-text: #ffffff;
+
+  --btn-danger-bg: #e63946;
+  --btn-danger-text: #ffffff;
+
+  --btn-primary-hover-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, #0f4c81 85%, #ffffff) 0%,
+    color-mix(in srgb, #0f4c81 70%, #ffffff) 100%
+  );
+
+  --btn-success-hover-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, #0ea5e9 85%, #ffffff) 0%,
+    color-mix(in srgb, #0ea5e9 70%, #ffffff) 100%
+  );
+
+  --btn-warning-hover-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, #ff7a1a 88%, #ffffff) 0%,
+    color-mix(in srgb, #ff7a1a 74%, #ffffff) 100%
+  );
+
+  --btn-danger-hover-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, #e63946 86%, #ffffff) 0%,
+    color-mix(in srgb, #e63946 72%, #ffffff) 100%
+  );
+
+  --btn-primary-hover-text: #ffffff;
+  --btn-success-hover-text: #ffffff;
+  --btn-warning-hover-text: #ffffff;
+  --btn-danger-hover-text: #ffffff;
+
+  --btn-outline-bg: transparent;
+  --btn-outline-text: #0f4c81;
+  --btn-outline-border: rgba(15, 76, 129, 0.65);
+  --btn-outline-hover-text: #0f1e2e;
+
+  --btn-ghost-bg: transparent;
+  --btn-ghost-text: #0f4c81;
+  --btn-ghost-hover-bg: color-mix(in srgb, var(--warning) 12%, #ffffff);
+  --btn-ghost-hover-text: #0f1e2e;
+
+  --btn-glow-alpha: 0.22;
+  --btn-glow-blur: 26px;
+
+  --select-bg: #ffffff;
+  --select-text: var(--text);
+  --select-border: rgba(15, 76, 129, 0.45);
+  --select-hover-bg: color-mix(in srgb, var(--primary) 8%, #ffffff);
+  --select-active-bg: color-mix(in srgb, var(--warning) 12%, #ffffff);
+  --select-radius: 14px;
+  --select-border-w: 1px;
+  --select-max-h: 280px;
+
+  --scrollbar-size: 10px;
+  --scrollbar-track: color-mix(in srgb, #edf3f8 85%, #ffffff);
+  --scrollbar-thumb: color-mix(in srgb, #0f4c81 45%, rgba(255, 122, 26, 0.15));
+  --scrollbar-thumb-hover: color-mix(in srgb, #ff7a1a 65%, rgba(15, 76, 129, 0.2));
+  --scrollbar-border: rgba(255, 122, 26, 0.25);
 }
+
+html[data-theme="gulf-blue"] {
+
+  /* Base azul dominante */
+  --bg-1: #cfe4f2;
+  --bg-2: #c4ddee;
+  --bg-3: #b7d3e8;
+
+  --panel: rgba(232, 243, 250, 0.92);
+  --panel-2: rgba(224, 238, 248, 0.96);
+
+  --text: #0c1f2f;
+  --muted: #466174;
+
+  --heading: #0a1a28;
+  --heading-muted: color-mix(in srgb, var(--heading) 65%, transparent);
+
+  /* 🔥 Accent ahora naranja real */
+  --heading-accent: #f26a21;
+
+  --border: #6faed6;
+  --border-alpha: 0.45;
+  --border-w: 1px;
+
+  /* Azul base */
+  --primary: #6faed6;
+
+  /* 🟠 Naranja más fuerte */
+  --warning: #ff6a00;
+
+  --success: #2c8fd6;
+  --danger: #d62839;
+
+  --ring: #ff6a00;
+
+  /* 🔥 Glow naranja más visible */
+  --glow-color: #ff6a00;
+  --glow-alpha: 0.28;
+  --glow-blur: 34px;
+
+  /* Controls */
+  --control-bg: #e6f2f9;
+  --control-bg-2: #dfeef8;
+  --control-text: var(--text);
+  --control-muted: var(--muted);
+
+  --control-border: rgba(111, 174, 214, 0.55);
+  --control-border-hover: #ff6a00;
+  --control-border-focus: #ff6a00;
+
+  /* Base buttons */
+  --btn-bg: #e6f2f9;
+  --btn-text: var(--text);
+  --btn-border: rgba(111, 174, 214, 0.6);
+
+  --btn-hover-bg: color-mix(in srgb, var(--primary) 18%, #e6f2f9);
+  --btn-hover-border: #ff6a00;
+  --btn-hover-text: var(--text);
+
+  /* 🔵 Primary azul sólido */
+  --btn-primary-bg: #6faed6;
+  --btn-primary-text: #ffffff;
+
+  --btn-primary-hover-bg: linear-gradient(
+    90deg,
+    #5fa3cf 0%,
+    #4d97c6 100%
+  );
+
+  /* 🟠 Warning = NARANJA HERO */
+  --btn-warning-bg: #ff6a00;
+  --btn-warning-text: #ffffff;
+
+  --btn-warning-hover-bg: linear-gradient(
+    90deg,
+    #ff5a00 0%,
+    #e84f00 100%
+  );
+
+  --btn-success-bg: #2c8fd6;
+  --btn-success-text: #ffffff;
+
+  --btn-danger-bg: #d62839;
+  --btn-danger-text: #ffffff;
+
+  --btn-primary-hover-text: #ffffff;
+  --btn-success-hover-text: #ffffff;
+  --btn-warning-hover-text: #ffffff;
+  --btn-danger-hover-text: #ffffff;
+
+  /* Outline ahora con más presencia naranja */
+  --btn-outline-bg: transparent;
+  --btn-outline-text: #0c1f2f;
+  --btn-outline-border: rgba(255, 106, 0, 0.8);
+  --btn-outline-hover-text: #0a1a28;
+
+  /* Ghost con toque naranja */
+  --btn-ghost-bg: transparent;
+  --btn-ghost-text: #0c1f2f;
+  --btn-ghost-hover-bg: color-mix(in srgb, #ff6a00 22%, #cfe4f2);
+  --btn-ghost-hover-text: #0a1a28;
+
+  --btn-glow-alpha: 0.22;
+  --btn-glow-blur: 38px;
+
+  /* Select */
+  --select-bg: #e6f2f9;
+  --select-text: var(--text);
+  --select-border: rgba(111, 174, 214, 0.65);
+  --select-hover-bg: color-mix(in srgb, var(--primary) 18%, #e6f2f9);
+  --select-active-bg: color-mix(in srgb, #ff6a00 25%, #e6f2f9);
+
+  /* Scrollbar con identidad */
+  --scrollbar-size: 10px;
+  --scrollbar-track: #c4ddee;
+  --scrollbar-thumb: #6faed6;
+  --scrollbar-thumb-hover: #ff6a00;
+  --scrollbar-border: rgba(255, 106, 0, 0.35);
+}
+
+  /* =========================
+     Derived tokens (computed in JS or mirrored here)
+     Keep at END to win cascade.
+     ========================= */
+  :root {
+    --border-rgba: rgba(148, 163, 184, 0.22);
+    --glow-rgba: rgba(16, 185, 129, 0.7);
+    --glow-shadow: 0 0 18px 0 rgba(16, 185, 129, 0.7);
+    --btn-glow-shadow: 0 0 18px 0 rgba(16, 185, 129, 0.7);
+  }
+  

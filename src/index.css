@@ -49,9 +49,11 @@ body {
 }
 
 .fc .fc-button:hover {
-  border-color: color-mix(in srgb, var(--primary) 45%, var(--border-rgba)) !important;
-  filter: brightness(1.06);
+  background: color-mix(in srgb, var(--control-bg) 88%, #ffffff) !important;
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border-rgba)) !important;
+  filter: none;
 }
+
 
 .fc .fc-button:disabled {
   opacity: 0.55 !important;
@@ -128,41 +130,34 @@ body {
 /* Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.55) rgba(2, 6, 23, 0.2);
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 /* Chrome / Edge / Safari */
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: var(--scrollbar-size, 10px);
+  height: var(--scrollbar-size, 10px);
 }
 
 *::-webkit-scrollbar-track {
-  background: rgba(2, 6, 23, 0.25);
+  background: var(--scrollbar-track);
   border-radius: 999px;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    to bottom,
-    rgba(148, 163, 184, 0.55),
-    rgba(148, 163, 184, 0.25)
-  );
+  background: var(--scrollbar-thumb);
   border-radius: 999px;
-  border: 2px solid rgba(2, 6, 23, 0.35);
+  border: 2px solid var(--scrollbar-border, transparent);
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(
-    to bottom,
-    rgba(226, 232, 240, 0.75),
-    rgba(148, 163, 184, 0.45)
-  );
+  background: var(--scrollbar-thumb-hover);
 }
 
 *::-webkit-scrollbar-corner {
   background: transparent;
 }
+
 
 /* src/index.css (o donde tengas los primitives) */
 
@@ -227,25 +222,23 @@ body {
   border-radius: var(--btn-radius);
   border: var(--btn-border-w) solid var(--btn-border);
 
-  /* ✅ Usamos SIEMPRE tokens */
+  /* Tokens */
   background: var(--btn-bg);
   color: var(--btn-text);
 
-  /* ✅ Glow configurable */
+  /* Glow configurable */
   box-shadow: var(--btn-glow-shadow);
 
   cursor: pointer;
   user-select: none;
-  transition: filter 120ms ease, transform 120ms ease, background 120ms ease, border-color 120ms ease;
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
 .ff-btn:hover {
   background: var(--btn-hover-bg);
   border-color: var(--btn-hover-border);
   color: var(--btn-hover-text);
-  filter: brightness(1.06);
 }
-
 
 .ff-btn:active { transform: scale(0.98); }
 
@@ -253,7 +246,6 @@ body {
   opacity: 0.55;
   cursor: not-allowed;
   transform: none;
-  filter: none;
 }
 
 /* Sizes */
@@ -269,7 +261,7 @@ body {
   --btn-font-size: 15px;
 }
 
-/* ✅ Variants usan SOLO tokens (y respetan customización) */
+/* Variants (token-driven) */
 .ff-btn-primary {
   --btn-bg: linear-gradient(
     90deg,
@@ -334,24 +326,15 @@ body {
   box-shadow: none;
 }
 
+/* Hover BG por variante (usa los tokens del tema) */
+.ff-btn-primary { --btn-hover-bg: var(--btn-primary-hover-bg); }
+.ff-btn-success { --btn-hover-bg: var(--btn-success-hover-bg); }
+.ff-btn-warning { --btn-hover-bg: var(--btn-warning-hover-bg); }
+.ff-btn-danger  { --btn-hover-bg: var(--btn-danger-hover-bg); }
 
-.ff-btn-outline:hover {
-  background: color-mix(in srgb, var(--panel) 75%, transparent);
-  border-color: color-mix(in srgb, var(--primary) 45%, var(--border-rgba));
-}
-
-.ff-btn-ghost {
-  --btn-bg: var(--btn-ghost-bg);
-  --btn-text: var(--btn-ghost-text);
-  --btn-border: transparent;
-  box-shadow: none;
-}
-
-.ff-btn-ghost:hover {
-  background: var(--btn-ghost-hover-bg);
-  border-color: color-mix(in srgb, var(--primary) 25%, transparent);
-}
-
+/* Outline/Ghost: hover tokenizado (sin hardcode) */
+.ff-btn-outline { --btn-hover-bg: var(--btn-hover-bg); }
+.ff-btn-ghost   { --btn-hover-bg: var(--btn-ghost-hover-bg); }
 
 
 /* Table-ish helpers (para Transactions) */
