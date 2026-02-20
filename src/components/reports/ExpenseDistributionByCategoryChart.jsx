@@ -1,5 +1,5 @@
 // src/components/reports/ExpenseDistributionByCategoryChart.jsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import axios from "axios";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import Modal from "../Modal";
@@ -10,15 +10,25 @@ const COLORS = [
   "var(--success)",
   "var(--warning)",
   "var(--danger)",
-  "color-mix(in srgb, var(--primary) 55%, #4f46e5)", // indigo-ish
-  "color-mix(in srgb, var(--primary) 45%, #3b82f6)", // blue-ish
-  "color-mix(in srgb, var(--danger) 55%, #ec4899)",  // pink-ish
-  "color-mix(in srgb, var(--primary) 35%, #14b8a6)", // teal-ish
-  "color-mix(in srgb, var(--warning) 55%, #a855f7)", // violet-ish
-  "color-mix(in srgb, var(--success) 55%, #0ea5e9)", // sky-ish
-  "color-mix(in srgb, var(--primary) 30%, #84cc16)", // lime-ish
-  "color-mix(in srgb, var(--danger) 35%, #f43f5e)",  // rose-ish
+  "color-mix(in srgb, var(--primary) 55%, #4f46e5)",
+  "color-mix(in srgb, var(--primary) 45%, #3b82f6)",
+  "color-mix(in srgb, var(--danger) 55%, #ec4899)",
+  "color-mix(in srgb, var(--primary) 35%, #14b8a6)",
+  "color-mix(in srgb, var(--warning) 55%, #a855f7)",
+  "color-mix(in srgb, var(--success) 55%, #0ea5e9)",
+  "color-mix(in srgb, var(--primary) 30%, #84cc16)",
+  "color-mix(in srgb, var(--danger) 35%, #f43f5e)",
 ];
+
+const money = (v) =>
+  new Intl.NumberFormat("es-DO", {
+    style: "currency",
+    currency: "DOP",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(Number(v)) ? Number(v) : 0);
+
+const safeNum = (x) => (Number.isFinite(Number(x)) ? Number(x) : 0);
 
 function ExpenseDistributionByCategoryChart({
   expensesByCategory = {},
@@ -31,39 +41,58 @@ function ExpenseDistributionByCategoryChart({
   const [categoryTransactions, setCategoryTransactions] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const pieData = useMemo(
-    () =>
-      Object.entries(expensesByCategory).map(([catId, value]) => ({
+  // ✅ Igual que el reporte de anillos: lista, total, % y ordenado
+  const rows = useMemo(() => {
+    const list = Object.entries(expensesByCategory)
+      .map(([catId, value]) => ({
         categoryId: catId,
         name: categoryNameMap?.[catId] || `Categoría ${catId}`,
-        value: Number(value || 0),
+        value: safeNum(value),
+      }))
+      .filter((r) => r.value > 0);
+
+    list.sort((a, b) => b.value - a.value);
+
+    const total = list.reduce((acc, r) => acc + r.value, 0);
+
+    return {
+      total,
+      items: list.map((r) => ({
+        ...r,
+        pct: total > 0 ? (r.value / total) * 100 : 0,
       })),
-    [expensesByCategory, categoryNameMap]
+    };
+  }, [expensesByCategory, categoryNameMap]);
+
+  // ✅ Misma acción para slice y card
+  const openCategory = useCallback(
+    async (catId, catName) => {
+      try {
+        if (!catId) return;
+
+        setSelectedCategory(catName || "Categoría");
+        const res = await axios.get(
+          `${api}/dashboard/transactions-by-category?category_id=${catId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        setCategoryTransactions(res?.data?.data || []);
+        setIsModalOpen(true);
+      } catch (err) {
+        console.error("Error al cargar transacciones:", err);
+      }
+    },
+    [api, token]
   );
 
-  const handleSliceClick = async (_, index) => {
-    try {
-      const slice = pieData[index];
-      if (!slice) return;
-
-      const catId = slice.categoryId;
-      const catName = slice.name;
-
-      setSelectedCategory(catName);
-
-      const res = await axios.get(
-        `${api}/dashboard/transactions-by-category?category_id=${catId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setCategoryTransactions(res.data.data || []);
-      setIsModalOpen(true);
-    } catch (err) {
-      console.error("Error al cargar transacciones:", err);
-    }
+  // ✅ Click en slice (Recharts manda (data, index))
+  const handleSliceClick = (_, index) => {
+    const slice = rows.items[index];
+    if (!slice) return;
+    openCategory(slice.categoryId, slice.name);
   };
 
-  if (!pieData.length) {
+  if (!rows.items.length) {
     return (
       <p className="text-sm italic" style={{ color: "var(--muted)" }}>
         No hay gastos registrados para el período actual.
@@ -73,21 +102,22 @@ function ExpenseDistributionByCategoryChart({
 
   return (
     <div className="space-y-3" style={{ color: "var(--text)" }}>
-      {/* PieChart – mismo tamaño original */}
+      {/* PieChart */}
       <div style={{ width: "100%", height: 300 }}>
         <ResponsiveContainer>
           <PieChart>
             <Pie
-              data={pieData}
+              data={rows.items}
               dataKey="value"
               nameKey="name"
               outerRadius="80%"
+              // Si quieres evitar labels largos, pon label={false}
               label={({ name, percent }) =>
                 `${name} (${(percent * 100).toFixed(1)}%)`
               }
               onClick={handleSliceClick}
             >
-              {pieData.map((entry, index) => (
+              {rows.items.map((entry, index) => (
                 <Cell
                   key={`cell-${entry.categoryId}-${index}`}
                   fill={COLORS[index % COLORS.length]}
@@ -96,9 +126,8 @@ function ExpenseDistributionByCategoryChart({
               ))}
             </Pie>
 
-            {/* ✅ Tooltip tokenizado */}
             <Tooltip
-              formatter={(value) => `RD$ ${Number(value || 0).toFixed(2)}`}
+              formatter={(value) => [money(value), "Gasto"]}
               labelFormatter={(label) => `Categoría: ${label}`}
               contentStyle={{
                 background: "color-mix(in srgb, var(--bg-3) 78%, transparent)",
@@ -116,15 +145,67 @@ function ExpenseDistributionByCategoryChart({
         </ResponsiveContainer>
       </div>
 
+      {/* ✅ Mini cards por categoría (clic abre modal) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        {rows.items.map((r, i) => (
+          <button
+            type="button"
+            key={`${r.categoryId}-${i}`}
+            className="flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left transition-colors"
+            style={{
+              borderColor: "var(--border-rgba)",
+              background: "color-mix(in srgb, var(--panel) 55%, transparent)",
+              cursor: "pointer",
+            }}
+            title={r.name}
+            onClick={() => openCategory(r.categoryId, r.name)}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background =
+                "color-mix(in srgb, var(--panel) 78%, transparent)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background =
+                "color-mix(in srgb, var(--panel) 55%, transparent)";
+            }}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ background: COLORS[i % COLORS.length] }}
+              />
+              <span
+                className="text-sm truncate"
+                style={{ color: "var(--text)" }}
+              >
+                {r.name}
+              </span>
+              <span
+                className="text-xs shrink-0"
+                style={{ color: "var(--muted)" }}
+              >
+                {r.pct.toFixed(1)}%
+              </span>
+            </div>
+
+            <span
+              className="text-sm font-semibold shrink-0"
+              style={{ color: "var(--text)" }}
+            >
+              {money(r.value)}
+            </span>
+          </button>
+        ))}
+      </div>
+
       <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
         Este gráfico muestra el porcentaje del total de gastos del mes actual,
         distribuidos por categoría.{" "}
         <span style={{ color: "var(--heading-muted)" }}>
-          Haz clic en una categoría para ver sus transacciones.
+          Haz clic en una categoría (slice o card) para ver sus transacciones.
         </span>
       </p>
 
-      {/* MODAL: ancho grande + sin scroll horizontal */}
+      {/* MODAL */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => {
@@ -153,15 +234,11 @@ function ExpenseDistributionByCategoryChart({
                 key={tx.id}
                 className="
                   flex items-center justify-between gap-3
-                  py-2
-                  border-b last:border-b-0
-                  rounded-md
-                  px-2 -mx-2
+                  py-2 border-b last:border-b-0
+                  rounded-md px-2 -mx-2
                   transition-colors
                 "
-                style={{
-                  borderColor: "var(--border-rgba)",
-                }}
+                style={{ borderColor: "var(--border-rgba)" }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background =
                     "color-mix(in srgb, var(--panel) 70%, transparent)";
@@ -170,16 +247,25 @@ function ExpenseDistributionByCategoryChart({
                   e.currentTarget.style.background = "transparent";
                 }}
               >
-                <span className="w-20 shrink-0" style={{ color: "var(--muted)" }}>
+                <span
+                  className="w-20 shrink-0"
+                  style={{ color: "var(--muted)" }}
+                >
                   {tx.date}
                 </span>
 
-                <span className="flex-1 truncate" style={{ color: "var(--text)" }}>
+                <span
+                  className="flex-1 truncate"
+                  style={{ color: "var(--text)" }}
+                >
                   {tx.description || "Sin descripción"}
                 </span>
 
-                <span className="font-semibold shrink-0" style={{ color: "var(--danger)" }}>
-                  RD$ {Number(tx.amount || 0).toFixed(2)}
+                <span
+                  className="font-semibold shrink-0"
+                  style={{ color: "var(--danger)" }}
+                >
+                  {money(tx.amount)}
                 </span>
               </div>
             ))

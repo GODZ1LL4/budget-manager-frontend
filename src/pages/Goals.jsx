@@ -64,7 +64,8 @@ function Goals({ token }) {
 
     const t = Number(target);
     if (!name.trim()) return toast.error("El nombre es obligatorio");
-    if (!Number.isFinite(t) || t <= 0) return toast.error("Monto objetivo inválido");
+    if (!Number.isFinite(t) || t <= 0)
+      return toast.error("Monto objetivo inválido");
 
     try {
       await axios.post(
@@ -112,13 +113,19 @@ function Goals({ token }) {
     if (amount == null) return toast.error("Monto inválido");
 
     try {
-      await axios.post(`${api}/goals/${goal.id}/deposit`, { amount }, authHeaders);
+      await axios.post(
+        `${api}/goals/${goal.id}/deposit`,
+        { amount },
+        authHeaders
+      );
 
       setAmountByGoal((p) => ({ ...p, [goal.id]: "" }));
       await fetchGoals();
       await fetchAccounts();
 
-      toast.success(goal.account_id ? "Aporte reservado" : "Aporte registrado (tracking)");
+      toast.success(
+        goal.account_id ? "Aporte reservado" : "Aporte registrado (tracking)"
+      );
     } catch (err) {
       toast.error(err?.response?.data?.error || "Error al aportar");
     }
@@ -133,13 +140,19 @@ function Goals({ token }) {
     }
 
     try {
-      await axios.post(`${api}/goals/${goal.id}/withdraw`, { amount }, authHeaders);
+      await axios.post(
+        `${api}/goals/${goal.id}/withdraw`,
+        { amount },
+        authHeaders
+      );
 
       setAmountByGoal((p) => ({ ...p, [goal.id]: "" }));
       await fetchGoals();
       await fetchAccounts();
 
-      toast.success(goal.account_id ? "Reserva liberada" : "Retiro registrado (tracking)");
+      toast.success(
+        goal.account_id ? "Reserva liberada" : "Retiro registrado (tracking)"
+      );
     } catch (err) {
       toast.error(err?.response?.data?.error || "Error al retirar");
     }
@@ -153,15 +166,23 @@ function Goals({ token }) {
         authHeaders
       );
       await fetchGoals();
-      toast.success(goal.is_priority ? "Prioridad removida" : "Meta marcada como prioritaria");
+      toast.success(
+        goal.is_priority
+          ? "Prioridad removida"
+          : "Meta marcada como prioritaria"
+      );
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Error al actualizar prioridad");
+      toast.error(
+        err?.response?.data?.error || "Error al actualizar prioridad"
+      );
     }
   };
 
   const handleDelete = async (goal) => {
     if ((goal.reserved_amount || 0) > 0) {
-      return toast.error("Primero retira/libera el monto antes de eliminar la meta.");
+      return toast.error(
+        "Primero retira/libera el monto antes de eliminar la meta."
+      );
     }
 
     if (!confirm("¿Eliminar esta meta?")) return;
@@ -176,11 +197,41 @@ function Goals({ token }) {
     }
   };
 
+  const handleComplete = async (goal) => {
+    // opcional: confirmar si hay saldo reservado
+    const reserved = Number(goal.reserved_amount ?? 0);
+    const msg =
+      reserved > 0
+        ? `¿Completar meta y liberar ${reserved.toFixed(2)} DOP?`
+        : "¿Completar meta?";
+    if (!confirm(msg)) return;
+
+    try {
+      const res = await axios.post(
+        `${api}/goals/${goal.id}/complete`,
+        {},
+        authHeaders
+      );
+      await fetchGoals();
+      await fetchAccounts();
+      const released = Number(res?.data?.data?.released_amount || 0);
+      toast.success(
+        released > 0
+          ? `Meta completada. Liberado: ${released.toFixed(2)} DOP`
+          : "Meta completada"
+      );
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Error al completar meta");
+    }
+  };
+
   const accountOptions = useMemo(() => {
     const base = [{ value: "", label: "Sin cuenta (tracking)" }];
     const mapped = accounts.map((a) => ({
       value: a.id,
-      label: `${a.name} — Disponible: ${Number(a.available_balance).toFixed(2)} DOP`,
+      label: `${a.name} — Disponible: ${Number(a.available_balance).toFixed(
+        2
+      )} DOP`,
     }));
     return [...base, ...mapped];
   }, [accounts]);
@@ -194,7 +245,8 @@ function Goals({ token }) {
           Metas de Ahorro
         </h2>
         <p className="text-sm text-[var(--muted)]">
-          Aporta y retira montos. Si asignas una cuenta, afecta el disponible. Si no, funciona como tracking.
+          Aporta y retira montos. Si asignas una cuenta, afecta el disponible.
+          Si no, funciona como tracking.
         </p>
       </div>
 
@@ -245,7 +297,8 @@ function Goals({ token }) {
             clearable={false}
           />
           <p className="text-xs text-[var(--muted)]">
-            Con cuenta: valida contra disponible. Sin cuenta: no afecta balances (solo tracking).
+            Con cuenta: valida contra disponible. Sin cuenta: no afecta balances
+            (solo tracking).
           </p>
         </div>
 
@@ -258,13 +311,19 @@ function Goals({ token }) {
             className="h-4 w-4 rounded"
             style={{ accentColor: "var(--primary)" }}
           />
-          <label htmlFor="priority-create" className="text-sm text-[var(--muted)]">
+          <label
+            htmlFor="priority-create"
+            className="text-sm text-[var(--muted)]"
+          >
             Meta prioritaria
           </label>
         </div>
 
         <div className="md:col-span-3 flex justify-end">
-          <button type="submit" className="ff-btn ff-btn-primary w-full md:w-auto">
+          <button
+            type="submit"
+            className="ff-btn ff-btn-primary w-full md:w-auto"
+          >
             Crear meta
           </button>
         </div>
@@ -278,7 +337,8 @@ function Goals({ token }) {
           const reserved = Math.abs(reservedRaw) < 0.000001 ? 0 : reservedRaw;
           const targetN = Math.abs(targetRaw) < 0.000001 ? 0 : targetRaw;
 
-          const progress = targetN > 0 ? Math.max(0, Math.min(1, reserved / targetN)) : 0;
+          const progress =
+            targetN > 0 ? Math.max(0, Math.min(1, reserved / targetN)) : 0;
 
           const reservedText = reserved.toFixed(2);
           const targetText = targetN.toFixed(2);
@@ -286,6 +346,7 @@ function Goals({ token }) {
           const acc = goal.account_id ? accountMap.get(goal.account_id) : null;
           const isTracking = !goal.account_id;
           const canWithdraw = reserved > 0;
+          const isCompleted = goal.status === "completed";
 
           return (
             <li
@@ -300,15 +361,20 @@ function Goals({ token }) {
               <div className="flex justify-between items-start gap-4">
                 <div>
                   <div className="flex items-center gap-3 flex-wrap">
-                    <p className="font-semibold text-[var(--text)] text-lg">{goal.name}</p>
+                    <p className="font-semibold text-[var(--text)] text-lg">
+                      {goal.name}
+                    </p>
 
                     {goal.is_priority && (
                       <span
                         className="text-xs px-2.5 py-1 rounded-full border"
                         style={{
-                          background: "color-mix(in srgb, var(--warning) 18%, transparent)",
-                          color: "color-mix(in srgb, var(--warning) 85%, var(--text))",
-                          borderColor: "color-mix(in srgb, var(--warning) 35%, var(--border-rgba))",
+                          background:
+                            "color-mix(in srgb, var(--warning) 18%, transparent)",
+                          color:
+                            "color-mix(in srgb, var(--warning) 85%, var(--text))",
+                          borderColor:
+                            "color-mix(in srgb, var(--warning) 35%, var(--border-rgba))",
                         }}
                       >
                         Prioridad
@@ -319,9 +385,12 @@ function Goals({ token }) {
                       <span
                         className="text-xs px-2.5 py-1 rounded-full border"
                         style={{
-                          background: "color-mix(in srgb, var(--muted) 14%, transparent)",
-                          color: "color-mix(in srgb, var(--text) 90%, var(--muted))",
-                          borderColor: "color-mix(in srgb, var(--muted) 22%, var(--border-rgba))",
+                          background:
+                            "color-mix(in srgb, var(--muted) 14%, transparent)",
+                          color:
+                            "color-mix(in srgb, var(--text) 90%, var(--muted))",
+                          borderColor:
+                            "color-mix(in srgb, var(--muted) 22%, var(--border-rgba))",
                         }}
                       >
                         Tracking
@@ -329,16 +398,41 @@ function Goals({ token }) {
                     )}
                   </div>
 
+                  {isCompleted && (
+                    <span
+                      className="text-xs px-2.5 py-1 rounded-full border"
+                      style={{
+                        background:
+                          "color-mix(in srgb, var(--primary) 18%, transparent)",
+                        color:
+                          "color-mix(in srgb, var(--primary) 85%, var(--text))",
+                        borderColor:
+                          "color-mix(in srgb, var(--primary) 35%, var(--border-rgba))",
+                      }}
+                    >
+                      Completada
+                    </span>
+                  )}
+
                   <p className="text-sm text-[var(--muted)] mt-1">
-                    <span className="font-semibold text-[var(--text)]">{reservedText}</span> / {targetText} DOP
+                    <span className="font-semibold text-[var(--text)]">
+                      {reservedText}
+                    </span>{" "}
+                    / {targetText} DOP
                     {goal.due_date ? (
-                      <span className="ml-2 text-[var(--muted)]">— Vence: {goal.due_date}</span>
+                      <span className="ml-2 text-[var(--muted)]">
+                        — Vence: {goal.due_date}
+                      </span>
                     ) : null}
                   </p>
 
                   {acc ? (
                     <p className="text-sm text-[var(--muted)] mt-1">
-                      Cuenta: <span className="text-[var(--text)] font-medium">{acc.name}</span> • Disponible:{" "}
+                      Cuenta:{" "}
+                      <span className="text-[var(--text)] font-medium">
+                        {acc.name}
+                      </span>{" "}
+                      • Disponible:{" "}
                       <span className="text-[var(--text)] font-medium">
                         {Number(acc.available_balance).toFixed(2)} DOP
                       </span>
@@ -359,6 +453,17 @@ function Goals({ token }) {
                   >
                     {goal.is_priority ? "Quitar prioridad" : "Marcar prioridad"}
                   </button>
+                  {!isCompleted && (
+                    <button
+                      type="button"
+                      onClick={() => handleComplete(goal)}
+                      className="text-sm font-semibold underline underline-offset-2"
+                      style={{ color: "var(--primary)" }}
+                      title="Marca la meta como completada y libera todo el monto reservado"
+                    >
+                      Completar y liberar
+                    </button>
+                  )}
 
                   <button
                     type="button"
@@ -374,9 +479,11 @@ function Goals({ token }) {
               <div
                 className="w-full h-2.5 rounded-full overflow-hidden"
                 style={{
-                  background: "color-mix(in srgb, var(--panel) 70%, transparent)",
+                  background:
+                    "color-mix(in srgb, var(--panel) 70%, transparent)",
                   border: "var(--border-w) solid",
-                  borderColor: "color-mix(in srgb, var(--border-rgba) 60%, transparent)",
+                  borderColor:
+                    "color-mix(in srgb, var(--border-rgba) 60%, transparent)",
                 }}
               >
                 <div
@@ -389,64 +496,100 @@ function Goals({ token }) {
                 />
               </div>
 
-              <div className="grid gap-3 md:grid-cols-3">
-                <div className="md:col-span-1">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={amountByGoal[goal.id] ?? ""}
-                    onChange={(e) =>
-                      setAmountByGoal((p) => ({
-                        ...p,
-                        [goal.id]: e.target.value,
-                      }))
-                    }
-                    placeholder="Monto"
-                    className="ff-input"
-                  />
+              {!isCompleted ? (
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="md:col-span-1">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={amountByGoal[goal.id] ?? ""}
+                      onChange={(e) =>
+                        setAmountByGoal((p) => ({
+                          ...p,
+                          [goal.id]: e.target.value,
+                        }))
+                      }
+                      placeholder="Monto"
+                      className="ff-input"
+                    />
 
-                  <div className="flex gap-2 mt-2">
-                    <button type="button" onClick={() => setQuickAmount(goal.id, 100)} className="ff-btn ff-btn-ghost ff-btn-sm">
-                      +100
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => setQuickAmount(goal.id, 100)}
+                        className="ff-btn ff-btn-ghost ff-btn-sm"
+                      >
+                        +100
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuickAmount(goal.id, 500)}
+                        className="ff-btn ff-btn-ghost ff-btn-sm"
+                      >
+                        +500
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQuickAmount(goal.id, 1000)}
+                        className="ff-btn ff-btn-ghost ff-btn-sm"
+                      >
+                        +1000
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="md:col-span-2 flex gap-3 items-start">
+                    <button
+                      type="button"
+                      onClick={() => handleDeposit(goal)}
+                      className="ff-btn ff-btn-primary flex-1"
+                      title={isTracking ? "Tracking: no afecta cuentas" : ""}
+                    >
+                      Aportar
                     </button>
-                    <button type="button" onClick={() => setQuickAmount(goal.id, 500)} className="ff-btn ff-btn-ghost ff-btn-sm">
-                      +500
-                    </button>
-                    <button type="button" onClick={() => setQuickAmount(goal.id, 1000)} className="ff-btn ff-btn-ghost ff-btn-sm">
-                      +1000
+
+                    <button
+                      type="button"
+                      onClick={() => handleWithdraw(goal, reserved)}
+                      disabled={!canWithdraw}
+                      className={`ff-btn flex-1 ${
+                        canWithdraw
+                          ? "ff-btn-outline"
+                          : "opacity-60 cursor-not-allowed"
+                      }`}
+                      title={
+                        !canWithdraw
+                          ? "No hay monto disponible para retirar"
+                          : ""
+                      }
+                    >
+                      Retirar
                     </button>
                   </div>
                 </div>
-
-                <div className="md:col-span-2 flex gap-3 items-start">
-                  <button
-                    type="button"
-                    onClick={() => handleDeposit(goal)}
-                    className="ff-btn ff-btn-primary flex-1"
-                    title={isTracking ? "Tracking: no afecta cuentas" : ""}
-                  >
-                    Aportar
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleWithdraw(goal, reserved)}
-                    disabled={!canWithdraw}
-                    className={`ff-btn flex-1 ${canWithdraw ? "ff-btn-outline" : "opacity-60 cursor-not-allowed"}`}
-                    title={!canWithdraw ? "No hay monto disponible para retirar" : ""}
-                  >
-                    Retirar
-                  </button>
+              ) : (
+                <div
+                  className="text-sm rounded-xl p-3"
+                  style={{
+                    background:
+                      "color-mix(in srgb, var(--panel) 75%, transparent)",
+                    border: "var(--border-w) solid var(--border-rgba)",
+                    color: "var(--muted)",
+                  }}
+                >
+                  Esta meta está completada. El monto reservado fue liberado.
+                  Registra el gasto desde <b>Transacciones</b>.
                 </div>
-              </div>
+              )}
             </li>
           );
         })}
 
         {goals.length === 0 && (
           <li className="text-base italic text-[var(--muted)]">
-            Aún no tienes metas creadas. Crea la primera desde el formulario superior.
+            Aún no tienes metas creadas. Crea la primera desde el formulario
+            superior.
           </li>
         )}
       </ul>

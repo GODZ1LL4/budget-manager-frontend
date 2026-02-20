@@ -190,6 +190,9 @@ function Transactions({ token }) {
         const taxAmount = isExempt ? 0 : subtotal * (taxRate / 100);
         const lineTotal = subtotal + taxAmount;
 
+        setRecurrence("");
+    setRecurrenceEndDate("");
+
         console.log(`🧾 Línea ${index + 1}:`);
         console.log(`  Artículo: ${item.name}`);
         console.log(`  Precio: ${price}`);
@@ -580,6 +583,7 @@ function Transactions({ token }) {
           <label className="ff-label">Repetir</label>
           <FFSelect
             value={recurrence}
+            disabled={isShoppingList}
             onChange={(v) => {
               setRecurrence(v);
               if (!v) setRecurrenceEndDate("");

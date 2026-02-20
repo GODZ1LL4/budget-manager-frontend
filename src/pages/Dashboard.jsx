@@ -37,6 +37,7 @@ import ExpenseForecastChart from "../components/reports/ExpenseForecastChart";
 import AdvancedBurnRateChart from "../components/reports/AdvancedBurnRateChart";
 import MonthlyIncomeVsExpenseLineChart from "../components/reports/MonthlyIncomeVsExpenseLineChart";
 import BudgetCoverageRobustChart from "../components/reports/BudgetCoverageRobustChart";
+import ItemExpenseForecast from "../components/reports/ItemExpenseForecast";
 
 function Dashboard({ token }) {
   const [data, setData] = useState(null);
@@ -646,6 +647,10 @@ function Dashboard({ token }) {
       <CollapseSection title="26- Proyección de flujo por período">
         <ExpenseForecastChart token={token} />
       </CollapseSection>
+
+      <CollapseSection title="26.1- Proyección de gastos por artículos (forecast)">
+  <ItemExpenseForecast token={token} />
+</CollapseSection>
 
       <CollapseSection title="27- Proyección de gastos por categoría y estabilidad">
         <ProjectedExpenseByCategoryChart token={token} />

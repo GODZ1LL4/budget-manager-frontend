@@ -3,6 +3,8 @@ export const THEME_PRESETS = [
   { id: "default", name: "FinanceFlow (Default)" },
   { id: "ironman", name: "Iron Man (Dev)" },
   { id: "ferrari-corsa", name: "Ferrari Corsa" },
+  { id: "scuderia-carbon-red", name: "Scuderia Carbon Red 🏎️" },
+  { id: "scuderia-carbon-red-pro", name: "Scuderia Carbon Red PRO 🟥" },
   { id: "white", name: "White Quartz (Light) PRO" },
   { id: "black-gold", name: "BlackGold × Rolex PRO v2" },
   { id: "gulf", name: "Gulf Racing 🏁" },

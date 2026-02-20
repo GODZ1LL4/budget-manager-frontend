@@ -169,6 +169,294 @@
   }
   
   /* =========================
+   Preset: Scuderia Carbon Red
+   ========================= */
+html[data-theme="scuderia-carbon-red"] {
+  --bg-1: #0b0c10;
+  --bg-2: #111218;
+  --bg-3: #161821;
+
+  --panel: rgba(21, 23, 32, 0.72);
+  --panel-2: rgba(27, 30, 41, 0.72);
+
+  --text: #f5f7fa;
+  --muted: #9aa3b2;
+
+  --heading: #ffffff;
+  --heading-muted: color-mix(in srgb, var(--heading) 72%, transparent);
+  --heading-accent: var(--primary);
+
+  --border: #2a2f3a;
+  --border-alpha: 0.28;
+  --border-w: 1px;
+
+  /* Scuderia red */
+  --primary: #e10600;
+  --ring: #ff3b30;
+
+  --danger: #ff3b30;
+  --success: #1f8f4e;
+  --warning: #f4c430;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --glow-color: #e10600;
+  --glow-alpha: 0.55;
+  --glow-blur: 22px;
+  --glow-spread: 0px;
+
+  --control-bg: #12141c;
+  --control-bg-2: #191c26;
+  --control-text: var(--text);
+  --control-muted: color-mix(in srgb, var(--muted) 92%, transparent);
+
+  /* Nota: en tus presets usas border-rgba derivado en :root,
+     así que aquí mantengo esa convención */
+  --control-border: var(--border-rgba);
+  --control-border-hover: color-mix(in srgb, var(--primary) 45%, var(--border-rgba));
+  --control-border-focus: color-mix(in srgb, var(--primary) 60%, var(--border-rgba));
+
+  --btn-radius: 12px;
+  --btn-border-w: 1px;
+
+  --btn-pad-y: 10px;
+  --btn-pad-x: 16px;
+  --btn-font-size: 14px;
+  --btn-font-weight: 650;
+
+  --btn-bg: color-mix(in srgb, rgba(27, 30, 41, 0.72) 92%, #000);
+  --btn-text: var(--text);
+  --btn-border: var(--border-rgba);
+
+  --btn-hover-bg: color-mix(in srgb, rgba(27, 30, 41, 0.78) 96%, #000);
+  --btn-hover-border: color-mix(in srgb, var(--primary) 55%, var(--border-rgba));
+  --btn-hover-text: #ffffff;
+
+  --btn-primary-bg: var(--primary);
+  --btn-primary-text: #ffffff;
+
+  --btn-success-bg: var(--success);
+  --btn-success-text: #ffffff;
+
+  --btn-warning-bg: var(--warning);
+  --btn-warning-text: #111111;
+
+  --btn-danger-bg: #c00000;
+  --btn-danger-text: #ffffff;
+
+  /* Variant hover BG tokens (gradients) */
+  --btn-primary-hover-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--btn-primary-bg) 88%, #ffffff) 0%,
+    color-mix(in srgb, var(--btn-primary-bg) 74%, #ffffff) 100%
+  );
+  --btn-success-hover-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--btn-success-bg) 88%, #ffffff) 0%,
+    color-mix(in srgb, var(--btn-success-bg) 74%, #ffffff) 100%
+  );
+  --btn-warning-hover-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--btn-warning-bg) 90%, #ffffff) 0%,
+    color-mix(in srgb, var(--btn-warning-bg) 78%, #ffffff) 100%
+  );
+  --btn-danger-hover-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--btn-danger-bg) 88%, #ffffff) 0%,
+    color-mix(in srgb, var(--btn-danger-bg) 74%, #ffffff) 100%
+  );
+
+  --btn-primary-hover-text: #ffffff;
+  --btn-success-hover-text: #ffffff;
+  --btn-warning-hover-text: #111111;
+  --btn-danger-hover-text: #ffffff;
+
+  --btn-ghost-hover-bg: color-mix(in srgb, var(--primary) 10%, transparent);
+  --btn-outline-border: color-mix(in srgb, var(--border-rgba) 92%, transparent);
+
+  --btn-outline-hover-text: #ffffff;
+  --btn-ghost-hover-text: #ffffff;
+
+  --btn-glow-alpha: 0.25;
+  --btn-glow-blur: 26px;
+
+  /* Select */
+  --select-bg: var(--control-bg);
+  --select-text: var(--control-text);
+  --select-border: var(--control-border);
+
+  --select-hover-bg: color-mix(in srgb, var(--primary) 10%, var(--control-bg));
+  --select-active-bg: color-mix(in srgb, var(--primary) 16%, var(--control-bg));
+  --select-radius: 12px;
+  --select-border-w: 1px;
+  --select-max-h: 280px;
+
+  /* Scrollbar */
+  --scrollbar-size: 10px;
+  --scrollbar-track: color-mix(in srgb, rgba(21, 23, 32, 0.72) 65%, #000);
+  --scrollbar-thumb: color-mix(in srgb, var(--primary) 55%, transparent);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--primary) 70%, transparent);
+  --scrollbar-border: color-mix(in srgb, rgba(21, 23, 32, 0.72) 60%, transparent);
+}
+
+
+/* =========================
+   Preset: Scuderia Carbon Red (Premium)
+   ========================= */
+   html[data-theme="scuderia-carbon-red-pro"] {
+    --bg-1: #07070b;
+    --bg-2: #0a0b10;
+    --bg-3: #05050a;
+  
+    /* Paneles premium con gradiente oscuro (carbon/metal) */
+    --panel: #121217;
+    --panel-2: #0e0e13;
+  
+    --text: rgba(255, 255, 255, 0.94);
+    --muted: rgba(255, 255, 255, 0.72);
+  
+    --heading: rgba(255, 255, 255, 0.98);
+    --heading-muted: color-mix(in srgb, var(--heading) 72%, transparent);
+    --heading-accent: var(--primary);
+  
+    --border: #ff3b30;
+    --border-alpha: 0.18;
+    --border-w: 1px;
+  
+    /* Rojo Scuderia */
+    --primary: #e10600;
+    --ring: #ff3b30;
+  
+    --danger: #ff3b30;
+    --success: #2ee59d;
+    --warning: #ffd34d;
+  
+    --radius-sm: 9px;
+    --radius-md: 14px;
+    --radius-lg: 18px;
+  
+    /* Glow más “premium” y profundo */
+    --glow-color: #e10600;
+    --glow-alpha: 0.42;
+    --glow-blur: 28px;
+    --glow-spread: 0px;
+  
+    /* Controls más “glass” */
+    --control-bg: rgba(10, 10, 14, 0.78);
+    --control-bg-2: rgba(14, 14, 20, 0.82);
+    --control-text: rgba(255, 255, 255, 0.94);
+    --control-muted: rgba(255, 255, 255, 0.70);
+  
+    --control-border: rgba(255, 59, 48, 0.35);
+    --control-border-hover: rgba(255, 59, 48, 0.58);
+    --control-border-focus: rgba(255, 59, 48, 0.82);
+  
+    /* ===================== */
+    /* BOTONES “PRO METAL” */
+    /* ===================== */
+    --btn-radius: 14px;
+    --btn-border-w: 1px;
+  
+    --btn-pad-y: 10px;
+    --btn-pad-x: 16px;
+    --btn-font-size: 14px;
+    --btn-font-weight: 650;
+  
+    --btn-bg: linear-gradient(
+      180deg,
+      rgba(45, 10, 14, 0.84) 0%,
+      rgba(12, 12, 16, 0.82) 100%
+    );
+    --btn-text: rgba(255, 255, 255, 0.95);
+    --btn-border: rgba(255, 59, 48, 0.40);
+  
+    --btn-hover-bg: linear-gradient(
+      180deg,
+      rgba(70, 14, 18, 0.92) 0%,
+      rgba(16, 16, 20, 0.88) 100%
+    );
+    --btn-hover-border: rgba(255, 59, 48, 0.78);
+    --btn-hover-text: #ffffff;
+  
+    --btn-primary-bg: #e10600;
+    --btn-primary-text: #ffffff;
+  
+    --btn-success-bg: #2ee59d;
+    --btn-success-text: #06130e;
+  
+    --btn-warning-bg: #ffd34d;
+    --btn-warning-text: #1a1a1a;
+  
+    --btn-danger-bg: #ff3b30;
+    --btn-danger-text: #ffffff;
+  
+    --btn-primary-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, #e10600 88%, #ffffff) 0%,
+      color-mix(in srgb, #e10600 74%, #ffffff) 100%
+    );
+    --btn-success-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, #2ee59d 84%, #ffffff) 0%,
+      color-mix(in srgb, #2ee59d 70%, #ffffff) 100%
+    );
+    --btn-warning-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, #ffd34d 90%, #ffffff) 0%,
+      color-mix(in srgb, #ffd34d 78%, #ffffff) 100%
+    );
+    --btn-danger-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, #ff3b30 88%, #ffffff) 0%,
+      color-mix(in srgb, #ff3b30 74%, #ffffff) 100%
+    );
+  
+    --btn-primary-hover-text: #ffffff;
+    --btn-success-hover-text: #06130e;
+    --btn-warning-hover-text: #1a1a1a;
+    --btn-danger-hover-text: #ffffff;
+  
+    --btn-outline-bg: transparent;
+    --btn-outline-text: rgba(255, 255, 255, 0.94);
+    --btn-outline-border: rgba(255, 59, 48, 0.62);
+    --btn-outline-hover-text: #ffffff;
+  
+    --btn-ghost-bg: transparent;
+    --btn-ghost-text: rgba(255, 255, 255, 0.90);
+    --btn-ghost-hover-bg: color-mix(in srgb, #e10600 14%, transparent);
+    --btn-ghost-hover-text: #ffffff;
+  
+    --btn-glow-alpha: 0.32;
+    --btn-glow-blur: 32px;
+  
+    /* Select */
+    --select-bg: rgba(10, 10, 14, 0.82);
+    --select-text: rgba(255, 255, 255, 0.94);
+    --select-border: rgba(255, 59, 48, 0.48);
+    --select-hover-bg: rgba(225, 6, 0, 0.12);
+    --select-active-bg: rgba(225, 6, 0, 0.20);
+    --select-radius: 14px;
+    --select-border-w: 1px;
+    --select-max-h: 280px;
+  
+    /* ===================== */
+    /* SCROLLBAR (thumb rojo) */
+    /* ===================== */
+    --scrollbar-size: 10px;
+    --scrollbar-track: color-mix(in srgb, rgba(12, 12, 16, 0.9) 85%, #000);
+  
+    /* 👉 esto es lo que “arrastras” */
+    --scrollbar-thumb: #e10600;
+  
+    /* hover un poquito más brillante */
+    --scrollbar-thumb-hover: #ff3b30;
+  
+    --scrollbar-border: rgba(255, 59, 48, 0.22);
+  }
+
+  /* =========================
      Preset: White (Light)
      ========================= */
   html[data-theme="white"] {
