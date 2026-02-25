@@ -24,6 +24,11 @@ function Budgets({ token }) {
   const [importItems, setImportItems] = useState([]);
   const [importLoading, setImportLoading] = useState(false);
 
+  // ✅ Modal eliminar presupuesto
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteBudget, setDeleteBudget] = useState(null); // guarda el budget completo para mostrar info
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   const api = import.meta.env.VITE_API_URL;
 
   const fetchBudgets = async () => {
@@ -91,16 +96,32 @@ function Budgets({ token }) {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("¿Deseas eliminar este presupuesto?")) return;
+  const openDeleteModal = (budget) => {
+    setDeleteBudget(budget);
+    setDeleteOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    if (deleteLoading) return;
+    setDeleteOpen(false);
+    setDeleteBudget(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteBudget) return;
+
+    setDeleteLoading(true);
     try {
-      await axios.delete(`${api}/budgets/${id}`, {
+      await axios.delete(`${api}/budgets/${deleteBudget.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       toast.success("Presupuesto eliminado");
-      fetchBudgets();
+      await fetchBudgets();
+      closeDeleteModal();
     } catch {
       toast.error("Error al eliminar el presupuesto");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -227,7 +248,9 @@ function Budgets({ token }) {
                 );
                 setShowImportModal(true);
               } catch {
-                toast.error("Error al obtener sugerencias desde el mes anterior");
+                toast.error(
+                  "Error al obtener sugerencias desde el mes anterior"
+                );
               } finally {
                 setImportLoading(false);
               }
@@ -235,7 +258,9 @@ function Budgets({ token }) {
             className="ff-btn ff-btn-outline"
             disabled={importLoading}
           >
-            {importLoading ? "Cargando sugerencias..." : "Sugerir desde mes anterior"}
+            {importLoading
+              ? "Cargando sugerencias..."
+              : "Sugerir desde mes anterior"}
           </button>
         </div>
       </form>
@@ -253,7 +278,10 @@ function Budgets({ token }) {
               const now = new Date();
               setFilterValue(
                 type === "month"
-                  ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+                  ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+                      2,
+                      "0"
+                    )}`
                   : `${now.getFullYear()}`
               );
             }}
@@ -326,7 +354,7 @@ function Budgets({ token }) {
                 </div>
 
                 <button
-                  onClick={() => handleDelete(b.id)}
+                  onClick={() => openDeleteModal(b)}
                   className="text-xs font-semibold underline underline-offset-2"
                   style={{
                     color: `color-mix(in srgb, ${accent} 70%, var(--text))`,
@@ -339,9 +367,11 @@ function Budgets({ token }) {
               <div
                 className="w-full h-2 rounded-full overflow-hidden"
                 style={{
-                  background: "color-mix(in srgb, var(--panel) 70%, transparent)",
+                  background:
+                    "color-mix(in srgb, var(--panel) 70%, transparent)",
                   border: "var(--border-w) solid",
-                  borderColor: "color-mix(in srgb, var(--border-rgba) 55%, transparent)",
+                  borderColor:
+                    "color-mix(in srgb, var(--border-rgba) 55%, transparent)",
                 }}
               >
                 <div
@@ -472,7 +502,9 @@ function Budgets({ token }) {
                   const selected = importItems.filter((it) => it.selected);
 
                   if (selected.length === 0) {
-                    toast.error("Selecciona al menos una categoría para importar.");
+                    toast.error(
+                      "Selecciona al menos una categoría para importar."
+                    );
                     return;
                   }
 
@@ -491,7 +523,9 @@ function Budgets({ token }) {
 
                     const { insertedCount, updatedCount } = res.data || {};
                     toast.success(
-                      `Presupuestos procesados. Nuevos: ${insertedCount || 0}, actualizados: ${updatedCount || 0}.`
+                      `Presupuestos procesados. Nuevos: ${
+                        insertedCount || 0
+                      }, actualizados: ${updatedCount || 0}.`
                     );
 
                     setShowImportModal(false);
@@ -499,7 +533,9 @@ function Budgets({ token }) {
                     setImportItems([]);
                     fetchBudgets();
                   } catch {
-                    toast.error("Error al importar presupuestos desde el mes anterior.");
+                    toast.error(
+                      "Error al importar presupuestos desde el mes anterior."
+                    );
                   }
                 }}
               >
@@ -520,6 +556,44 @@ function Budgets({ token }) {
             </div>
           </>
         )}
+      </Modal>
+      {/* ✅ Modal confirmar eliminación */}
+      <Modal
+        isOpen={deleteOpen}
+        onClose={closeDeleteModal}
+        title="Eliminar presupuesto"
+        size="sm"
+      >
+        <p className="text-sm" style={{ color: "var(--muted)" }}>
+          ¿Seguro que deseas eliminar el presupuesto de{" "}
+          <span style={{ color: "var(--text)", fontWeight: 700 }}>
+            {deleteBudget?.category_name || "esta categoría"}
+          </span>{" "}
+          para{" "}
+          <span style={{ color: "var(--text)", fontWeight: 700 }}>
+            {deleteBudget?.month || ""}
+          </span>
+          ? Esta acción no se puede deshacer.
+        </p>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={confirmDelete}
+            disabled={deleteLoading}
+            className="ff-btn ff-btn-danger"
+          >
+            {deleteLoading ? "Eliminando..." : "Sí, eliminar"}
+          </button>
+          <button
+            type="button"
+            onClick={closeDeleteModal}
+            disabled={deleteLoading}
+            className="ff-btn ff-btn-outline"
+          >
+            Cancelar
+          </button>
+        </div>
       </Modal>
     </div>
   );

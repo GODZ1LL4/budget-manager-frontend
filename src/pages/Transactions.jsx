@@ -73,6 +73,21 @@ function Transactions({ token }) {
     date: "",
   });
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const openDeleteModal = (id) => {
+    setDeleteId(id);
+    setDeleteOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    if (deleteLoading) return; // opcional: evita cerrar mientras borra
+    setDeleteOpen(false);
+    setDeleteId(null);
+  };
+
   const [showQuickShoppingModal, setShowQuickShoppingModal] = useState(false);
 
   const api = import.meta.env.VITE_API_URL;
@@ -191,7 +206,7 @@ function Transactions({ token }) {
         const lineTotal = subtotal + taxAmount;
 
         setRecurrence("");
-    setRecurrenceEndDate("");
+        setRecurrenceEndDate("");
 
         console.log(`🧾 Línea ${index + 1}:`);
         console.log(`  Artículo: ${item.name}`);
@@ -265,16 +280,21 @@ function Transactions({ token }) {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("¿Eliminar esta transacción?")) return;
+  const handleDelete = async () => {
+    if (!deleteId) return;
+
+    setDeleteLoading(true);
     try {
-      await axios.delete(`${api}/transactions/${id}`, {
+      await axios.delete(`${api}/transactions/${deleteId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       await fetchTransactions();
+      closeDeleteModal();
     } catch (err) {
       console.error("Error al eliminar transacción:", err);
       alert("Error al eliminar");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -861,17 +881,17 @@ function Transactions({ token }) {
                   {tx.type !== "transfer" && (
                     <button
                       onClick={() => openEdit(tx)}
-                      className="text-sm font-semibold"
-                      style={{ color: "var(--link)" }}
+                      className="ff-btn ff-btn-outline"
+                      
                     >
                       Editar
                     </button>
                   )}
 
                   <button
-                    onClick={() => handleDelete(tx.id)}
-                    className="text-sm font-semibold"
-                    style={{ color: "var(--danger)" }}
+                    onClick={() => openDeleteModal(tx.id)}
+                    className="ff-btn ff-btn-danger"
+                    
                   >
                     Eliminar
                   </button>
@@ -1273,7 +1293,36 @@ function Transactions({ token }) {
           </form>
         )}
       </Modal>
+      <Modal
+        isOpen={deleteOpen}
+        onClose={closeDeleteModal}
+        title="Eliminar transacción"
+        size="sm"
+      >
+        <p className="text-sm" style={{ color: "var(--muted)" }}>
+          ¿Seguro que deseas eliminar esta transacción? Esta acción no se puede
+          deshacer.
+        </p>
 
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleteLoading}
+            className="ff-btn ff-btn-danger"
+          >
+            {deleteLoading ? "Eliminando..." : "Sí, eliminar"}
+          </button>
+          <button
+            type="button"
+            onClick={closeDeleteModal}
+            disabled={deleteLoading}
+            className="ff-btn ff-btn-outline"
+          >
+            Cancelar
+          </button>
+        </div>
+      </Modal>
       <ShoppingListQuickModal
         isOpen={showQuickShoppingModal}
         onClose={() => setShowQuickShoppingModal(false)}

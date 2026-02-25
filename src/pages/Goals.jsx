@@ -4,6 +4,7 @@ import axios from "axios";
 // 🔔 react-toastify
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Modal from "../components/Modal";
 
 import FFSelect from "../components/FFSelect";
 
@@ -19,6 +20,15 @@ function Goals({ token }) {
   const [dueDate, setDueDate] = useState("");
   const [accountId, setAccountId] = useState("");
   const [isPriority, setIsPriority] = useState(false);
+
+  // ✅ MODALS
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteGoal, setDeleteGoal] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const [completeOpen, setCompleteOpen] = useState(false);
+  const [completeGoal, setCompleteGoal] = useState(null);
+  const [completeLoading, setCompleteLoading] = useState(false);
 
   // aportes por meta (estado local)
   const [amountByGoal, setAmountByGoal] = useState({});
@@ -178,50 +188,75 @@ function Goals({ token }) {
     }
   };
 
-  const handleDelete = async (goal) => {
+  const openDeleteModal = (goal) => {
     if ((goal.reserved_amount || 0) > 0) {
       return toast.error(
         "Primero retira/libera el monto antes de eliminar la meta."
       );
     }
+    setDeleteGoal(goal);
+    setDeleteOpen(true);
+  };
 
-    if (!confirm("¿Eliminar esta meta?")) return;
+  const closeDeleteModal = () => {
+    if (deleteLoading) return;
+    setDeleteOpen(false);
+    setDeleteGoal(null);
+  };
 
+  const confirmDelete = async () => {
+    if (!deleteGoal) return;
+
+    setDeleteLoading(true);
     try {
-      await axios.delete(`${api}/goals/${goal.id}`, authHeaders);
+      await axios.delete(`${api}/goals/${deleteGoal.id}`, authHeaders);
       await fetchGoals();
       await fetchAccounts();
       toast.success("Meta eliminada");
+      closeDeleteModal();
     } catch (err) {
       toast.error(err?.response?.data?.error || "Error al eliminar meta");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
-  const handleComplete = async (goal) => {
-    // opcional: confirmar si hay saldo reservado
-    const reserved = Number(goal.reserved_amount ?? 0);
-    const msg =
-      reserved > 0
-        ? `¿Completar meta y liberar ${reserved.toFixed(2)} DOP?`
-        : "¿Completar meta?";
-    if (!confirm(msg)) return;
+  const openCompleteModal = (goal) => {
+    setCompleteGoal(goal);
+    setCompleteOpen(true);
+  };
 
+  const closeCompleteModal = () => {
+    if (completeLoading) return;
+    setCompleteOpen(false);
+    setCompleteGoal(null);
+  };
+
+  const confirmComplete = async () => {
+    if (!completeGoal) return;
+
+    setCompleteLoading(true);
     try {
       const res = await axios.post(
-        `${api}/goals/${goal.id}/complete`,
+        `${api}/goals/${completeGoal.id}/complete`,
         {},
         authHeaders
       );
       await fetchGoals();
       await fetchAccounts();
+
       const released = Number(res?.data?.data?.released_amount || 0);
       toast.success(
         released > 0
           ? `Meta completada. Liberado: ${released.toFixed(2)} DOP`
           : "Meta completada"
       );
+
+      closeCompleteModal();
     } catch (err) {
       toast.error(err?.response?.data?.error || "Error al completar meta");
+    } finally {
+      setCompleteLoading(false);
     }
   };
 
@@ -456,7 +491,7 @@ function Goals({ token }) {
                   {!isCompleted && (
                     <button
                       type="button"
-                      onClick={() => handleComplete(goal)}
+                      onClick={() => openCompleteModal(goal)}
                       className="text-sm font-semibold underline underline-offset-2"
                       style={{ color: "var(--primary)" }}
                       title="Marca la meta como completada y libera todo el monto reservado"
@@ -467,7 +502,7 @@ function Goals({ token }) {
 
                   <button
                     type="button"
-                    onClick={() => handleDelete(goal)}
+                    onClick={() => openDeleteModal(goal)}
                     className="text-sm font-semibold underline underline-offset-2"
                     style={{ color: "var(--danger)" }}
                   >
@@ -593,6 +628,107 @@ function Goals({ token }) {
           </li>
         )}
       </ul>
+
+      {/* ✅ MODAL ELIMINAR */}
+      <Modal
+        isOpen={deleteOpen}
+        onClose={closeDeleteModal}
+        title="Eliminar meta"
+        size="sm"
+      >
+        <p className="text-sm" style={{ color: "var(--muted)" }}>
+          ¿Seguro que deseas eliminar la meta{" "}
+          <span style={{ color: "var(--text)", fontWeight: 700 }}>
+            {deleteGoal?.name || ""}
+          </span>
+          ? Esta acción no se puede deshacer.
+        </p>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={confirmDelete}
+            disabled={deleteLoading}
+            className="ff-btn ff-btn-danger"
+          >
+            {deleteLoading ? "Eliminando..." : "Sí, eliminar"}
+          </button>
+          <button
+            type="button"
+            onClick={closeDeleteModal}
+            disabled={deleteLoading}
+            className="ff-btn ff-btn-outline"
+          >
+            Cancelar
+          </button>
+        </div>
+      </Modal>
+
+      {/* ✅ MODAL COMPLETAR */}
+      <Modal
+        isOpen={completeOpen}
+        onClose={closeCompleteModal}
+        title="Completar meta"
+        size="sm"
+      >
+        {(() => {
+          const reserved = Number(completeGoal?.reserved_amount ?? 0);
+          const reservedSafe = Math.abs(reserved) < 0.000001 ? 0 : reserved;
+
+          return (
+            <>
+              <p className="text-sm" style={{ color: "var(--muted)" }}>
+                Vas a marcar como completada la meta{" "}
+                <span style={{ color: "var(--text)", fontWeight: 700 }}>
+                  {completeGoal?.name || ""}
+                </span>
+                .
+              </p>
+
+              <div
+                className="mt-3 text-sm rounded-xl p-3"
+                style={{
+                  background:
+                    "color-mix(in srgb, var(--panel) 75%, transparent)",
+                  border: "var(--border-w) solid var(--border-rgba)",
+                  color: "var(--muted)",
+                }}
+              >
+                {reservedSafe > 0 ? (
+                  <>
+                    Se liberará{" "}
+                    <span style={{ color: "var(--text)", fontWeight: 700 }}>
+                      {reservedSafe.toFixed(2)} DOP
+                    </span>{" "}
+                    de fondos reservados.
+                  </>
+                ) : (
+                  <>No hay fondos reservados para liberar.</>
+                )}
+              </div>
+
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={confirmComplete}
+                  disabled={completeLoading}
+                  className="ff-btn ff-btn-danger"
+                >
+                  {completeLoading ? "Completando..." : "Sí, completar"}
+                </button>
+                <button
+                  type="button"
+                  onClick={closeCompleteModal}
+                  disabled={completeLoading}
+                  className="ff-btn ff-btn-outline"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </>
+          );
+        })()}
+      </Modal>
     </div>
   );
 }

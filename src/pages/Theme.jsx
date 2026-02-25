@@ -634,19 +634,20 @@ export default function Theme() {
           />
 
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setShowImport(false)}
-              className="ff-btn ff-btn-outline"
-            >
-              Cerrar
-            </button>
+            
             <button
               type="button"
               onClick={handleImport}
               className="ff-btn ff-btn-primary"
             >
               Importar
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowImport(false)}
+              className="ff-btn ff-btn-outline"
+            >
+              Cerrar
             </button>
           </div>
 

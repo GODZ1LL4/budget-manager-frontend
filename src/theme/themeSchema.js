@@ -9,7 +9,9 @@ export const THEME_PRESETS = [
   { id: "black-gold", name: "BlackGold × Rolex PRO v2" },
   { id: "gulf", name: "Gulf Racing 🏁" },
   { id: "gulf-blue", name: "Gulf Heritage Blue 🏁" },
-
+  { id: "midnight-aurora", name: "Midnight Aurora PRO 🌌" },
+{ id: "paper-studio", name: "Paper Studio PRO 🤍" },
+  
 ];
 
 export const THEME_SECTIONS = [

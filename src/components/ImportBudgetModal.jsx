@@ -338,9 +338,7 @@ export default function ImportBudgetModal({
           </div>
 
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className="ff-btn ff-btn-outline">
-              Cancelar
-            </button>
+           
 
             <button
               type="button"
@@ -354,6 +352,9 @@ export default function ImportBudgetModal({
               }
             >
               Importar seleccionados
+            </button>
+            <button type="button" onClick={onClose} className="ff-btn ff-btn-outline">
+              Cancelar
             </button>
           </div>
         </div>

@@ -52,7 +52,7 @@
     /* ====== Glow / Neon ====== */
     --glow-color: var(--primary);
     --glow-alpha: 0.7;
-    --glow-blur: 18px;
+    --glow-blur: 7px;
     --glow-spread: 0px;
   
     /* ====== Controls (inputs/selects) ====== */
@@ -157,6 +157,9 @@
     --select-item-radius: var(--radius-sm);
     --select-shadow: var(--glow-shadow);
     --select-max-h: 260px;
+
+    --modal-panel: rgba(15, 23, 42, 0.92);
+  --modal-border: color-mix(in srgb, var(--border-rgba) 85%, transparent);
   
     /* =========================
        Scrollbar Tokens
@@ -204,7 +207,7 @@ html[data-theme="scuderia-carbon-red"] {
 
   --glow-color: #e10600;
   --glow-alpha: 0.55;
-  --glow-blur: 22px;
+  --glow-blur: 7px;
   --glow-spread: 0px;
 
   --control-bg: #12141c;
@@ -293,6 +296,10 @@ html[data-theme="scuderia-carbon-red"] {
   --select-border-w: 1px;
   --select-max-h: 280px;
 
+  --modal-panel: rgba(21, 23, 32, 0.94);
+  --modal-border: color-mix(in srgb, var(--border-rgba) 92%, transparent);
+
+
   /* Scrollbar */
   --scrollbar-size: 10px;
   --scrollbar-track: color-mix(in srgb, rgba(21, 23, 32, 0.72) 65%, #000);
@@ -340,7 +347,7 @@ html[data-theme="scuderia-carbon-red"] {
     /* Glow más “premium” y profundo */
     --glow-color: #e10600;
     --glow-alpha: 0.42;
-    --glow-blur: 28px;
+    --glow-blur: 7px;
     --glow-spread: 0px;
   
     /* Controls más “glass” */
@@ -440,6 +447,9 @@ html[data-theme="scuderia-carbon-red"] {
     --select-radius: 14px;
     --select-border-w: 1px;
     --select-max-h: 280px;
+
+    --modal-panel: #0f0f14;
+  --modal-border: rgba(255, 59, 48, 0.42);
   
     /* ===================== */
     /* SCROLLBAR (thumb rojo) */
@@ -487,7 +497,7 @@ html[data-theme="scuderia-carbon-red"] {
   
     --glow-color: var(--primary);
     --glow-alpha: 0.12;
-    --glow-blur: 14px;
+    --glow-blur: 7px;
   
     --control-bg: #ffffff;
     --control-bg-2: #f8fafc;
@@ -560,6 +570,9 @@ html[data-theme="scuderia-carbon-red"] {
     --btn-glow-alpha: 0.0;
     --btn-glow-blur: 0px;
 
+    --modal-panel: rgba(255, 255, 255, 0.98);
+  --modal-border: rgba(148, 163, 184, 0.50);
+
   }
   
 
@@ -593,7 +606,7 @@ html[data-theme="scuderia-carbon-red"] {
   
     --glow-color: #FFD37A;
     --glow-alpha: 0.28;
-    --glow-blur: 28px;
+    --glow-blur: 7px;
     --glow-spread: 0px;
   
     --control-bg: rgba(35,5,7,0.78);
@@ -680,6 +693,13 @@ html[data-theme="scuderia-carbon-red"] {
     --select-radius: 14px;
     --select-border-w: 1px;
     --select-max-h: 280px;
+
+    --modal-panel: linear-gradient(
+    180deg,
+    rgba(90, 10, 14, 0.96) 0%,
+    rgba(25, 4, 6, 0.98) 100%
+  );
+  --modal-border: rgba(255, 215, 128, 0.55);
   
     /* ===================== */
     /* SCROLLBAR */
@@ -724,7 +744,7 @@ html[data-theme="scuderia-carbon-red"] {
   
     --glow-color: #d5001c;
     --glow-alpha: 0.55;
-    --glow-blur: 20px;
+    --glow-blur: 7px;
   
     --control-bg: #0f0f14;
     --control-bg-2: #14141a;
@@ -799,6 +819,9 @@ html[data-theme="scuderia-carbon-red"] {
     --select-item-radius: var(--radius-sm);
     --select-shadow: var(--glow-shadow);
     --select-max-h: 280px;
+
+    --modal-panel: rgba(18, 18, 22, 0.96);
+    --modal-border: rgba(215, 219, 227, 0.32);
   }
 
   html[data-theme="black-gold"] {
@@ -833,7 +856,7 @@ html[data-theme="scuderia-carbon-red"] {
   
     --glow-color: #d4af37;
     --glow-alpha: 0.28;
-    --glow-blur: 22px;
+    --glow-blur: 7px;
     --glow-spread: 0px;
   
     --control-bg: color-mix(in srgb, #0b0b0b 82%, #000);
@@ -912,6 +935,8 @@ html[data-theme="scuderia-carbon-red"] {
     --select-border-w: 1px;
     --select-max-h: 280px;
   
+    --modal-panel: rgba(14, 14, 14, 0.95);
+  --modal-border: rgba(212, 175, 55, 0.42);
     --scrollbar-size: 10px;
     --scrollbar-track: color-mix(in srgb, var(--panel) 55%, var(--bg-1));
     --scrollbar-thumb: color-mix(in srgb, var(--border) 55%, transparent);
@@ -950,7 +975,7 @@ html[data-theme="gulf"] {
 
   --glow-color: #ff7a1a;
   --glow-alpha: 0.25;
-  --glow-blur: 24px;
+  --glow-blur: 7px;
   --glow-spread: 0px;
 
   --control-bg: #ffffff;
@@ -1033,6 +1058,9 @@ html[data-theme="gulf"] {
   --select-border-w: 1px;
   --select-max-h: 280px;
 
+  --modal-panel: rgba(255, 255, 255, 0.985);
+  --modal-border: rgba(15, 76, 129, 0.30);
+
   --scrollbar-size: 10px;
   --scrollbar-track: color-mix(in srgb, #edf3f8 85%, #ffffff);
   --scrollbar-thumb: color-mix(in srgb, #0f4c81 45%, rgba(255, 122, 26, 0.15));
@@ -1077,7 +1105,7 @@ html[data-theme="gulf-blue"] {
   /* 🔥 Glow naranja más visible */
   --glow-color: #ff6a00;
   --glow-alpha: 0.28;
-  --glow-blur: 34px;
+  --glow-blur: 7px;
 
   /* Controls */
   --control-bg: #e6f2f9;
@@ -1150,13 +1178,343 @@ html[data-theme="gulf-blue"] {
   --select-border: rgba(111, 174, 214, 0.65);
   --select-hover-bg: color-mix(in srgb, var(--primary) 18%, #e6f2f9);
   --select-active-bg: color-mix(in srgb, #ff6a00 25%, #e6f2f9);
-
+  --modal-panel: rgba(224, 238, 248, 0.985);
+  --modal-border: rgba(111, 174, 214, 0.45);
   /* Scrollbar con identidad */
   --scrollbar-size: 10px;
   --scrollbar-track: #c4ddee;
   --scrollbar-thumb: #6faed6;
   --scrollbar-thumb-hover: #ff6a00;
   --scrollbar-border: rgba(255, 106, 0, 0.35);
+}
+
+/* =========================
+   Preset: Midnight Aurora PRO (Dark)
+   ========================= */
+   html[data-theme="midnight-aurora"] {
+    /* Backgrounds (más profundo, cero parecido al default) */
+    --bg-1: #050814;
+    --bg-2: #070a1a;
+    --bg-3: #040612;
+  
+    /* Surfaces (menos glass, más premium/inky) */
+    --panel: rgba(10, 16, 40, 0.78);
+    --panel-2: rgba(12, 20, 52, 0.72);
+  
+    /* Text */
+    --text: #eaf2ff;
+    --muted: #9db0d0;
+  
+    /* Headings */
+    --heading: #f4f8ff;
+    --heading-muted: color-mix(in srgb, var(--heading) 70%, transparent);
+    --heading-accent: var(--primary);
+  
+    /* Border system */
+    --border: #7c8bb8;
+    --border-alpha: 0.20;
+    --border-w: 1px;
+  
+    /* Semantics (aurora) */
+    --primary: #36f3c6; /* aurora mint */
+    --ring: #6fe7ff;    /* focus cian */
+  
+    --danger: #ff4d6d;
+    --success: #22c55e;
+    --warning: #fbbf24;
+  
+    /* Radii (más “pro” que tu default) */
+    --radius-sm: 9px;
+    --radius-md: 13px;
+    --radius-lg: 18px;
+  
+    /* Glow (aurora) */
+    --glow-color: #36f3c6;
+    --glow-alpha: 0.46;
+    --glow-blur: 14px;
+    --glow-spread: 0px;
+  
+    /* Controls */
+    --control-bg: rgba(6, 10, 26, 0.92);
+    --control-bg-2: rgba(8, 12, 32, 0.92);
+    --control-text: var(--text);
+    --control-muted: color-mix(in srgb, var(--muted) 92%, transparent);
+  
+    --control-border: rgba(124, 139, 184, 0.28);
+    --control-border-hover: rgba(111, 231, 255, 0.55);
+    --control-border-focus: rgba(54, 243, 198, 0.72);
+    --control-focus-shadow: var(--glow-shadow);
+  
+    /* Buttons (metal/aurora) */
+    --btn-radius: 14px;
+    --btn-border-w: 1px;
+  
+    --btn-pad-y: 10px;
+    --btn-pad-x: 16px;
+    --btn-font-size: 14px;
+    --btn-font-weight: 680;
+  
+    --btn-bg: linear-gradient(
+      180deg,
+      rgba(14, 24, 62, 0.88) 0%,
+      rgba(8, 12, 32, 0.86) 100%
+    );
+    --btn-text: #eaf2ff;
+    --btn-border: rgba(111, 231, 255, 0.26);
+  
+    --btn-hover-bg: linear-gradient(
+      180deg,
+      rgba(18, 34, 86, 0.92) 0%,
+      rgba(10, 16, 44, 0.90) 100%
+    );
+    --btn-hover-border: rgba(54, 243, 198, 0.55);
+    --btn-hover-text: #ffffff;
+  
+    /* Variants */
+    --btn-primary-bg: #36f3c6;
+    --btn-primary-text: #04110e;
+  
+    --btn-success-bg: #22c55e;
+    --btn-success-text: #04140d;
+  
+    --btn-warning-bg: #fbbf24;
+    --btn-warning-text: #1a1205;
+  
+    --btn-danger-bg: #ff4d6d;
+    --btn-danger-text: #ffffff;
+  
+    /* Gradient hovers */
+    --btn-primary-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, #36f3c6 86%, #ffffff) 0%,
+      color-mix(in srgb, #36f3c6 70%, #ffffff) 100%
+    );
+    --btn-success-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, #22c55e 86%, #ffffff) 0%,
+      color-mix(in srgb, #22c55e 70%, #ffffff) 100%
+    );
+    --btn-warning-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, #fbbf24 88%, #ffffff) 0%,
+      color-mix(in srgb, #fbbf24 74%, #ffffff) 100%
+    );
+    --btn-danger-hover-bg: linear-gradient(
+      90deg,
+      color-mix(in srgb, #ff4d6d 86%, #ffffff) 0%,
+      color-mix(in srgb, #ff4d6d 70%, #ffffff) 100%
+    );
+  
+    --btn-primary-hover-text: #04110e;
+    --btn-success-hover-text: #04140d;
+    --btn-warning-hover-text: #1a1205;
+    --btn-danger-hover-text: #ffffff;
+  
+    /* Ghost / outline */
+    --btn-outline-bg: transparent;
+    --btn-outline-text: #eaf2ff;
+    --btn-outline-border: rgba(111, 231, 255, 0.48);
+    --btn-outline-hover-text: #ffffff;
+  
+    --btn-ghost-bg: transparent;
+    --btn-ghost-text: #eaf2ff;
+    --btn-ghost-hover-bg: color-mix(in srgb, #36f3c6 12%, transparent);
+    --btn-ghost-hover-text: #ffffff;
+  
+    /* Button glow */
+    --btn-glow-alpha: 0.22;
+    --btn-glow-blur: 28px;
+  
+    /* Links */
+    --link: color-mix(in srgb, #6fe7ff 78%, var(--text));
+    --link-hover: color-mix(in srgb, #36f3c6 88%, var(--text));
+  
+    /* Select */
+    --select-radius: 14px;
+    --select-border-w: 1px;
+  
+    --select-bg: rgba(6, 10, 26, 0.92);
+    --select-text: var(--text);
+    --select-border: rgba(124, 139, 184, 0.28);
+  
+    --select-hover-bg: color-mix(in srgb, #6fe7ff 12%, rgba(6, 10, 26, 0.92));
+    --select-active-bg: color-mix(in srgb, #36f3c6 16%, rgba(6, 10, 26, 0.92));
+  
+    --select-muted: color-mix(in srgb, var(--muted) 92%, transparent);
+    --select-item-radius: 10px;
+    --select-shadow: 0 18px 55px rgba(0, 0, 0, 0.62);
+    --select-max-h: 300px;
+  
+    /* Modal (importante con tu Modal.jsx) */
+    --modal-panel: rgba(8, 12, 32, 0.96);
+    --modal-border: rgba(111, 231, 255, 0.30);
+  
+    /* Scrollbar */
+    --scrollbar-size: 10px;
+    --scrollbar-track: rgba(6, 10, 26, 0.85);
+    --scrollbar-thumb: color-mix(in srgb, #6fe7ff 50%, transparent);
+    --scrollbar-thumb-hover: color-mix(in srgb, #36f3c6 78%, transparent);
+    --scrollbar-border: rgba(111, 231, 255, 0.20);
+  }
+
+
+/* =========================
+   Preset: Paper Studio PRO (White)
+   ========================= */
+html[data-theme="paper-studio"] {
+  /* Backgrounds */
+  --bg-1: #ffffff;
+  --bg-2: #f7f8fb;
+  --bg-3: #eff2f7;
+
+  /* Surfaces */
+  --panel: rgba(255, 255, 255, 0.96);
+  --panel-2: rgba(255, 255, 255, 0.985);
+
+  /* Text */
+  --text: #0b1220;
+  --muted: #516072;
+
+  /* Headings */
+  --heading: #070d18;
+  --heading-muted: color-mix(in srgb, var(--heading) 62%, transparent);
+  --heading-accent: var(--primary);
+
+  /* Border system */
+  --border: #94a3b8;
+  --border-alpha: 0.32;
+  --border-w: 1px;
+
+  /* Semantics */
+  --primary: #3b5bfd; /* indigo-blue */
+  --ring: #38bdf8;    /* sky focus */
+
+  --danger: #e11d48;
+  --success: #059669;
+  --warning: #f59e0b;
+
+  /* Radii */
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  /* Glow (sutil, light friendly) */
+  --glow-color: #38bdf8;
+  --glow-alpha: 0.14;
+  --glow-blur: 18px;
+  --glow-spread: 0px;
+
+  /* Controls */
+  --control-bg: #ffffff;
+  --control-bg-2: #f7f8fb;
+  --control-text: var(--text);
+  --control-muted: var(--muted);
+
+  --control-border: rgba(148, 163, 184, 0.55);
+  --control-border-hover: rgba(59, 91, 253, 0.45);
+  --control-border-focus: rgba(56, 189, 248, 0.75);
+  --control-focus-shadow: var(--glow-shadow);
+
+  /* Buttons */
+  --btn-radius: 14px;
+  --btn-border-w: 1px;
+
+  --btn-pad-y: 10px;
+  --btn-pad-x: 16px;
+  --btn-font-size: 14px;
+  --btn-font-weight: 650;
+
+  --btn-bg: rgba(255, 255, 255, 0.98);
+  --btn-text: #0b1220;
+  --btn-border: rgba(148, 163, 184, 0.55);
+
+  --btn-hover-bg: color-mix(in srgb, #3b5bfd 4%, #ffffff);
+  --btn-hover-border: rgba(59, 91, 253, 0.42);
+  --btn-hover-text: #0b1220;
+
+  /* Variants */
+  --btn-primary-bg: #3b5bfd;
+  --btn-primary-text: #ffffff;
+
+  --btn-success-bg: #059669;
+  --btn-success-text: #ffffff;
+
+  --btn-warning-bg: #f59e0b;
+  --btn-warning-text: #1f2937;
+
+  --btn-danger-bg: #e11d48;
+  --btn-danger-text: #ffffff;
+
+  /* Gradient hovers (light-friendly, no “plastico”) */
+  --btn-primary-hover-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, #3b5bfd 88%, #ffffff) 0%,
+    color-mix(in srgb, #3b5bfd 74%, #ffffff) 100%
+  );
+  --btn-success-hover-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, #059669 88%, #ffffff) 0%,
+    color-mix(in srgb, #059669 74%, #ffffff) 100%
+  );
+  --btn-warning-hover-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, #f59e0b 90%, #ffffff) 0%,
+    color-mix(in srgb, #f59e0b 78%, #ffffff) 100%
+  );
+  --btn-danger-hover-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, #e11d48 88%, #ffffff) 0%,
+    color-mix(in srgb, #e11d48 74%, #ffffff) 100%
+  );
+
+  --btn-primary-hover-text: #ffffff;
+  --btn-success-hover-text: #ffffff;
+  --btn-warning-hover-text: #1f2937;
+  --btn-danger-hover-text: #ffffff;
+
+  /* Outline / Ghost */
+  --btn-outline-bg: transparent;
+  --btn-outline-text: #0b1220;
+  --btn-outline-border: rgba(59, 91, 253, 0.55);
+  --btn-outline-hover-text: #070d18;
+
+  --btn-ghost-bg: transparent;
+  --btn-ghost-text: #0b1220;
+  --btn-ghost-hover-bg: color-mix(in srgb, #38bdf8 14%, #ffffff);
+  --btn-ghost-hover-text: #070d18;
+
+  /* Button glow (prácticamente nada) */
+  --btn-glow-alpha: 0.0;
+  --btn-glow-blur: 0px;
+
+  /* Links */
+  --link: color-mix(in srgb, #3b5bfd 78%, #0b1220);
+  --link-hover: color-mix(in srgb, #38bdf8 75%, #0b1220);
+
+  /* Select */
+  --select-radius: 14px;
+  --select-border-w: 1px;
+
+  --select-bg: #ffffff;
+  --select-text: #0b1220;
+  --select-border: rgba(148, 163, 184, 0.55);
+
+  --select-hover-bg: color-mix(in srgb, #3b5bfd 6%, #ffffff);
+  --select-active-bg: color-mix(in srgb, #38bdf8 10%, #ffffff);
+
+  --select-shadow: 0 18px 55px rgba(2, 6, 23, 0.10);
+  --select-max-h: 320px;
+
+  /* Modal */
+  --modal-panel: rgba(255, 255, 255, 0.99);
+  --modal-border: rgba(148, 163, 184, 0.58);
+
+  /* Scrollbar */
+  --scrollbar-size: 10px;
+  --scrollbar-track: #eef2f7;
+  --scrollbar-thumb: color-mix(in srgb, #94a3b8 55%, #ffffff);
+  --scrollbar-thumb-hover: color-mix(in srgb, #3b5bfd 38%, #94a3b8);
+  --scrollbar-border: rgba(59, 91, 253, 0.14);
 }
 
   /* =========================

@@ -653,10 +653,7 @@ function BudgetVsActualSummaryChart({ token }) {
               </table>
             </div>
 
-            <p className="text-xs" style={{ color: ui.muted }}>
-              Nota: si quieres ver TODAS las categorías sin agrupar, podemos
-              agregar un modo “sin Otros”.
-            </p>
+           
           </div>
         )}
       </Modal>

@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
 
-import CollapseSection from "../components/CollapseSection";
+import ReportsNavRail from "../components/ReportsNavRail";
+
+// Charts / Reports
 import ItemPriceTrendChart from "../components/reports/ItemPriceTrendChart";
 import ExpenseDistributionByCategoryChart from "../components/reports/ExpenseDistributionByCategoryChart";
 import BudgetVsActualChart from "../components/reports/BudgetVsActualChart";
@@ -13,7 +15,6 @@ import CategoryVariationChart from "../components/reports/CategoryVariationChart
 import TransactionsCalendar from "../components/reports/TransactionsCalendar";
 import BudgetVsActualSummaryChart from "../components/reports/BudgetVsActualSummaryChart";
 import ExpenseByStabilityChart from "../components/reports/ExpenseByStabilityChart";
-import TopVariableCategoriesChart from "../components/reports/TopVariableCategoriesChart";
 import GoalsProgressChart from "../components/reports/GoalsProgressChart";
 import ProjectedExpenseByCategoryChart from "../components/reports/ProjectedExpenseByCategoryChart";
 import ProjectedIncomeByCategoryChart from "../components/reports/ProjectedIncomeByCategoryChart";
@@ -23,9 +24,7 @@ import ItemMonthlyComparisonTable from "../components/reports/ItemMonthlyCompari
 import TopItemsByCategoryChart from "../components/reports/TopItemsByCategoryChart";
 import ItemsAnnualSummaryTable from "../components/reports/ItemsAnnualSummaryTable";
 import BurnRateChart from "../components/reports/BurnRateChart";
-
 import ExpenseByWeekdayChart from "../components/reports/ExpenseByWeekdayChart";
-
 import BudgetCoverageChart from "../components/reports/BudgetCoverageChart";
 import ProjectedVsActualExpenseByCategoryChart from "../components/reports/ProjectedVsActualExpenseByCategoryChart";
 import UnusualExpensesTable from "../components/reports/UnusualExpensesTable";
@@ -38,14 +37,20 @@ import AdvancedBurnRateChart from "../components/reports/AdvancedBurnRateChart";
 import MonthlyIncomeVsExpenseLineChart from "../components/reports/MonthlyIncomeVsExpenseLineChart";
 import BudgetCoverageRobustChart from "../components/reports/BudgetCoverageRobustChart";
 import ItemExpenseForecast from "../components/reports/ItemExpenseForecast";
+import AntExpensesReport from "../components/reports/AntExpensesReport";
+import ItemPurchaseHistoryReport from "../components/reports/ItemPurchaseHistoryReport";
 
 function Dashboard({ token }) {
-  const [data, setData] = useState(null);
   const api = import.meta.env.VITE_API_URL;
+
+  const [data, setData] = useState(null);
   const [categories, setCategories] = useState([]);
 
   const [todayExpense, setTodayExpense] = useState(0);
   const [yearlyStabilitySummary, setYearlyStabilitySummary] = useState(null);
+
+  // ✅ Para el atajo "/" -> enfocar buscador
+  const searchInputRef = useRef(null);
 
   const fetchSummary = async () => {
     try {
@@ -59,18 +64,19 @@ function Dashboard({ token }) {
   };
 
   useEffect(() => {
-    if (token) {
-      axios
-        .get(`${api}/categories`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((res) => setCategories(res.data.data))
-        .catch(() => console.error("Error al cargar categorías"));
-    }
-  }, [token]);
+    if (!token) return;
+
+    axios
+      .get(`${api}/categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => setCategories(res.data.data))
+      .catch(() => console.error("Error al cargar categorías"));
+  }, [token, api]);
 
   useEffect(() => {
     if (token) fetchSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   useEffect(() => {
@@ -86,7 +92,7 @@ function Dashboard({ token }) {
     };
 
     if (token) fetchTodayExpense();
-  }, [token]);
+  }, [token, api]);
 
   useEffect(() => {
     const fetchYearlyStabilitySummary = async () => {
@@ -107,7 +113,7 @@ function Dashboard({ token }) {
     };
 
     if (token) fetchYearlyStabilitySummary();
-  }, [token]);
+  }, [token, api]);
 
   useEffect(() => {
     const runDailyRecurring = async () => {
@@ -119,9 +125,7 @@ function Dashboard({ token }) {
           const res = await axios.post(
             `${api}/jobs/run-daily-recurring`,
             null,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
+            { headers: { Authorization: `Bearer ${token}` } }
           );
 
           localStorage.setItem(key, "1");
@@ -145,26 +149,27 @@ function Dashboard({ token }) {
     };
 
     if (token) runDailyRecurring();
-  }, [token]);
+  }, [token, api]);
 
-  if (!data) return <p className="p-4">Cargando métricas...</p>;
+  // ✅ Atajo "/" para enfocar el buscador del sidebar
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      // si estás escribiendo en un input/textarea, no robes el foco
+      const tag = (e.target?.tagName || "").toLowerCase();
+      const typing =
+        tag === "input" || tag === "textarea" || e.target?.isContentEditable;
 
-  const daysInMonth = new Date(
-    new Date().getFullYear(),
-    new Date().getMonth() + 1,
-    0
-  ).getDate();
-  const projectedExpense = data.averageDailyExpense * daysInMonth;
+      if (typing) return;
 
-  const budgetUsagePct =
-    data.totalMonthlyBudget > 0
-      ? (data.budgetedExpenseTotal / data.totalMonthlyBudget) * 100
-      : 0;
+      if (e.key === "/") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
 
-  const incomeSpentPct =
-    data.totalIncome > 0 ? (data.totalExpense / data.totalIncome) * 100 : 0;
-
-  const projectedSaving = data.totalIncome - projectedExpense;
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const formatSignedCurrency = (amount) => {
     const safe = Number.isFinite(Number(amount)) ? Number(amount) : 0;
@@ -180,48 +185,389 @@ function Dashboard({ token }) {
     return `${sign}${formatted}`;
   };
 
-  // Helpers UI tokenizados (ponlos dentro de Dashboard, antes del return)
+  // Helpers UI tokenizados
   const ui = {
     text: "var(--text)",
     muted: "var(--muted)",
 
-    // tonos “intermedios” para texto
     soft: "color-mix(in srgb, var(--text) 78%, transparent)",
     soft2: "color-mix(in srgb, var(--text) 70%, transparent)",
     subtle: "color-mix(in srgb, var(--muted) 85%, transparent)",
 
-    // border
     border: "color-mix(in srgb, var(--border-rgba) 85%, transparent)",
 
-    // semánticos
     success: "var(--success)",
     danger: "var(--danger)",
     warning: "var(--warning)",
   };
 
   const dividerStyle = { borderTop: `1px solid ${ui.border}` };
-
   const deltaStyle = (isGood) => ({
     color: isGood ? ui.success : ui.danger,
     fontWeight: 800,
   });
-
   const boldText = { color: ui.text, fontWeight: 700 };
   const labelMuted = { color: ui.soft };
   const labelStrong = { color: ui.text, fontWeight: 600 };
   const metaMuted = { color: ui.subtle };
 
+  // ✅ IMPORTANTÍSIMO: sections SIEMPRE se define (aunque data sea null)
+  // y dentro hacemos guardas para que no reviente.
+  const sections = useMemo(() => {
+    const loading = (msg = "Cargando…") => (
+      <div className="text-sm" style={{ color: "var(--muted)" }}>
+        {msg}
+      </div>
+    );
+
+    return [
+      {
+        groupId: "estado",
+        groupTitle: "🧭 Estado actual",
+        items: [
+          {
+            id: "balances",
+            title: "1- Estado financiero actual (Saldos por cuenta)",
+            keywords: "saldo cuentas banco",
+            short: "Saldos",
+            panelHint: "Resumen de balances por cuenta.",
+            render: () => <AccountBalancesChart token={token} />,
+          },
+          {
+            id: "calendar",
+            title: "2- Calendario financiero (actividad reciente)",
+            keywords: "calendario transacciones",
+            short: "Calendario",
+            panelHint: "Actividad reciente organizada por fecha.",
+            render: () => <TransactionsCalendar token={token} />,
+          },
+          {
+            id: "income-expense-month",
+            title: "3- Ingresos vs Gastos (mensual)",
+            keywords: "ingresos gastos mensual",
+            short: "Ingresos vs Gastos",
+            panelHint: "Comparación mensual de ingresos y gastos.",
+            render: () => <MonthlyIncomeVsExpenseChart token={token} />,
+          },
+          {
+            id: "burn-rate",
+            title: "4- Ritmo de gasto del mes (Burn Rate)",
+            keywords: "ritmo gasto burn rate",
+            short: "Burn Rate",
+            panelHint: "Qué tan rápido estás gastando este mes.",
+            render: () => <BurnRateChart token={token} />,
+          },
+          {
+            id: "burn-rate-advanced",
+            title: "4.1- Ritmo de gasto avanzado",
+            keywords: "burn rate avanzado",
+            short: "Burn Rate+",
+            badge: "Pro",
+            panelHint: "Detalle avanzado del ritmo de gasto.",
+            render: () => <AdvancedBurnRateChart token={token} />,
+          },
+        ],
+      },
+
+      {
+        groupId: "analisis",
+        groupTitle: "📊 Análisis del mes",
+        items: [
+          {
+            id: "dist-category",
+            title: "5- Distribución del gasto por categoría (mes actual)",
+            keywords: "distribucion categoria",
+            short: "Distribución",
+            panelHint: "¿En qué categorías se va el dinero?",
+            render: () => {
+              if (!data) return loading("Cargando data del dashboard…");
+              return (
+                <ExpenseDistributionByCategoryChart
+                  expensesByCategory={data.expensesByCategory}
+                  categoryNameMap={data.categoryNameMap}
+                  token={token}
+                />
+              );
+            },
+          },
+          {
+            id: "weekday",
+            title: "6- Hábitos de gasto por día de la semana",
+            keywords: "weekday semana",
+            short: "Día semana",
+            render: () => <ExpenseByWeekdayChart token={token} />,
+          },
+          {
+            id: "stability",
+            title:
+              "7- Gastos por tipo de estabilidad (fijo / variable / ocasional)",
+            keywords: "estabilidad fijo variable ocasional",
+            short: "Estabilidad",
+            render: () => <ExpenseByStabilityChart token={token} />,
+          },
+          {
+            id: "ants",
+            title: "8- Gastos hormiga",
+            keywords: "hormiga pequenos",
+            short: "Hormiga",
+            render: () => <AntExpensesReport token={token} />,
+          },
+        ],
+      },
+
+      {
+        groupId: "presupuesto",
+        groupTitle: "🎯 Control presupuestario",
+        items: [
+          {
+            id: "bva",
+            title: "9- Presupuesto vs gasto por categoría (mes actual)",
+            keywords: "budget actual categoria",
+            short: "Presupuesto",
+            render: () => <BudgetVsActualChart token={token} />,
+          },
+          {
+            id: "over",
+            title: "10- Top categorías con gasto excesivo",
+            keywords: "exceso overbudget",
+            short: "Over budget",
+            render: () => <OverBudgetChart token={token} />,
+          },
+          {
+            id: "coverage",
+            title: "11- Calidad de presupuestos (cobertura)",
+            keywords: "cobertura presupuesto",
+            short: "Cobertura",
+            render: () => <BudgetCoverageChart token={token} />,
+          },
+          {
+            id: "coverage2",
+            title: "11.1- Calidad de presupuestos (cobertura detallada)",
+            keywords: "cobertura detallada",
+            short: "Cobertura+",
+            badge: "Pro",
+            render: () => <BudgetCoverageRobustChart token={token} />,
+          },
+          {
+            id: "proj-vs-actual",
+            title: "12- Proyección vs realidad por categoría",
+            keywords: "proyeccion realidad",
+            short: "Proy vs Real",
+            render: () => (
+              <ProjectedVsActualExpenseByCategoryChart token={token} />
+            ),
+          },
+        ],
+      },
+
+      {
+        groupId: "alertas",
+        groupTitle: "🔍 Alertas",
+        items: [
+          {
+            id: "unusual",
+            title: "13- Gastos atípicos del mes",
+            keywords: "atipicos unusual",
+            short: "Atípicos",
+            render: () => <UnusualExpensesTable token={token} />,
+          },
+          {
+            id: "variation-year",
+            title: "14- Variaciones anuales por categoría",
+            keywords: "variacion anual",
+            short: "Variación anual",
+            render: () => (
+              <CategoryVariationChart token={token} categories={categories} />
+            ),
+          },
+          {
+            id: "year-summary",
+            title: "15- Resumen anual: Presupuesto vs Gasto total",
+            keywords: "resumen anual",
+            short: "Resumen anual",
+            render: () => <BudgetVsActualSummaryChart token={token} />,
+          },
+        ],
+      },
+
+      {
+        groupId: "historico",
+        groupTitle: "📈 Histórico y comparativos",
+        items: [
+          {
+            id: "heatmap",
+            title: "16- Heatmap de gasto por categoría y mes",
+            keywords: "heatmap",
+            short: "Heatmap",
+            render: () => <CategoryMonthlyHeatmap token={token} />,
+          },
+          {
+            id: "cmp-cat",
+            title: "17- Comparativo mensual por categoría",
+            keywords: "comparativo categoria",
+            short: "Comp. categoría",
+            render: () => <CategoryMonthlyComparisonTable token={token} />,
+          },
+          {
+            id: "cmp-item",
+            title: "18- Comparativo mensual por artículo",
+            keywords: "comparativo articulo item",
+            short: "Comp. artículo",
+            render: () => <ItemMonthlyComparisonTable token={token} />,
+          },
+          {
+            id: "history-item",
+            title: "19- Histórico de compra por artículo",
+            keywords: "historico compras",
+            short: "Histórico ítem",
+            render: () => <ItemPurchaseHistoryReport token={token} />,
+          },
+        ],
+      },
+
+      {
+        groupId: "items",
+        groupTitle: "🛒 Análisis por artículos",
+        items: [
+          {
+            id: "item-price",
+            title: "20- Tendencia de precios por artículo",
+            keywords: "precio tendencia",
+            short: "Precio ítem",
+            render: () => <ItemPriceTrendChart token={token} />,
+          },
+          {
+            id: "item-trend",
+            title: "21- Tendencia de consumo mensual por artículo",
+            keywords: "consumo tendencia",
+            short: "Consumo ítem",
+            render: () => <ItemTrendChart token={token} />,
+          },
+          {
+            id: "item-patterns",
+            title: "22- Patrones de compra por artículo",
+            keywords: "patrones item",
+            short: "Patrones ítem",
+            render: () => <RecurringItemPatternsTable token={token} />,
+          },
+          {
+            id: "top-items",
+            title: "23- Top ítems por categoría (anual)",
+            keywords: "top items",
+            short: "Top ítems",
+            render: () => (
+              <TopItemsByCategoryChart token={token} categories={categories} />
+            ),
+          },
+          {
+            id: "items-annual",
+            title: "24- Resumen anual de artículos",
+            keywords: "resumen anual items",
+            short: "Resumen ítems",
+            render: () => <ItemsAnnualSummaryTable token={token} />,
+          },
+        ],
+      },
+
+      {
+        groupId: "patrones",
+        groupTitle: "🔷 Patrones y recurrencias",
+        items: [
+          {
+            id: "rec-exp",
+            title: "25- Patrones de gasto recurrente no marcados",
+            keywords: "recurrente no marcado",
+            short: "Recurrencias",
+            render: () => <RecurringExpensePatternsTable token={token} />,
+          },
+          {
+            id: "intervals",
+            title: "26- Intervalo entre gastos por categoría",
+            keywords: "intervalo",
+            short: "Intervalos",
+            render: () => <ExpenseIntervalsByCategoryTable token={token} />,
+          },
+        ],
+      },
+
+      {
+        groupId: "futuro",
+        groupTitle: "🔮 Proyecciones",
+        items: [
+          {
+            id: "forecast",
+            title: "27- Proyección de flujo por período",
+            keywords: "forecast flujo",
+            short: "Forecast",
+            render: () => <ExpenseForecastChart token={token} />,
+          },
+          {
+            id: "forecast-items",
+            title: "27.1- Proyección de gastos por artículos (forecast)",
+            keywords: "forecast items",
+            short: "Forecast ítems",
+            badge: "Pro",
+            render: () => <ItemExpenseForecast token={token} />,
+          },
+          {
+            id: "proj-exp",
+            title: "28- Proyección de gastos por categoría y estabilidad",
+            keywords: "proyeccion gastos",
+            short: "Proy gastos",
+            render: () => <ProjectedExpenseByCategoryChart token={token} />,
+          },
+          {
+            id: "proj-inc",
+            title: "29- Proyección de ingresos por categoría y estabilidad",
+            keywords: "proyeccion ingresos",
+            short: "Proy ingresos",
+            render: () => <ProjectedIncomeByCategoryChart token={token} />,
+          },
+          {
+            id: "annual-line",
+            title: "30- Ingresos vs Gastos (visión anual)",
+            keywords: "anual linea",
+            short: "Anual",
+            render: () => <MonthlyIncomeVsExpenseLineChart token={token} />,
+          },
+          {
+            id: "goals",
+            title: "31- Progreso de metas de ahorro",
+            keywords: "metas ahorro goals",
+            short: "Metas",
+            render: () => <GoalsProgressChart token={token} />,
+          },
+        ],
+      },
+    ];
+  }, [token, data, categories]);
+
+  // ✅ Ahora sí podemos hacer early return sin romper hooks
+  if (!data) return <p className="p-4">Cargando métricas...</p>;
+
+  const daysInMonth = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth() + 1,
+    0
+  ).getDate();
+
+  const projectedExpense = data.averageDailyExpense * daysInMonth;
+
+  const budgetUsagePct =
+    data.totalMonthlyBudget > 0
+      ? (data.budgetedExpenseTotal / data.totalMonthlyBudget) * 100
+      : 0;
+
+  const incomeSpentPct =
+    data.totalIncome > 0 ? (data.totalExpense / data.totalIncome) * 100 : 0;
+
+  const projectedSaving = data.totalIncome - projectedExpense;
+
   return (
     <div className="p-4 space-y-6">
-      <h2
-        className="ff-h1 ff-heading-accent mb-2"
-        
-      >
-        Dashboard Financiero
-      </h2>
+      <h2 className="ff-h1 ff-heading-accent mb-2">Dashboard Financiero</h2>
 
       <div className="grid md:grid-cols-4 gap-4">
-        {/* === Grupo 1 === */}
         <MetricCard
           title="Ingreso fijo promedio"
           value={data.fixedIncomeAverage}
@@ -246,7 +592,7 @@ function Dashboard({ token }) {
           isCurrency
           color={data.balance >= 0 ? "green" : "red"}
         />
-        {/* === Grupo 2 === */}
+
         <MetricCard
           title="Presupuesto del mes"
           value={data.totalMonthlyBudget}
@@ -272,7 +618,6 @@ function Dashboard({ token }) {
           color={budgetUsagePct > 90 ? "red" : "gray"}
         />
 
-        {/* === Grupo 3 === */}
         <MetricCard
           title="Gasto total hoy"
           value={todayExpense}
@@ -304,12 +649,6 @@ function Dashboard({ token }) {
           isCurrency
           color="red"
         />
-
-        {/* <MetricCard
-          title="Transacciones por día"
-          value={data.averageTransactionsPerDay}
-          color="gray"
-        /> */}
 
         <MetricCard
           title="Ahorro proyectado del mes"
@@ -356,10 +695,8 @@ function Dashboard({ token }) {
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
-        {/* Resumen anual & Metas (flip card) */}
         <FlipMetricCard summary={yearlyStabilitySummary} />
 
-        {/* Comparación con mes anterior (en RD$) */}
         <ChromeInfoCard
           title="Comparación con mes anterior (en RD$)"
           accent="amber"
@@ -380,7 +717,6 @@ function Dashboard({ token }) {
 
             <li className="flex items-center justify-between gap-3">
               <span style={labelMuted}>Gastos</span>
-              {/* Gastos: subir es malo => danger; bajar es bueno => success */}
               <span
                 style={deltaStyle(
                   (data.previousMonthComparison.expenseDiffAbs || 0) < 0
@@ -410,7 +746,6 @@ function Dashboard({ token }) {
           </ul>
         </ChromeInfoCard>
 
-        {/* Variaciones por categoría (en RD$) */}
         <ChromeInfoCard
           title="Variaciones por categoría (en RD$)"
           accent="dual"
@@ -455,7 +790,7 @@ function Dashboard({ token }) {
                     data.mostIncreasedCategoryAbs.current || 0
                   )}
                 </span>
-                <span style={metaMuted}>)</span> {/* Aumento = danger */}
+                <span style={metaMuted}>)</span>
                 <span
                   className="ml-2 text-base"
                   style={{ color: ui.danger, fontWeight: 800 }}
@@ -500,7 +835,7 @@ function Dashboard({ token }) {
                     data.mostDecreasedCategoryAbs.current || 0
                   )}
                 </span>
-                <span style={metaMuted}>)</span> {/* Disminución = success */}
+                <span style={metaMuted}>)</span>
                 <span
                   className="ml-2 text-base"
                   style={{ color: ui.success, fontWeight: 800 }}
@@ -519,163 +854,26 @@ function Dashboard({ token }) {
         </ChromeInfoCard>
       </div>
 
-      {/* -------------------------------------------------- */}
-      {/* 🧭 ORDEN SECUENCIAL — Contexto financiero completo */}
-      {/* -------------------------------------------------- */}
-
-      {/* 🔵 BLOQUE 1 — Estado financiero actual */}
-      <CollapseSection title="1- Estado financiero actual (Saldos por cuenta)">
-        <AccountBalancesChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="2- Calendario financiero (actividad reciente)">
-        <TransactionsCalendar token={token} />
-      </CollapseSection>
-
-      {/* 🟣 BLOQUE 2 — ¿En qué se va mi dinero? */}
-      <CollapseSection title="3- Distribución del gasto por categoría (mes actual)">
-        <ExpenseDistributionByCategoryChart
-          expensesByCategory={data.expensesByCategory}
-          categoryNameMap={data.categoryNameMap}
-          token={token}
-        />
-      </CollapseSection>
-
-      <CollapseSection title="4- Hábitos de gasto por día de la semana">
-        <ExpenseByWeekdayChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="5- Gastos por tipo de estabilidad (fijo / variable / ocasional)">
-        <ExpenseByStabilityChart token={token} />
-      </CollapseSection>
-
-      {/* 🟠 BLOQUE 3 — Desempeño del mes */}
-      <CollapseSection title="6- Ingresos vs Gastos (mensual)">
-        <MonthlyIncomeVsExpenseChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="7- Ritmo de gasto del mes (Burn Rate)">
-        <BurnRateChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="7.1- Ritmo de gasto avanzado">
-        <AdvancedBurnRateChart token={token} />
-      </CollapseSection>
-
-      {/* 🔴 BLOQUE 4 — Presupuesto y control */}
-      <CollapseSection title="8- Presupuesto vs gasto por categoría (mes actual)">
-        <BudgetVsActualChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="9- Top categorías con gasto excesivo">
-        <OverBudgetChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="10- Calidad de presupuestos (cobertura)">
-        <BudgetCoverageChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="10.1- Calidad de presupuestos (cobertura detallada)">
-        <BudgetCoverageRobustChart token={token} />
-      </CollapseSection>
-
-      {/* 🟡 BLOQUE 5 — Comparación y contexto histórico */}
-      <CollapseSection title="11- Proyección vs realidad por categoría">
-        <ProjectedVsActualExpenseByCategoryChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="12- Heatmap de gasto por categoría y mes">
-        <CategoryMonthlyHeatmap token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="13- Comparativo mensual por categoría">
-        <CategoryMonthlyComparisonTable token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="14- Comparativo mensual por artículo">
-        <ItemMonthlyComparisonTable token={token} />
-      </CollapseSection>
-
-      {/* 🟢 BLOQUE 6 — Variaciones y señales clave */}
-      <CollapseSection title="15- Variaciones anuales por categoría">
-        <CategoryVariationChart token={token} categories={categories} />
-      </CollapseSection>
-
-      <CollapseSection title="16- Resumen anual: Presupuesto vs Gasto total">
-        <BudgetVsActualSummaryChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="17- Gastos atípicos del mes">
-        <UnusualExpensesTable token={token} />
-      </CollapseSection>
-
-      {/* 🔷 BLOQUE 7 — Patrones y recurrencias */}
-      <CollapseSection title="18- Patrones de gasto recurrente no marcados">
-        <RecurringExpensePatternsTable token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="19- Intervalo entre gastos por categoría">
-        <ExpenseIntervalsByCategoryTable token={token} />
-      </CollapseSection>
-
-      {/* 🛒 BLOQUE 8 — Detalle por categorías e ítems */}
-      <CollapseSection title="20- Gastos por categoría - estabilidad">
-        <TopVariableCategoriesChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="21- Tendencia de precios por artículo">
-        <ItemPriceTrendChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="22- Tendencia de consumo mensual por artículo">
-        <ItemTrendChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="23- Patrones de compra por artículo">
-        <RecurringItemPatternsTable token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="24- Top ítems por categoría (anual)">
-        <TopItemsByCategoryChart token={token} categories={categories} />
-      </CollapseSection>
-
-      <CollapseSection title="25- Resumen anual de artículos">
-        <ItemsAnnualSummaryTable token={token} />
-      </CollapseSection>
-
-      {/* 🔮 BLOQUE 9 — Mirada al futuro */}
-      <CollapseSection title="26- Proyección de flujo por período">
-        <ExpenseForecastChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="26.1- Proyección de gastos por artículos (forecast)">
-  <ItemExpenseForecast token={token} />
-</CollapseSection>
-
-      <CollapseSection title="27- Proyección de gastos por categoría y estabilidad">
-        <ProjectedExpenseByCategoryChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="28- Proyección de ingresos por categoría y estabilidad">
-        <ProjectedIncomeByCategoryChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="29- Ingresos vs Gastos (visión anual)">
-        <MonthlyIncomeVsExpenseLineChart token={token} />
-      </CollapseSection>
-
-      <CollapseSection title="30- Progreso de metas de ahorro">
-        <GoalsProgressChart token={token} />
-      </CollapseSection>
+      <ReportsNavRail
+        sections={sections}
+        defaultSectionId="balances"
+        storageKey="dashboard_active_report"
+        preloadNext
+        searchInputRef={searchInputRef}
+      />
     </div>
   );
 }
+
+/* =========================
+   COMPONENTES INTERNOS
+   ========================= */
 
 function MetricCard({
   title,
   value,
   suffix = "",
-  color = "gray", // "green" | "red" | "gray"
+  color = "gray",
   isCurrency = false,
   subtitle = "",
 }) {
@@ -690,7 +888,6 @@ function MetricCard({
       }).format(safeValue)
     : `${safeValue.toFixed(2)}${suffix}`;
 
-  // Tokens por acento
   const accentToken =
     color === "green"
       ? "var(--success)"
@@ -698,7 +895,6 @@ function MetricCard({
       ? "var(--danger)"
       : "var(--muted)";
 
-  // Texto del número (un poquito más “vivo” que el resto)
   const valueColor =
     color === "green"
       ? "color-mix(in srgb, var(--success) 70%, var(--text))"
@@ -717,7 +913,6 @@ function MetricCard({
         color: "var(--text)",
       }}
     >
-      {/* Barra lateral de acento */}
       <div
         className="absolute inset-y-0 left-0 w-[3px]"
         style={{
@@ -725,7 +920,6 @@ function MetricCard({
         }}
       />
 
-      {/* Borde interior sutil */}
       <div
         className="pointer-events-none absolute inset-[1px] rounded-2xl"
         style={{
@@ -733,7 +927,6 @@ function MetricCard({
         }}
       />
 
-      {/* Brillo superior sutil */}
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-8 opacity-40"
         style={{
@@ -742,7 +935,6 @@ function MetricCard({
         }}
       />
 
-      {/* Contenido */}
       <div className="relative z-10 flex flex-col gap-1">
         <p
           className="text-[11px] font-semibold uppercase tracking-[0.18em]"
@@ -771,11 +963,7 @@ function MetricCard({
   );
 }
 
-function ChromeInfoCard({
-  title,
-  children,
-  accent = "neutral", // "neutral" | "green" | "red" | "amber" | "dual"
-}) {
+function ChromeInfoCard({ title, children, accent = "neutral" }) {
   const accentMap = {
     green: [
       "var(--success)",
@@ -813,13 +1001,11 @@ function ChromeInfoCard({
         color: "var(--text)",
       }}
     >
-      {/* Barra lateral con acento */}
       <div
         className="absolute inset-y-0 left-0 w-[3px]"
         style={{ background: accentGradient }}
       />
 
-      {/* Borde interior sutil */}
       <div
         className="pointer-events-none absolute inset-[1px] rounded-2xl"
         style={{
@@ -827,7 +1013,6 @@ function ChromeInfoCard({
         }}
       />
 
-      {/* Brillo superior */}
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-8 opacity-40"
         style={{
@@ -904,7 +1089,6 @@ function FlipMetricCard({ summary }) {
       }}
       onClick={() => setFlipped((prev) => !prev)}
     >
-      {/* Barra lateral de acento */}
       <div
         className="absolute inset-y-0 left-0 w-[3px]"
         style={{
@@ -913,7 +1097,6 @@ function FlipMetricCard({ summary }) {
         }}
       />
 
-      {/* Borde interior */}
       <div
         className="pointer-events-none absolute inset-[1px] rounded-2xl"
         style={{
@@ -921,7 +1104,6 @@ function FlipMetricCard({ summary }) {
         }}
       />
 
-      {/* Brillo superior */}
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-8 opacity-40"
         style={{
@@ -930,7 +1112,6 @@ function FlipMetricCard({ summary }) {
         }}
       />
 
-      {/* Contenido flippeable */}
       <div
         className={`
           relative w-full h-full

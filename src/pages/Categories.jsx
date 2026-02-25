@@ -3,6 +3,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 
 import FFSelect from "../components/FFSelect";
+import Modal from "../components/Modal";
 
 function Categories({ token }) {
   const [name, setName] = useState("");
@@ -10,6 +11,11 @@ function Categories({ token }) {
   const [categories, setCategories] = useState([]);
   const [editId, setEditId] = useState(null);
   const [stabilityType, setStabilityType] = useState("variable");
+
+  // ✅ Modal eliminar categoría
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteCat, setDeleteCat] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   const api = import.meta.env.VITE_API_URL;
 
@@ -81,17 +87,32 @@ function Categories({ token }) {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("¿Eliminar esta categoría?")) return;
+  const openDeleteModal = (cat) => {
+    setDeleteCat(cat);
+    setDeleteOpen(true);
+  };
 
+  const closeDeleteModal = () => {
+    if (deleteLoading) return;
+    setDeleteOpen(false);
+    setDeleteCat(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteCat) return;
+
+    setDeleteLoading(true);
     try {
-      await axios.delete(`${api}/categories/${id}`, {
+      await axios.delete(`${api}/categories/${deleteCat.id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      fetchCategories();
+      await fetchCategories();
       toast.success("Categoría eliminada");
+      closeDeleteModal();
     } catch {
       toast.error("Error al eliminar categoría");
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -280,7 +301,7 @@ function Categories({ token }) {
                         </button>
                         <button
                           type="button"
-                          onClick={() => handleDelete(cat.id)}
+                          onClick={() => openDeleteModal(cat)}
                           className="ff-btn ff-btn-danger ff-btn-sm"
                         >
                           Eliminar
@@ -300,6 +321,41 @@ function Categories({ token }) {
           </div>
         )}
       </div>
+
+      {/* ✅ Modal confirmar eliminación */}
+      <Modal
+        isOpen={deleteOpen}
+        onClose={closeDeleteModal}
+        title="Eliminar categoría"
+        size="sm"
+      >
+        <p className="text-sm" style={{ color: "var(--muted)" }}>
+          ¿Seguro que deseas eliminar la categoría{" "}
+          <span style={{ color: "var(--text)", fontWeight: 700 }}>
+            {deleteCat?.name || ""}
+          </span>
+          ? Esta acción no se puede deshacer.
+        </p>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={confirmDelete}
+            disabled={deleteLoading}
+            className="ff-btn ff-btn-danger"
+          >
+            {deleteLoading ? "Eliminando..." : "Sí, eliminar"}
+          </button>
+          <button
+            type="button"
+            onClick={closeDeleteModal}
+            disabled={deleteLoading}
+            className="ff-btn ff-btn-outline"
+          >
+            Cancelar
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
