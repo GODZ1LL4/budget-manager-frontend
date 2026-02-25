@@ -11,6 +11,7 @@ import {
   Legend,
 } from "recharts";
 import { toast } from "react-toastify";
+import FFSelect from "../FFSelect";
 
 const MAX_ITEMS = 20;
 const toNum = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
@@ -45,13 +46,17 @@ function ItemTrendChart({ token }) {
   const [items, setItems] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [trendData, setTrendData] = useState([]); // {month, quantity, total, item_id}
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [year, setYear] = useState(String(new Date().getFullYear()));
   const [metric, setMetric] = useState("quantity"); // "quantity" | "total"
   const [search, setSearch] = useState("");
 
   const currentYear = new Date().getFullYear();
   const yearOptions = useMemo(
-    () => Array.from({ length: 6 }, (_, i) => currentYear - i),
+    () =>
+      Array.from({ length: 6 }, (_, i) => {
+        const y = String(currentYear - i);
+        return { value: y, label: y };
+      }),
     [currentYear]
   );
 
@@ -217,12 +222,7 @@ function ItemTrendChart({ token }) {
     boxShadow: "0 16px 40px rgba(0,0,0,0.55)",
   };
 
-  const selectStyle = {
-    background: "color-mix(in srgb, var(--panel) 70%, transparent)",
-    color: "var(--text)",
-    border: `var(--border-w) solid var(--border-rgba)`,
-    borderRadius: "var(--radius-md)",
-  };
+
 
   const chipWrapStyle = {
     background: "color-mix(in srgb, var(--panel) 60%, transparent)",
@@ -276,28 +276,28 @@ function ItemTrendChart({ token }) {
       </div>
 
       {/* Controles superiores */}
-      <div className="flex flex-wrap items-end gap-4 text-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-4 text-sm items-end">
         {/* Año */}
-        <div className="flex flex-col">
-          <label
-            className="text-[11px] uppercase tracking-[0.18em]"
-            style={{ color: "color-mix(in srgb,var(--text)_70%,transparent)" }}
-          >
-            Año
-          </label>
-          <select
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="mt-1 px-3 py-2 text-sm focus:outline-none"
-            style={selectStyle}
-          >
-            {yearOptions.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-        </div>
+        <div className="flex flex-col w-full sm:w-[180px]">
+  <label
+    className="text-[11px] uppercase tracking-[0.18em]"
+    style={{ color: "color-mix(in srgb,var(--text)_70%,transparent)" }}
+  >
+    Año
+  </label>
+
+  <FFSelect
+    value={year}
+    onChange={(v) => setYear(String(v))}
+    options={yearOptions}
+    placeholder="Selecciona año..."
+    searchable={false}
+    clearable={false}
+    className="mt-1 w-full"
+    getOptionLabel={(o) => o.label}
+    getOptionValue={(o) => o.value}
+  />
+</div>
 
         {/* Métrica */}
         <div className="flex flex-col">
@@ -360,7 +360,7 @@ function ItemTrendChart({ token }) {
         </div>
 
         {/* Buscador */}
-        <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
           <div className="flex-1 min-w-[220px]">
             <label
               className="text-[11px] uppercase tracking-[0.18em]"

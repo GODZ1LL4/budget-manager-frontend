@@ -1,7 +1,13 @@
 // BudgetCoverageChart.jsx (tokenizado + click en mes -> modal detalle)
+// ✅ Cambios aplicados:
+// 1) Reemplazado <select> de Año por <FFSelect />
+// 2) Mejorada distribución de inputs/controles (grid responsive, más consistente)
+// 3) Ajustado Modal para usar tokens de modal (--modal-panel/--modal-border) en el componente Modal (ya lo tienes)
+
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Modal from "../Modal"; // ajusta ruta
+import FFSelect from "../FFSelect";
 import {
   BarChart,
   Bar,
@@ -17,7 +23,7 @@ export default function BudgetCoverageChart({ token }) {
   const api = import.meta.env.VITE_API_URL;
 
   const [data, setData] = useState(null);
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [year, setYear] = useState(String(new Date().getFullYear()));
   const [loading, setLoading] = useState(false);
 
   // Modal states
@@ -27,8 +33,14 @@ export default function BudgetCoverageChart({ token }) {
   const [detail, setDetail] = useState(null);
 
   const currentYear = new Date().getFullYear();
+
+  // ✅ Year options para FFSelect
   const yearOptions = useMemo(
-    () => Array.from({ length: 6 }, (_, i) => currentYear - i),
+    () =>
+      Array.from({ length: 6 }, (_, i) => {
+        const y = String(currentYear - i);
+        return { value: y, label: y };
+      }),
     [currentYear]
   );
 
@@ -87,18 +99,6 @@ export default function BudgetCoverageChart({ token }) {
         fontSize: "0.95rem",
       },
 
-      // controls
-      select: {
-        marginTop: 6,
-        backgroundColor: "var(--control-bg)",
-        color: "var(--control-text)",
-        border: "1px solid var(--control-border)",
-        borderRadius: "var(--radius-md)",
-        padding: "6px 10px",
-        fontSize: 14,
-        outline: "none",
-        boxShadow: "none",
-      },
       tableWrap: {
         border: "1px solid var(--border-rgba)",
         borderRadius: "var(--radius-lg)",
@@ -108,7 +108,8 @@ export default function BudgetCoverageChart({ token }) {
         backgroundColor: "color-mix(in srgb, var(--bg-3) 92%, transparent)",
         borderBottom: "1px solid var(--border-rgba)",
       },
-      rowDivider: "1px solid color-mix(in srgb, var(--border-rgba) 60%, transparent)",
+      rowDivider:
+        "1px solid color-mix(in srgb, var(--border-rgba) 60%, transparent)",
       rowHover: "color-mix(in srgb, var(--panel) 72%, transparent)",
     };
     return styles;
@@ -133,7 +134,7 @@ export default function BudgetCoverageChart({ token }) {
     axios
       .get(`${api}/analytics/budget-coverage`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { year },
+        params: { year: Number(year) },
       })
       .then((res) => setData(res.data.data))
       .catch((err) =>
@@ -152,7 +153,7 @@ export default function BudgetCoverageChart({ token }) {
     try {
       const res = await axios.get(`${api}/analytics/budget-coverage/details`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { year, month, limit: 80 },
+        params: { year: Number(year), month, limit: 80 },
       });
       setDetail(res.data.data);
     } catch (err) {
@@ -172,7 +173,9 @@ export default function BudgetCoverageChart({ token }) {
   if (loading && !data) {
     return (
       <div className="rounded-2xl p-6 text-sm" style={ui.card}>
-        <span style={{ color: ui.muted }}>Cargando cobertura de presupuestos...</span>
+        <span style={{ color: ui.muted }}>
+          Cargando cobertura de presupuestos...
+        </span>
       </div>
     );
   }
@@ -230,10 +233,10 @@ export default function BudgetCoverageChart({ token }) {
   return (
     <>
       <div className="rounded-2xl p-6 space-y-5" style={ui.card}>
-        {/* Header + Año */}
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="text-xl font-semibold" style={{ color: ui.heading }}>
+        {/* ✅ Header + Controles (mejor distribución) */}
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <h3 className="text-lg sm:text-xl font-semibold" style={{ color: ui.heading }}>
               Calidad de presupuestos
             </h3>
             <p className="text-sm mt-1" style={{ color: ui.muted }}>
@@ -242,49 +245,53 @@ export default function BudgetCoverageChart({ token }) {
             </p>
           </div>
 
-          <div className="flex flex-col items-end">
-            <label
-              className="text-[11px] uppercase tracking-[0.18em]"
-              style={{ color: ui.muted }}
-            >
-              Año
-            </label>
+          <div
+            className="
+              w-full lg:w-auto
+              grid grid-cols-1 sm:grid-cols-2 gap-3
+              lg:flex lg:items-end lg:justify-end
+            "
+          >
+            {/* ✅ Año (FFSelect) */}
+            <div className="flex flex-col gap-1">
+              <label
+                className="text-[11px] uppercase tracking-[0.18em]"
+                style={{ color: ui.muted }}
+              >
+                Año
+              </label>
 
-            <select
-              value={year}
-              onChange={(e) => setYear(parseInt(e.target.value, 10))}
-              style={ui.select}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = "var(--control-border-focus)";
-                e.currentTarget.style.boxShadow = "var(--control-focus-shadow)";
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = "var(--control-border)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
-            >
-              {yearOptions.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
+              <FFSelect
+                value={year}
+                onChange={(v) => setYear(String(v))}
+                options={yearOptions}
+                placeholder="Selecciona año..."
+                searchable={false}
+                clearable={false}
+                className="w-full lg:w-[160px]"
+                getOptionLabel={(o) => o.label}
+                getOptionValue={(o) => o.value}
+              />
 
-            <p className="text-xs mt-2 text-right" style={{ color: ui.text }}>
-              Cobertura anual:{" "}
-              <span style={{ fontWeight: 800, color: ui.covered }}>
-                {Number.isFinite(Number(totals.coverage_pct))
-                  ? Number(totals.coverage_pct).toFixed(2)
-                  : "0.00"}
-                %
-              </span>
-            </p>
+              <p className="text-xs mt-1" style={{ color: ui.text }}>
+                Cobertura anual:{" "}
+                <span style={{ fontWeight: 800, color: ui.covered }}>
+                  {Number.isFinite(Number(totals.coverage_pct))
+                    ? Number(totals.coverage_pct).toFixed(2)
+                    : "0.00"}
+                  %
+                </span>
+              </p>
 
-            {loading ? (
-              <span className="text-[11px] mt-1" style={{ color: ui.muted }}>
-                Actualizando…
-              </span>
-            ) : null}
+              {loading ? (
+                <span className="text-[11px]" style={{ color: ui.muted }}>
+                  Actualizando…
+                </span>
+              ) : null}
+            </div>
+
+            {/* (espacio libre para futuros filtros sin romper layout) */}
+            <div className="hidden sm:block" />
           </div>
         </div>
 
@@ -354,10 +361,7 @@ export default function BudgetCoverageChart({ token }) {
             >
               Cubierto
             </div>
-            <div
-              className="text-xl font-extrabold mt-1"
-              style={{ color: ui.covered }}
-            >
+            <div className="text-xl font-extrabold mt-1" style={{ color: ui.covered }}>
               {formatCurrency(totals.covered)}
             </div>
           </div>
@@ -369,10 +373,7 @@ export default function BudgetCoverageChart({ token }) {
             >
               Sin presupuesto
             </div>
-            <div
-              className="text-xl font-extrabold mt-1"
-              style={{ color: ui.uncovered }}
-            >
+            <div className="text-xl font-extrabold mt-1" style={{ color: ui.uncovered }}>
               {formatCurrency(totals.uncovered)}
             </div>
           </div>
@@ -597,7 +598,10 @@ export default function BudgetCoverageChart({ token }) {
                 >
                   Sin presupuesto
                 </div>
-                <div className="text-base font-semibold mt-1" style={{ color: ui.uncovered }}>
+                <div
+                  className="text-base font-semibold mt-1"
+                  style={{ color: ui.uncovered }}
+                >
                   {formatCurrency(detailTotals?.uncovered)}
                 </div>
               </div>
@@ -657,7 +661,10 @@ export default function BudgetCoverageChart({ token }) {
                           <td className="p-3" style={{ color: ui.text }}>
                             {c.category_name}
                           </td>
-                          <td className="p-3 text-right font-semibold" style={{ color: ui.uncovered }}>
+                          <td
+                            className="p-3 text-right font-semibold"
+                            style={{ color: ui.uncovered }}
+                          >
                             {formatCurrency(c.uncovered_total)}
                           </td>
                         </tr>

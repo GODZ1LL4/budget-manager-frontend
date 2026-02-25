@@ -1,6 +1,7 @@
 // src/components/reports/RecurringExpensePatternsTable.jsx
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import FFSelect from "../FFSelect";
 
 const safeNum = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
@@ -57,6 +58,8 @@ function RecurringExpensePatternsTable({ token }) {
 
   const [data, setData] = useState([]);
   const [months, setMonths] = useState(6);
+  const [search, setSearch] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -96,6 +99,15 @@ function RecurringExpensePatternsTable({ token }) {
     };
   }, []);
 
+  const monthsOptions = useMemo(
+    () => [
+      { value: 3, label: "Últimos 3 meses" },
+      { value: 6, label: "Últimos 6 meses" },
+      { value: 12, label: "Últimos 12 meses" },
+    ],
+    []
+  );
+
   useEffect(() => {
     if (!token) return;
 
@@ -119,13 +131,29 @@ function RecurringExpensePatternsTable({ token }) {
       .finally(() => setLoading(false));
   }, [token, months, api]);
 
+  // ✅ Buscador (categoría / descripción / frecuencia)
+  const filteredData = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return data;
+
+    return (data || []).filter((row) => {
+      const cat = String(row?.category_name || "").toLowerCase();
+      const desc = String(prettifyDescriptionKey(row?.description_key) || "").toLowerCase();
+      const freq = String(
+        FREQUENCY_LABELS[row?.frequency_label] || row?.frequency_label || ""
+      ).toLowerCase();
+
+      return cat.includes(q) || desc.includes(q) || freq.includes(q);
+    });
+  }, [data, search]);
+
   const thText = "color-mix(in srgb, var(--text) 70%, transparent)";
 
   return (
     <div className="rounded-2xl p-6 space-y-4" style={ui.card}>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div>
+      {/* Header (FFSelect + buscador debajo) */}
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div className="min-w-0">
           <h3 className="text-xl font-semibold" style={{ color: ui.text }}>
             Patrones de gasto recurrente (no marcados)
           </h3>
@@ -136,21 +164,82 @@ function RecurringExpensePatternsTable({ token }) {
           </p>
         </div>
 
-        {/* Filtro meses */}
-        <div className="flex items-center gap-2 text-sm">
-          <span style={{ color: ui.muted }}>Últimos</span>
+        {/* Controls */}
+        <div className="w-full lg:w-[520px]">
+          {/* Row 1: Período + mini KPI */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+            <div className="flex flex-col">
+              <label
+                className="text-[11px] uppercase tracking-[0.18em]"
+                style={{ color: ui.muted }}
+              >
+                Período
+              </label>
 
-          {/* si tienes FFSelect.jsx, úsalo aquí */}
-          <select
-            value={months}
-            onChange={(e) => setMonths(Number(e.target.value) || 6)}
-            className="ff-input bg-transparent px-3 py-2 text-sm rounded-lg outline-none focus:ring-2"
-            style={{ borderColor: ui.border }}
-          >
-            <option value={3}>3 meses</option>
-            <option value={6}>6 meses</option>
-            <option value={12}>12 meses</option>
-          </select>
+              <FFSelect
+                value={months}
+                onChange={(v) => setMonths(Number(v) || 6)}
+                options={monthsOptions}
+                placeholder="Selecciona período..."
+                searchable={false}
+                clearable={false}
+                className="mt-1 w-full"
+                getOptionLabel={(o) => o.label}
+                getOptionValue={(o) => o.value}
+              />
+            </div>
+
+            <div className="flex flex-col sm:items-end">
+              <div
+                className="text-[11px] uppercase tracking-[0.18em]"
+                style={{ color: ui.muted }}
+              >
+                Resultados
+              </div>
+              <div className="mt-1 text-sm" style={{ color: ui.text }}>
+                <span className="font-semibold">{filteredData.length}</span>{" "}
+                <span style={{ color: ui.muted }}>/</span>{" "}
+                <span style={{ color: ui.muted }}>{data.length}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2: buscador */}
+          <div className="mt-3">
+            <label
+              className="text-[11px] uppercase tracking-[0.18em]"
+              style={{ color: ui.muted }}
+            >
+              Buscar
+            </label>
+
+            <div className="relative mt-1">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Categoría, descripción o frecuencia..."
+                className="ff-input w-full pr-10"
+              />
+
+              {search.trim() ? (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs"
+                  style={{
+                    border: "1px solid var(--border-rgba)",
+                    background: "color-mix(in srgb, var(--panel) 70%, transparent)",
+                    color: "color-mix(in srgb, var(--text) 85%, transparent)",
+                  }}
+                  aria-label="Limpiar búsqueda"
+                  title="Limpiar"
+                >
+                  ✕
+                </button>
+              ) : null}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -170,10 +259,11 @@ function RecurringExpensePatternsTable({ token }) {
         >
           {error}
         </div>
-      ) : data.length === 0 ? (
+      ) : filteredData.length === 0 ? (
         <p className="text-sm italic" style={{ color: ui.muted }}>
-          No se encontraron patrones de gasto recurrente en el período
-          seleccionado.
+          {search.trim()
+            ? `No hay resultados para “${search.trim()}”.`
+            : "No se encontraron patrones de gasto recurrente en el período seleccionado."}
         </p>
       ) : (
         <div className="overflow-x-auto" style={ui.tableWrap}>
@@ -251,7 +341,7 @@ function RecurringExpensePatternsTable({ token }) {
             </thead>
 
             <tbody>
-              {data.map((row, idx) => {
+              {filteredData.map((row, idx) => {
                 const zebraBg = idx % 2 === 0 ? ui.zebraA : ui.zebraB;
                 const tone = toneForFrequency(row.frequency_label);
 
@@ -342,8 +432,8 @@ function RecurringExpensePatternsTable({ token }) {
               background: "color-mix(in srgb, var(--panel) 72%, transparent)",
             }}
           >
-            Tip: si un patrón tiene muchas ocurrencias y baja desviación, suele ser un gasto “hábito” (suscripción,
-            transporte, comida, etc.).
+            Tip: si un patrón tiene muchas ocurrencias y baja desviación, suele ser un gasto “hábito”
+            (suscripción, transporte, comida, etc.).
           </div>
         </div>
       )}

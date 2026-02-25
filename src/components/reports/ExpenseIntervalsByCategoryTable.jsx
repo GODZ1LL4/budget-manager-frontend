@@ -1,6 +1,7 @@
 // src/components/reports/ExpenseIntervalsByCategoryTable.jsx
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import FFSelect from "../FFSelect";
 
 const safeNum = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
@@ -62,6 +63,15 @@ function ExpenseIntervalsByCategoryTable({ token }) {
     };
   }, []);
 
+  const monthsOptions = useMemo(
+    () => [
+      { value: 6, label: "Últimos 6 meses" },
+      { value: 12, label: "Últimos 12 meses" },
+      { value: 24, label: "Últimos 24 meses" },
+    ],
+    []
+  );
+
   useEffect(() => {
     if (!token) return;
 
@@ -87,9 +97,9 @@ function ExpenseIntervalsByCategoryTable({ token }) {
 
   return (
     <div className="rounded-2xl p-6 space-y-4" style={ui.card}>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div>
+      {/* Header (FFSelect + mejor distribución) */}
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div className="min-w-0">
           <h3 className="text-xl font-semibold" style={{ color: ui.text }}>
             Intervalo entre gastos por categoría
           </h3>
@@ -100,32 +110,25 @@ function ExpenseIntervalsByCategoryTable({ token }) {
           </p>
         </div>
 
-        {/* Filtro de meses */}
-        <div className="flex items-center gap-2 text-sm">
-          <span style={{ color: ui.muted }}>Período analizado:</span>
-
-          {/* Si tienes FFSelect.jsx, cámbialo aquí */}
-          <select
-            value={months}
-            onChange={(e) => setMonths(Number(e.target.value) || 12)}
-            className="
-              ff-input
-              px-3 py-2 text-sm
-              bg-transparent
-              rounded-lg
-              outline-none
-              focus:outline-none
-              focus:ring-2
-            "
-            style={{
-              borderColor: ui.border,
-              boxShadow: "none",
-            }}
+        <div className="w-full lg:w-[360px]">
+          <label
+            className="text-[11px] uppercase tracking-[0.18em]"
+            style={{ color: ui.muted }}
           >
-            <option value={6}>Últimos 6 meses</option>
-            <option value={12}>Últimos 12 meses</option>
-            <option value={24}>Últimos 24 meses</option>
-          </select>
+            Período analizado
+          </label>
+
+          <FFSelect
+            value={months}
+            onChange={(v) => setMonths(Number(v) || 12)}
+            options={monthsOptions}
+            placeholder="Selecciona período..."
+            searchable={false}
+            clearable={false}
+            className="mt-1 w-full"
+            getOptionLabel={(o) => o.label}
+            getOptionValue={(o) => o.value}
+          />
         </div>
       </div>
 
@@ -202,30 +205,46 @@ function ExpenseIntervalsByCategoryTable({ token }) {
                       {row.category_name || "Sin categoría"}
                     </td>
 
-                    <td className="px-3 py-2 align-top text-center" style={{ color: ui.text }}>
+                    <td
+                      className="px-3 py-2 align-top text-center"
+                      style={{ color: ui.text }}
+                    >
                       {safeNum(row.transactions_count)}
                     </td>
 
-                    <td className="px-3 py-2 align-top text-center" style={{ color: ui.text }}>
+                    <td
+                      className="px-3 py-2 align-top text-center"
+                      style={{ color: ui.text }}
+                    >
                       {safeNum(row.avg_interval_days)}
                     </td>
 
-                    <td className="px-3 py-2 align-top text-center" style={{ color: ui.text }}>
+                    <td
+                      className="px-3 py-2 align-top text-center"
+                      style={{ color: ui.text }}
+                    >
                       {safeNum(row.median_interval_days)}
                     </td>
 
-                    <td className="px-3 py-2 align-top text-center" style={{ color: ui.text }}>
+                    <td
+                      className="px-3 py-2 align-top text-center"
+                      style={{ color: ui.text }}
+                    >
                       {safeNum(row.min_interval_days)}
                     </td>
 
-                    <td className="px-3 py-2 align-top text-center" style={{ color: ui.text }}>
+                    <td
+                      className="px-3 py-2 align-top text-center"
+                      style={{ color: ui.text }}
+                    >
                       {safeNum(row.max_interval_days)}
                     </td>
 
                     <td
                       className="px-3 py-2 align-top text-right font-semibold tabular-nums whitespace-nowrap"
                       style={{
-                        color: "color-mix(in srgb, var(--success) 80%, var(--text))",
+                        color:
+                          "color-mix(in srgb, var(--success) 80%, var(--text))",
                         background:
                           "linear-gradient(90deg, color-mix(in srgb, var(--success) 10%, transparent), transparent)",
                       }}
@@ -233,11 +252,17 @@ function ExpenseIntervalsByCategoryTable({ token }) {
                       {formatCurrencyDOP(row.total_spent)}
                     </td>
 
-                    <td className="px-3 py-2 align-top text-center" style={{ color: ui.muted }}>
+                    <td
+                      className="px-3 py-2 align-top text-center"
+                      style={{ color: ui.muted }}
+                    >
                       {formatDate(row.first_date)}
                     </td>
 
-                    <td className="px-3 py-2 align-top text-center" style={{ color: ui.muted }}>
+                    <td
+                      className="px-3 py-2 align-top text-center"
+                      style={{ color: ui.muted }}
+                    >
                       {formatDate(row.last_date)}
                     </td>
                   </tr>
@@ -254,8 +279,9 @@ function ExpenseIntervalsByCategoryTable({ token }) {
               background: "color-mix(in srgb, var(--panel) 72%, transparent)",
             }}
           >
-            Tip: si el intervalo promedio es bajo y el total gastado es alto, esa categoría suele ser un “hábito”
-            fuerte (suscripción, comida, transporte, etc.).
+            Tip: si el intervalo promedio es bajo y el total gastado es alto, esa
+            categoría suele ser un “hábito” fuerte (suscripción, comida,
+            transporte, etc.).
           </div>
         </div>
       )}

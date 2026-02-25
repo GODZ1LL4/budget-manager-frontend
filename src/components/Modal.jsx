@@ -18,6 +18,7 @@ function Modal({ isOpen, onClose, title, children, size = "md" }) {
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
+        {/* Overlay tokenizable */}
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-200"
@@ -27,7 +28,15 @@ function Modal({ isOpen, onClose, title, children, size = "md" }) {
           leaveFrom="opacity-100"
           leaveTo="opacity-0"
         >
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-[2px]" />
+          <div
+            className="fixed inset-0 backdrop-blur-sm"
+            style={{
+              background:
+                "color-mix(in srgb, #000 62%, transparent)", // default overlay
+              // Si quieres tokenizarlo luego:
+              // background: "var(--modal-overlay, color-mix(in srgb, #000 62%, transparent))",
+            }}
+          />
         </Transition.Child>
 
         <div className="fixed inset-0 overflow-y-auto">
@@ -43,48 +52,76 @@ function Modal({ isOpen, onClose, title, children, size = "md" }) {
             >
               <Dialog.Panel
                 className={`
-                  w-full ${sizeClass}
-                  transform overflow-hidden
+                  relative w-full ${sizeClass}
+                  overflow-hidden
                   rounded-[var(--radius-lg)]
-                  border
-                  transition-all
                   text-left align-middle
-                  shadow-[0_18px_60px_rgba(0,0,0,0.65)]
+                  transition-all
                 `}
                 style={{
-                  background: "var(--modal-panel, var(--panel))",
-                  borderWidth: "var(--border-w)",
-                  borderColor: "var(--modal-border, var(--border-rgba))",
+                  /* ✅ 100% controlado por tokens */
+                  background: "var(--modal-panel)",
+                  border: "var(--border-w) solid var(--modal-border)",
+
+                  /* ✅ Shadow premium (profundo + limpio) */
+                  boxShadow:
+                    "0 30px 90px rgba(0,0,0,0.65), 0 10px 30px rgba(0,0,0,0.35)",
                 }}
               >
-                <div className="relative p-6">
-                  <div
-                    className="pointer-events-none absolute inset-0 rounded-[var(--radius-lg)]"
-                    style={{
-                      borderWidth: "1px",
-                      borderStyle: "solid",
-                      borderColor:
-                        "color-mix(in srgb, var(--modal-border, var(--border-rgba)) 22%, transparent)",
-                    }}
-                  />
+                {/* Sheen superior (acabado “glass/metal”) */}
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    background:
+                      "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 22%, transparent 55%)",
+                    opacity: 0.85,
+                  }}
+                />
 
+                {/* Vignette sutil para “profundidad” */}
+                <div
+                  className="pointer-events-none absolute inset-0"
+                  style={{
+                    background:
+                      "radial-gradient(1200px 500px at 50% 0%, transparent 0%, rgba(0,0,0,0.22) 62%, rgba(0,0,0,0.35) 100%)",
+                    opacity: 0.55,
+                    mixBlendMode: "multiply",
+                  }}
+                />
+
+                {/* Inner hairline (borde interior premium) */}
+                <div
+                  className="pointer-events-none absolute inset-[1px] rounded-[calc(var(--radius-lg)-1px)]"
+                  style={{
+                    border: "1px solid",
+                    borderColor:
+                      "color-mix(in srgb, var(--modal-border) 38%, transparent)",
+                  }}
+                />
+
+                {/* Glow muy sutil (tokenizado) */}
+                <div
+                  className="pointer-events-none absolute inset-0 rounded-[var(--radius-lg)]"
+                  style={{
+                    boxShadow: "var(--glow-shadow)",
+                    opacity: 0.12,
+                  }}
+                />
+
+                {/* Content */}
+                <div className="relative p-6">
                   {title && (
-                    <Dialog.Title className="relative text-lg sm:text-xl font-semibold text-[var(--text)] mb-4">
+                    <Dialog.Title
+                      className="text-lg sm:text-xl font-semibold mb-4"
+                      style={{ color: "var(--heading)" }}
+                    >
                       {title}
                     </Dialog.Title>
                   )}
 
-                  <div className="relative text-base text-[var(--text)]">
+                  <div className="text-base" style={{ color: "var(--text)" }}>
                     {children}
                   </div>
-
-                  <div
-                    className="pointer-events-none absolute inset-0 rounded-[var(--radius-lg)]"
-                    style={{
-                      boxShadow: "var(--glow-shadow)",
-                      opacity: 0.12,
-                    }}
-                  />
                 </div>
               </Dialog.Panel>
             </Transition.Child>

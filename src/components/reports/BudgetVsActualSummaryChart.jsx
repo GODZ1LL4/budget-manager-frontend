@@ -11,6 +11,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import Modal from "../Modal";
+import FFSelect from "../FFSelect";
 
 const formatMoney = (v) =>
   new Intl.NumberFormat("es-DO", {
@@ -26,7 +27,7 @@ function BudgetVsActualSummaryChart({ token }) {
   const api = import.meta.env.VITE_API_URL;
 
   const [flipped, setFlipped] = useState(false);
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [year, setYear] = useState(String(new Date().getFullYear()));
   const [loading, setLoading] = useState(false);
 
   const [monthly, setMonthly] = useState([]);
@@ -38,7 +39,11 @@ function BudgetVsActualSummaryChart({ token }) {
 
   const currentYear = new Date().getFullYear();
   const yearOptions = useMemo(
-    () => Array.from({ length: 6 }, (_, i) => currentYear - i),
+    () =>
+      Array.from({ length: 6 }, (_, i) => {
+        const y = String(currentYear - i);
+        return { value: y, label: y };
+      }),
     [currentYear]
   );
 
@@ -129,11 +134,11 @@ function BudgetVsActualSummaryChart({ token }) {
         const [mRes, cRes] = await Promise.all([
           axios.get(`${api}/analytics/budget-vs-actual-summary-yearly`, {
             headers: { Authorization: `Bearer ${token}` },
-            params: { year, view: "monthly" },
+            params: { year: Number(year), view: "monthly" },
           }),
           axios.get(`${api}/analytics/budget-vs-actual-summary-yearly`, {
             headers: { Authorization: `Bearer ${token}` },
-            params: { year, view: "categories" },
+            params: { year: Number(year), view: "categories" },
           }),
         ]);
 
@@ -141,7 +146,10 @@ function BudgetVsActualSummaryChart({ token }) {
         setCategories(cRes?.data?.data || []);
         setOthersBreakdown(cRes?.data?.meta?.others_breakdown || []);
       } catch (err) {
-        console.error("Error al cargar resumen anual presupuesto vs gasto:", err);
+        console.error(
+          "Error al cargar resumen anual presupuesto vs gasto:",
+          err
+        );
         setMonthly([]);
         setCategories([]);
         setOthersBreakdown([]);
@@ -154,23 +162,43 @@ function BudgetVsActualSummaryChart({ token }) {
   }, [token, api, year]);
 
   const totalsMonthly = useMemo(() => {
-    const budgeted = (monthly || []).reduce((acc, r) => acc + safeNum(r.budgeted), 0);
+    const budgeted = (monthly || []).reduce(
+      (acc, r) => acc + safeNum(r.budgeted),
+      0
+    );
     const spent = (monthly || []).reduce((acc, r) => acc + safeNum(r.spent), 0);
     return { budgeted, spent, diff: spent - budgeted };
   }, [monthly]);
 
   const totalsCategories = useMemo(() => {
-    const budgeted = (categories || []).reduce((acc, r) => acc + safeNum(r.budgeted), 0);
-    const spent = (categories || []).reduce((acc, r) => acc + safeNum(r.spent), 0);
+    const budgeted = (categories || []).reduce(
+      (acc, r) => acc + safeNum(r.budgeted),
+      0
+    );
+    const spent = (categories || []).reduce(
+      (acc, r) => acc + safeNum(r.spent),
+      0
+    );
     return { budgeted, spent, diff: spent - budgeted };
   }, [categories]);
 
   const monthTick = (m) => (typeof m === "string" ? m.slice(5, 7) : m);
 
   const othersTotals = useMemo(() => {
-    const budgeted = (othersBreakdown || []).reduce((acc, r) => acc + safeNum(r.budgeted), 0);
-    const spent = (othersBreakdown || []).reduce((acc, r) => acc + safeNum(r.spent), 0);
-    return { budgeted, spent, diff: spent - budgeted, count: othersBreakdown.length };
+    const budgeted = (othersBreakdown || []).reduce(
+      (acc, r) => acc + safeNum(r.budgeted),
+      0
+    );
+    const spent = (othersBreakdown || []).reduce(
+      (acc, r) => acc + safeNum(r.spent),
+      0
+    );
+    return {
+      budgeted,
+      spent,
+      diff: spent - budgeted,
+      count: othersBreakdown.length,
+    };
   }, [othersBreakdown]);
 
   // click robusto (Recharts Bar onClick)
@@ -180,7 +208,9 @@ function BudgetVsActualSummaryChart({ token }) {
 
     const isOthers =
       row.category_id === "others" ||
-      String(row.category || "").trim().toLowerCase() === "otros";
+      String(row.category || "")
+        .trim()
+        .toLowerCase() === "otros";
 
     if (isOthers) setOthersOpen(true);
   };
@@ -208,14 +238,29 @@ function BudgetVsActualSummaryChart({ token }) {
           boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
         }}
       >
-        <p style={{ marginBottom: 6, fontWeight: 800, color: ui.text }}>{label}</p>
-        <p style={{ margin: 0, color: ui.muted }}>
-          Presupuesto: <span style={{ color: ui.text, fontWeight: 800 }}>{formatMoney(row.budgeted)}</span>
+        <p style={{ marginBottom: 6, fontWeight: 800, color: ui.text }}>
+          {label}
         </p>
         <p style={{ margin: 0, color: ui.muted }}>
-          Gasto: <span style={{ color: ui.text, fontWeight: 800 }}>{formatMoney(row.spent)}</span>
+          Presupuesto:{" "}
+          <span style={{ color: ui.text, fontWeight: 800 }}>
+            {formatMoney(row.budgeted)}
+          </span>
         </p>
-        <p style={{ marginTop: 6, marginBottom: 0, color: diffColor, fontWeight: 900 }}>
+        <p style={{ margin: 0, color: ui.muted }}>
+          Gasto:{" "}
+          <span style={{ color: ui.text, fontWeight: 800 }}>
+            {formatMoney(row.spent)}
+          </span>
+        </p>
+        <p
+          style={{
+            marginTop: 6,
+            marginBottom: 0,
+            color: diffColor,
+            fontWeight: 900,
+          }}
+        >
           Diferencia: {formatMoney(diff)}
         </p>
       </div>
@@ -242,16 +287,29 @@ function BudgetVsActualSummaryChart({ token }) {
           boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
         }}
       >
-        <p style={{ marginBottom: 6, fontWeight: 800, color: ui.text }}>{label}</p>
+        <p style={{ marginBottom: 6, fontWeight: 800, color: ui.text }}>
+          {label}
+        </p>
         <p style={{ margin: 0, color: ui.muted }}>
           Presupuesto anual:{" "}
-          <span style={{ color: ui.text, fontWeight: 800 }}>{formatMoney(row.budgeted)}</span>
+          <span style={{ color: ui.text, fontWeight: 800 }}>
+            {formatMoney(row.budgeted)}
+          </span>
         </p>
         <p style={{ margin: 0, color: ui.muted }}>
           Gasto anual:{" "}
-          <span style={{ color: ui.text, fontWeight: 800 }}>{formatMoney(row.spent)}</span>
+          <span style={{ color: ui.text, fontWeight: 800 }}>
+            {formatMoney(row.spent)}
+          </span>
         </p>
-        <p style={{ marginTop: 6, marginBottom: 0, color: diffColor, fontWeight: 900 }}>
+        <p
+          style={{
+            marginTop: 6,
+            marginBottom: 0,
+            color: diffColor,
+            fontWeight: 900,
+          }}
+        >
           Diferencia: {formatMoney(diff)}
         </p>
       </div>
@@ -274,37 +332,33 @@ function BudgetVsActualSummaryChart({ token }) {
           </p>
         </div>
 
-        <div className="flex items-end gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-[180px_auto] items-end gap-3 w-full sm:w-auto">
           {/* Año */}
-          <div className="flex flex-col items-end">
+          <div className="flex flex-col gap-1 w-full sm:w-[180px]">
             <label
-              className="text-[11px] uppercase tracking-[0.18em]"
+              className="text-[11px] uppercase tracking-[0.18em] sm:text-right"
               style={{ color: ui.muted }}
             >
               Año
             </label>
-            <select
+
+            <FFSelect
               value={year}
-              onChange={(e) => setYear(parseInt(e.target.value, 10))}
-              className="mt-1 px-3 py-2 text-sm"
-              style={ui.input}
-              onFocus={(e) => {
-                e.currentTarget.style.boxShadow = ui.inputFocusRing;
-                e.currentTarget.style.borderColor = ui.inputHoverBorder;
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.boxShadow = "none";
-                e.currentTarget.style.borderColor = ui.border;
-              }}
-            >
-              {yearOptions.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setYear(String(v))}
+              options={yearOptions}
+              placeholder="Selecciona año..."
+              searchable={false}
+              clearable={false}
+              className="w-full"
+              getOptionLabel={(o) => o.label}
+              getOptionValue={(o) => o.value}
+            />
+
             {loading ? (
-              <span className="text-xs mt-1" style={{ color: ui.muted }}>
+              <span
+                className="text-xs mt-1 sm:text-right"
+                style={{ color: ui.muted }}
+              >
                 Actualizando…
               </span>
             ) : null}
@@ -314,7 +368,7 @@ function BudgetVsActualSummaryChart({ token }) {
           <button
             onClick={() => setFlipped((p) => !p)}
             type="button"
-            className="mt-[18px] inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition"
+            className="sm:mt-[18px] inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition"
             style={ui.btn}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = ui.btnHoverBg;
@@ -631,7 +685,10 @@ function BudgetVsActualSummaryChart({ token }) {
                         <td className="px-3 py-2" style={{ color: ui.text }}>
                           {r.category}
                         </td>
-                        <td className="px-3 py-2 text-right" style={{ color: ui.text }}>
+                        <td
+                          className="px-3 py-2 text-right"
+                          style={{ color: ui.text }}
+                        >
                           {formatMoney(r.budgeted)}
                         </td>
                         <td
@@ -652,8 +709,6 @@ function BudgetVsActualSummaryChart({ token }) {
                 </tbody>
               </table>
             </div>
-
-           
           </div>
         )}
       </Modal>

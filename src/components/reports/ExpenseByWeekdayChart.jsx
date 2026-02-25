@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import FFSelect from "../FFSelect";
 import {
   BarChart,
   Bar,
@@ -29,15 +30,21 @@ function ExpenseByWeekdayChart({ token }) {
   const api = import.meta.env.VITE_API_URL;
 
   const [data, setData] = useState([]);
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [year, setYear] = useState(String(new Date().getFullYear()));
   const [loading, setLoading] = useState(false);
 
   // total | avg_txn | avg_day
   const [mode, setMode] = useState("total");
 
   const currentYear = new Date().getFullYear();
+
+  // ✅ FFSelect options
   const yearOptions = useMemo(
-    () => Array.from({ length: 6 }, (_, i) => currentYear - i),
+    () =>
+      Array.from({ length: 6 }, (_, i) => {
+        const y = String(currentYear - i);
+        return { value: y, label: y };
+      }),
     [currentYear]
   );
 
@@ -48,7 +55,7 @@ function ExpenseByWeekdayChart({ token }) {
     axios
       .get(`${api}/analytics/expense-by-weekday`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { year },
+        params: { year: Number(year) },
       })
       .then((res) => setData(res.data.data || []))
       .catch((err) =>
@@ -71,13 +78,8 @@ function ExpenseByWeekdayChart({ token }) {
     const axis = cssVar("--muted", "#94a3b8");
     const tick = cssVar("--text", "#e2e8f0");
     const grid = cssVar("--border-rgba", "rgba(148,163,184,0.22)");
-    const bar = cssVar("--warning", "#fbbf24"); // para “gasto” luce bien
-    const panelBg = cssVar("--bg-3", "#0a0c10");
-    const border = cssVar("--border-rgba", "rgba(148,163,184,0.22)");
-    const text = cssVar("--text", "#e2e8f0");
-    const heading = cssVar("--heading", tick);
-
-    return { axis, tick, grid, bar, panelBg, border, text, heading };
+    const bar = cssVar("--warning", "#fbbf24");
+    return { axis, tick, grid, bar };
   }, [mode]);
 
   // ✅ tooltip tokenizado
@@ -96,11 +98,7 @@ function ExpenseByWeekdayChart({ token }) {
 
   return (
     <div
-      className="
-        rounded-2xl p-6
-        border shadow-[0_16px_40px_rgba(0,0,0,0.85)]
-        space-y-4
-      "
+      className="rounded-2xl p-6 border shadow-[0_16px_40px_rgba(0,0,0,0.85)] space-y-4"
       style={{
         background:
           "linear-gradient(135deg, var(--bg-3), color-mix(in srgb, var(--bg-2) 70%, var(--bg-3)), var(--bg-3))",
@@ -108,10 +106,13 @@ function ExpenseByWeekdayChart({ token }) {
         color: "var(--text)",
       }}
     >
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-        <div>
-          <h3 className="text-xl font-semibold" style={{ color: "var(--heading)" }}>
+      {/* ✅ Header (layout premium) */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <h3
+            className="text-lg sm:text-xl font-semibold"
+            style={{ color: "var(--heading)" }}
+          >
             Hábitos de gasto por día de la semana
           </h3>
           <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
@@ -120,39 +121,44 @@ function ExpenseByWeekdayChart({ token }) {
           </p>
         </div>
 
-        <div className="flex items-end gap-3">
-          {/* Año */}
-          <div className="flex flex-col items-end">
+        {/* ✅ Controles: grid en mobile, barra en desktop */}
+        <div
+          className="
+            w-full lg:w-auto
+            grid grid-cols-1 sm:grid-cols-2 gap-3
+            lg:flex lg:items-end lg:justify-end
+          "
+        >
+          {/* ✅ Año (FFSelect) */}
+          <div className="flex flex-col gap-1">
             <label
               className="text-[11px] uppercase tracking-[0.18em]"
               style={{ color: "var(--muted)" }}
             >
               Año
             </label>
-            <select
+
+            <FFSelect
               value={year}
-              onChange={(e) => setYear(parseInt(e.target.value, 10))}
-              className="mt-1 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2"
-              style={{
-                background: "var(--control-bg)",
-                border: "1px solid var(--border-rgba)",
-                color: "var(--control-text)",
-                boxShadow: "none",
-                outline: "none",
-                // ring
-                "--tw-ring-color": "color-mix(in srgb, var(--ring) 60%, transparent)",
-              }}
-            >
-              {yearOptions.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setYear(String(v))}
+              options={yearOptions}
+              placeholder="Selecciona año..."
+              searchable={false}
+              clearable={false}
+              className="w-full lg:w-[160px]"
+              getOptionLabel={(o) => o.label}
+              getOptionValue={(o) => o.value}
+            />
+
+            {loading ? (
+              <span className="text-[11px] mt-1" style={{ color: "var(--muted)" }}>
+                Actualizando…
+              </span>
+            ) : null}
           </div>
 
-          {/* Métrica */}
-          <div className="flex flex-col items-end">
+          {/* ✅ Métrica (segmented control) */}
+          <div className="flex flex-col gap-1">
             <label
               className="text-[11px] uppercase tracking-[0.18em]"
               style={{ color: "var(--muted)" }}
@@ -161,7 +167,7 @@ function ExpenseByWeekdayChart({ token }) {
             </label>
 
             <div
-              className="mt-1 inline-flex rounded-lg p-1"
+              className="h-10 w-full lg:w-[320px] flex items-center gap-1 rounded-lg p-1"
               style={{
                 border: "1px solid var(--border-rgba)",
                 background: "color-mix(in srgb, var(--panel) 70%, transparent)",
@@ -178,13 +184,15 @@ function ExpenseByWeekdayChart({ token }) {
                     key={b.key}
                     type="button"
                     onClick={() => setMode(b.key)}
-                    className="px-3 py-1 text-xs rounded-md transition"
+                    className="h-full flex-1 text-xs rounded-md transition"
                     style={{
                       background: active
-                        ? "color-mix(in srgb, var(--panel) 88%, var(--bg-1))"
+                        ? "color-mix(in srgb, var(--panel) 92%, var(--bg-1))"
                         : "transparent",
                       color: active ? "var(--text)" : "var(--muted)",
-                      border: active ? "1px solid var(--border-rgba)" : "1px solid transparent",
+                      border: active
+                        ? "1px solid color-mix(in srgb, var(--border-rgba) 85%, transparent)"
+                        : "1px solid transparent",
                     }}
                   >
                     {b.label}
@@ -207,7 +215,6 @@ function ExpenseByWeekdayChart({ token }) {
         </p>
       ) : (
         <div className="w-full">
-          {/* Área del gráfico */}
           <div className="h-[300px] w-full">
             <ResponsiveContainer>
               <BarChart data={data}>
@@ -250,7 +257,6 @@ function ExpenseByWeekdayChart({ token }) {
             </ResponsiveContainer>
           </div>
 
-          {/* Footer */}
           <div
             className="mt-3 rounded-xl border p-3"
             style={{

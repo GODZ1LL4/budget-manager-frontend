@@ -1,6 +1,7 @@
 // src/components/reports/RecurringItemPatternsTable.jsx
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import FFSelect from "../FFSelect";
 
 function formatCurrencyDOP(value) {
   const num = Number(value) || 0;
@@ -52,8 +53,8 @@ function toneForFrequency(freq) {
 
 function RecurringItemPatternsTable({ token }) {
   const [data, setData] = useState([]);
-  const [months, setMonths] = useState(6);
-  const [minOccurrences, setMinOccurrences] = useState(3);
+  const [months, setMonths] = useState("6");
+  const [minOccurrences, setMinOccurrences] = useState("3");
   const [search, setSearch] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -69,7 +70,10 @@ function RecurringItemPatternsTable({ token }) {
     axios
       .get(`${api}/analytics/recurring-item-patterns`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { months, min_occurrences: minOccurrences },
+        params: {
+          months: Number(months) || 6,
+          min_occurrences: Number(minOccurrences) || 3,
+        },
       })
       .then((res) => setData(res.data?.data || []))
       .catch((err) => {
@@ -82,6 +86,25 @@ function RecurringItemPatternsTable({ token }) {
       .finally(() => setLoading(false));
   }, [token, months, minOccurrences, api]);
 
+  const monthsOptions = useMemo(
+    () => [
+      { value: "3", label: "Últimos 3 meses" },
+      { value: "6", label: "Últimos 6 meses" },
+      { value: "12", label: "Últimos 12 meses" },
+    ],
+    []
+  );
+
+  const minOccOptions = useMemo(
+    () => [
+      { value: "2", label: "2+" },
+      { value: "3", label: "3+" },
+      { value: "4", label: "4+" },
+      { value: "5", label: "5+" },
+    ],
+    []
+  );
+
   // ✅ Buscador (artículo/categoría/variante)
   const filteredData = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -90,7 +113,9 @@ function RecurringItemPatternsTable({ token }) {
     return (data || []).filter((row) => {
       const item = String(row?.item_name || "").toLowerCase();
       const cat = String(row?.category_name || "").toLowerCase();
-      const variant = String(prettifyKey(row?.description_key) || "").toLowerCase();
+      const variant = String(
+        prettifyKey(row?.description_key) || ""
+      ).toLowerCase();
       return item.includes(q) || cat.includes(q) || variant.includes(q);
     });
   }, [data, search]);
@@ -118,13 +143,6 @@ function RecurringItemPatternsTable({ token }) {
     borderRadius: "inherit",
     border: "1px solid color-mix(in srgb, var(--text) 8%, transparent)",
     pointerEvents: "none",
-  };
-
-  const selectStyle = {
-    background: "color-mix(in srgb, var(--panel) 78%, transparent)",
-    color: "var(--text)",
-    border: `var(--border-w) solid var(--border-rgba)`,
-    borderRadius: "var(--radius-md)",
   };
 
   const tableShellStyle = {
@@ -162,53 +180,76 @@ function RecurringItemPatternsTable({ token }) {
 
   return (
     <div className="relative rounded-2xl p-6 space-y-4" style={cardStyle}>
-      <div className="absolute inset-[1px] rounded-2xl" style={innerHairlineStyle} />
+      <div
+        className="absolute inset-[1px] rounded-2xl"
+        style={innerHairlineStyle}
+      />
 
       {/* Header */}
-      <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
-        <div>
-          <h3 className="text-xl font-semibold" style={{ color: "var(--text)" }}>
+      <div className="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div className="min-w-0">
+          <h3
+            className="text-xl font-semibold"
+            style={{ color: "var(--text)" }}
+          >
             Patrones de compra por artículo
           </h3>
           <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-            Detecta artículos que compras con una frecuencia similar (semanal, mensual, etc.),
-            aunque no estén configurados como transacciones recurrentes.
+            Detecta artículos que compras con una frecuencia similar (semanal,
+            mensual, etc.), aunque no estén configurados como transacciones
+            recurrentes.
           </p>
         </div>
 
-        {/* Filtros + buscador */}
-        <div className="flex flex-col sm:flex-row flex-wrap gap-3 text-sm sm:items-end">
-          <div className="flex items-center gap-2">
-            <span style={{ color: mutedText }}>Período:</span>
-            <select
-              value={months}
-              onChange={(e) => setMonths(Number(e.target.value) || 6)}
-              className="px-2 py-1 text-sm focus:outline-none"
-              style={selectStyle}
-            >
-              <option value={3}>Últimos 3 meses</option>
-              <option value={6}>Últimos 6 meses</option>
-              <option value={12}>Últimos 12 meses</option>
-            </select>
+        {/* Controls */}
+        <div className="w-full lg:w-[520px]">
+          {/* Row 1: selects */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+            <div className="flex flex-col">
+              <label
+                className="text-[11px] uppercase tracking-[0.18em]"
+                style={{ color: mutedText }}
+              >
+                Período
+              </label>
+
+              <FFSelect
+                value={months}
+                onChange={(v) => setMonths(String(v))}
+                options={monthsOptions}
+                placeholder="Selecciona período..."
+                searchable={false}
+                clearable={false}
+                className="mt-1 w-full"
+                getOptionLabel={(o) => o.label}
+                getOptionValue={(o) => o.value}
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label
+                className="text-[11px] uppercase tracking-[0.18em]"
+                style={{ color: mutedText }}
+              >
+                Mín. ocurrencias
+              </label>
+
+              <FFSelect
+                value={minOccurrences}
+                onChange={(v) => setMinOccurrences(String(v))}
+                options={minOccOptions}
+                placeholder="Selecciona mínimo..."
+                searchable={false}
+                clearable={false}
+                className="mt-1 w-full"
+                getOptionLabel={(o) => o.label}
+                getOptionValue={(o) => o.value}
+              />
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span style={{ color: mutedText }}>Mín. ocurrencias:</span>
-            <select
-              value={minOccurrences}
-              onChange={(e) => setMinOccurrences(Number(e.target.value) || 3)}
-              className="px-2 py-1 text-sm focus:outline-none"
-              style={selectStyle}
-            >
-              <option value={2}>2+</option>
-              <option value={3}>3+</option>
-              <option value={4}>4+</option>
-              <option value={5}>5+</option>
-            </select>
-          </div>
-
-          {/* Buscador */}
-          <div className="min-w-[240px] flex-1">
+          {/* Row 2: buscador debajo */}
+          <div className="mt-3">
             <label
               className="text-[11px] uppercase tracking-[0.18em]"
               style={{ color: mutedText }}
@@ -232,7 +273,8 @@ function RecurringItemPatternsTable({ token }) {
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md px-2 py-1 text-xs"
                   style={{
                     border: "1px solid var(--border-rgba)",
-                    background: "color-mix(in srgb, var(--panel) 70%, transparent)",
+                    background:
+                      "color-mix(in srgb, var(--panel) 70%, transparent)",
                     color: "color-mix(in srgb, var(--text) 85%, transparent)",
                   }}
                   aria-label="Limpiar búsqueda"
@@ -256,7 +298,9 @@ function RecurringItemPatternsTable({ token }) {
       {error && (
         <p
           className="text-sm"
-          style={{ color: "color-mix(in srgb, var(--danger) 75%, var(--text))" }}
+          style={{
+            color: "color-mix(in srgb, var(--danger) 75%, var(--text))",
+          }}
         >
           {error}
         </p>
@@ -276,7 +320,9 @@ function RecurringItemPatternsTable({ token }) {
       {/* Tabla */}
       {!loading && !error && filteredData.length > 0 && (
         <div
-          className={`relative overflow-x-auto ${enableYScroll ? "overflow-y-auto" : ""}`}
+          className={`relative overflow-x-auto ${
+            enableYScroll ? "overflow-y-auto" : ""
+          }`}
           style={
             enableYScroll
               ? { ...tableShellStyle, maxHeight: `${maxTableHeightPx}px` }
@@ -355,7 +401,8 @@ function RecurringItemPatternsTable({ token }) {
                   className="sticky top-0 z-30 px-1.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide border-b border-[var(--border-rgba)] w-[95px] text-right"
                   style={{
                     ...thStickyStyle,
-                    background: "color-mix(in srgb, var(--primary) 10%, var(--panel))",
+                    background:
+                      "color-mix(in srgb, var(--primary) 10%, var(--panel))",
                   }}
                 >
                   Monto<span className="block">prom.</span>
@@ -381,7 +428,9 @@ function RecurringItemPatternsTable({ token }) {
 
                 return (
                   <tr
-                    key={`${row.item_id || "item"}-${row.description_key || "desc"}-${idx}`}
+                    key={`${row.item_id || "item"}-${
+                      row.description_key || "desc"
+                    }-${idx}`}
                     className={`${zebra} transition-colors hover:bg-[color-mix(in srgb,var(--primary)_10%,transparent)]`}
                     style={{
                       borderTop:
@@ -479,11 +528,17 @@ function RecurringItemPatternsTable({ token }) {
 
                     <td className="px-1.5 py-2 align-top text-center tabular-nums">
                       <div className="flex flex-col items-center gap-0.5">
-                        <span className="whitespace-nowrap" style={{ color: mutedText }}>
+                        <span
+                          className="whitespace-nowrap"
+                          style={{ color: mutedText }}
+                        >
                           {formatDate(row.last_date)}
                         </span>
                         {row.last_amount != null && (
-                          <span className="text-[10px] whitespace-nowrap" style={lastAmountStyle}>
+                          <span
+                            className="text-[10px] whitespace-nowrap"
+                            style={lastAmountStyle}
+                          >
                             {formatCurrencyDOP(row.last_amount)}
                           </span>
                         )}

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import FFSelect from "../FFSelect";
+
 import {
   BarChart,
   Bar,
@@ -58,12 +60,8 @@ function CustomTooltip({ active, payload, label }) {
       <p style={{ marginBottom: 6, fontWeight: 800, color: text }}>
         Mes: {label}
       </p>
-      <p style={{ margin: 0, color: muted }}>
-        Ingresos: {formatMoney(row.income)}
-      </p>
-      <p style={{ margin: 0, color: muted }}>
-        Gastos: {formatMoney(row.expense)}
-      </p>
+      <p style={{ margin: 0, color: muted }}>Ingresos: {formatMoney(row.income)}</p>
+      <p style={{ margin: 0, color: muted }}>Gastos: {formatMoney(row.expense)}</p>
 
       <p
         style={{
@@ -87,10 +85,14 @@ function MonthlyIncomeVsExpenseChart({ token }) {
   const api = import.meta.env.VITE_API_URL;
 
   const currentYear = new Date().getFullYear();
-  const yearOptions = useMemo(
-    () => Array.from({ length: 6 }, (_, i) => currentYear - i),
-    [currentYear]
-  );
+
+  // ✅ FFSelect options (memo)
+  const yearOptions = useMemo(() => {
+    return Array.from({ length: 6 }, (_, i) => {
+      const y = currentYear - i;
+      return { value: y, label: String(y) };
+    });
+  }, [currentYear]);
 
   useEffect(() => {
     if (!token) return;
@@ -145,7 +147,7 @@ function MonthlyIncomeVsExpenseChart({ token }) {
           Balance de Ingreso vs Gasto
         </h3>
 
-        <div className="flex flex-col items-end gap-1">
+        <div className="flex flex-col items-end gap-2">
           <div className="flex flex-col items-end">
             <label
               className="text-[11px] uppercase tracking-[0.18em]"
@@ -154,24 +156,18 @@ function MonthlyIncomeVsExpenseChart({ token }) {
               Año
             </label>
 
-            <select
+            {/* ✅ FFSelect */}
+            <FFSelect
               value={year}
-              onChange={(e) => setYear(parseInt(e.target.value, 10))}
-              className="mt-1 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2"
-              style={{
-                background: "var(--control-bg)",
-                border: "1px solid var(--control-border)",
-                color: "var(--control-text)",
-                boxShadow: "none",
-                outline: "none",
-              }}
-            >
-              {yearOptions.map((y) => (
-                <option key={y} value={y}>
-                  {y}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setYear(Number(v))}
+              options={yearOptions}
+              placeholder="Año…"
+              searchable={false}
+              clearable={false}
+              className="mt-1 w-[160px]"
+              getOptionValue={(o) => o.value}
+              getOptionLabel={(o) => o.label}
+            />
           </div>
 
           <p className="text-sm font-medium" style={yearlyBalanceStyle}>
@@ -203,38 +199,21 @@ function MonthlyIncomeVsExpenseChart({ token }) {
                 tick={{ fill: tickFill, fontSize: 14 }}
               />
 
-              <YAxis
-                stroke={axisStroke}
-                tick={{ fill: tickFill, fontSize: 14 }}
-              />
+              <YAxis stroke={axisStroke} tick={{ fill: tickFill, fontSize: 14 }} />
 
               <Tooltip content={<CustomTooltip />} />
 
               <Legend
                 wrapperStyle={{ color: tickFill }}
                 formatter={(value) => (
-                  <span
-                    className="text-xs sm:text-sm"
-                    style={{ color: tickFill }}
-                  >
+                  <span className="text-xs sm:text-sm" style={{ color: tickFill }}>
                     {value}
                   </span>
                 )}
               />
 
-              <Bar
-                dataKey="income"
-                fill={incomeFill}
-                name="Ingresos"
-                radius={[4, 4, 0, 0]}
-              />
-
-              <Bar
-                dataKey="expense"
-                fill={expenseFill}
-                name="Gastos"
-                radius={[4, 4, 0, 0]}
-              />
+              <Bar dataKey="income" fill={incomeFill} name="Ingresos" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="expense" fill={expenseFill} name="Gastos" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

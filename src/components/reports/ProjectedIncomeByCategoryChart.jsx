@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import FFSelect from "../FFSelect";
 
 /* ================= Tokens / Utils ================= */
 
@@ -33,6 +34,15 @@ function ProjectedIncomeByCategoryChart({ token }) {
   const [filteredData, setFilteredData] = useState([]);
   const [filter, setFilter] = useState("all");
   const api = import.meta.env.VITE_API_URL;
+
+  const filterOptions = useMemo(
+    () => [
+      { value: "all", label: "Todos" },
+      { value: "fixed", label: "Fijos" },
+      { value: "variable", label: "Variables" },
+    ],
+    []
+  );
 
   useEffect(() => {
     if (!token) return;
@@ -97,8 +107,9 @@ function ProjectedIncomeByCategoryChart({ token }) {
         boxShadow: "0 16px 40px rgba(0,0,0,0.55)",
       }}
     >
-      <div className="flex flex-col sm:flex-row justify-between gap-3 items-start sm:items-center">
-        <div>
+      {/* Header (FFSelect + mejor distribución) */}
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div className="min-w-0">
           <h3 className="text-lg md:text-xl font-semibold text-[var(--text)]">
             Ingresos proyectados por categoría
           </h3>
@@ -108,16 +119,28 @@ function ProjectedIncomeByCategoryChart({ token }) {
           </p>
         </div>
 
-        {/* Usa tu select custom si quieres: <FFSelect .../> */}
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="ff-input text-sm rounded-lg px-3 py-1.5"
-        >
-          <option value="all">Todos</option>
-          <option value="fixed">Fijos</option>
-          <option value="variable">Variables</option>
-        </select>
+        <div className="w-full lg:w-[280px]">
+          <label
+            className="text-[11px] uppercase tracking-[0.18em]"
+            style={{
+              color: "color-mix(in srgb,var(--text)_70%,transparent)",
+            }}
+          >
+            Filtro
+          </label>
+
+          <FFSelect
+            value={filter}
+            onChange={(v) => setFilter(String(v))}
+            options={filterOptions}
+            placeholder="Filtrar..."
+            searchable={false}
+            clearable={false}
+            className="mt-1 w-full"
+            getOptionLabel={(o) => o.label}
+            getOptionValue={(o) => o.value}
+          />
+        </div>
       </div>
 
       {filteredData.length === 0 ? (

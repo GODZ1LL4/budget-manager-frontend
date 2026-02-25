@@ -10,8 +10,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-
-
+import FFSelect from "../FFSelect";
 
 function formatMonthLabel(ym) {
   if (ym == null) return "—";
@@ -22,7 +21,20 @@ function formatMonthLabel(ym) {
   const y = s.slice(0, 4);
   const m = Number(s.slice(5, 7));
 
-  const months = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const months = [
+    "Ene",
+    "Feb",
+    "Mar",
+    "Abr",
+    "May",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dic",
+  ];
   return `${months[m - 1] || s} ${y}`;
 }
 
@@ -33,15 +45,25 @@ function formatCurrency(val) {
 
 function MonthlyIncomeVsExpenseLineChart({ token }) {
   const [data, setData] = useState([]);
-  const [months, setMonths] = useState(6);
+  const [months, setMonths] = useState("6");
   const api = import.meta.env.VITE_API_URL;
+
+  const periodOptions = useMemo(
+    () => [
+      { value: "3", label: "3 meses" },
+      { value: "6", label: "6 meses" },
+      { value: "12", label: "12 meses" },
+      { value: "24", label: "24 meses" },
+    ],
+    []
+  );
 
   useEffect(() => {
     if (!token) return;
     axios
       .get(`${api}/analytics/income-vs-expense-monthly`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { months },
+        params: { months: Number(months) || 6 },
       })
       .then((res) => setData(res.data.data || []))
       .catch((err) =>
@@ -88,8 +110,9 @@ function MonthlyIncomeVsExpenseLineChart({ token }) {
         boxShadow: "0 16px 40px rgba(0,0,0,0.55)",
       }}
     >
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
-        <div>
+      {/* Header (FFSelect + mejor distribución) */}
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+        <div className="min-w-0">
           <h3 className="text-xl font-semibold text-[var(--text)]">
             Ingresos vs Gastos (mensual)
           </h3>
@@ -98,21 +121,25 @@ function MonthlyIncomeVsExpenseLineChart({ token }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-[color-mix(in srgb,var(--text)_65%,transparent)]">
-            Período:
-          </span>
-          {/* Si tienes FFSelect.jsx, cámbialo aquí */}
-          <select
-            value={months}
-            onChange={(e) => setMonths(Number(e.target.value))}
-            className="ff-input bg-transparent rounded-lg px-2 py-1"
+        <div className="w-full lg:w-[240px]">
+          <label
+            className="text-[11px] uppercase tracking-[0.18em]"
+            style={{ color: "color-mix(in srgb,var(--text)_70%,transparent)" }}
           >
-            <option value={3}>3 meses</option>
-            <option value={6}>6 meses</option>
-            <option value={12}>12 meses</option>
-            <option value={24}>24 meses</option>
-          </select>
+            Período
+          </label>
+
+          <FFSelect
+            value={months}
+            onChange={(v) => setMonths(String(v))}
+            options={periodOptions}
+            placeholder="Selecciona período..."
+            searchable={false}
+            clearable={false}
+            className="mt-1 w-full"
+            getOptionLabel={(o) => o.label}
+            getOptionValue={(o) => o.value}
+          />
         </div>
       </div>
 
@@ -149,8 +176,18 @@ function MonthlyIncomeVsExpenseLineChart({ token }) {
                 name="Ingresos"
                 stroke={incomeStroke}
                 strokeWidth={2.5}
-                dot={{ r: 3, fill: incomeDotFill, stroke: incomeStroke, strokeWidth: 1.5 }}
-                activeDot={{ r: 5, fill: incomeDotFill, stroke: incomeStroke, strokeWidth: 2 }}
+                dot={{
+                  r: 3,
+                  fill: incomeDotFill,
+                  stroke: incomeStroke,
+                  strokeWidth: 1.5,
+                }}
+                activeDot={{
+                  r: 5,
+                  fill: incomeDotFill,
+                  stroke: incomeStroke,
+                  strokeWidth: 2,
+                }}
                 isAnimationActive={false}
               />
 
@@ -160,8 +197,18 @@ function MonthlyIncomeVsExpenseLineChart({ token }) {
                 name="Gastos"
                 stroke={expenseStroke}
                 strokeWidth={2.5}
-                dot={{ r: 3, fill: expenseDotFill, stroke: expenseStroke, strokeWidth: 1.5 }}
-                activeDot={{ r: 5, fill: expenseDotFill, stroke: expenseStroke, strokeWidth: 2 }}
+                dot={{
+                  r: 3,
+                  fill: expenseDotFill,
+                  stroke: expenseStroke,
+                  strokeWidth: 1.5,
+                }}
+                activeDot={{
+                  r: 5,
+                  fill: expenseDotFill,
+                  stroke: expenseStroke,
+                  strokeWidth: 2,
+                }}
                 isAnimationActive={false}
               />
             </LineChart>

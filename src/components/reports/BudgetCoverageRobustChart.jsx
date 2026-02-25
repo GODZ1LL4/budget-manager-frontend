@@ -11,6 +11,7 @@ import {
   Legend,
 } from "recharts";
 import Modal from "../Modal";
+import FFSelect from "../FFSelect";
 
 const formatCurrency = (v) =>
   new Intl.NumberFormat("es-DO", {
@@ -22,7 +23,7 @@ const formatCurrency = (v) =>
 function BudgetCoverageRobustChart({ token }) {
   const api = import.meta.env.VITE_API_URL;
 
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [year, setYear] = useState(String(new Date().getFullYear()));
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -32,7 +33,11 @@ function BudgetCoverageRobustChart({ token }) {
 
   const currentYear = new Date().getFullYear();
   const yearOptions = useMemo(
-    () => Array.from({ length: 6 }, (_, i) => currentYear - i),
+    () =>
+      Array.from({ length: 6 }, (_, i) => {
+        const y = String(currentYear - i);
+        return { value: y, label: y };
+      }),
     [currentYear]
   );
 
@@ -66,7 +71,8 @@ function BudgetCoverageRobustChart({ token }) {
       },
       metricCard: {
         borderRadius: "var(--radius-lg)",
-        border: "1px solid color-mix(in srgb, var(--border-rgba) 100%, transparent)",
+        border:
+          "1px solid color-mix(in srgb, var(--border-rgba) 100%, transparent)",
         background:
           "linear-gradient(135deg, var(--bg-3), color-mix(in srgb, var(--panel) 70%, transparent), var(--bg-2))",
         boxShadow: "0 10px 30px rgba(0,0,0,0.65)",
@@ -113,7 +119,8 @@ function BudgetCoverageRobustChart({ token }) {
         backgroundColor: "color-mix(in srgb, var(--bg-3) 92%, transparent)",
         borderBottom: "1px solid var(--border-rgba)",
       },
-      rowDivider: "1px solid color-mix(in srgb, var(--border-rgba) 60%, transparent)",
+      rowDivider:
+        "1px solid color-mix(in srgb, var(--border-rgba) 60%, transparent)",
       rowHover: "color-mix(in srgb, var(--panel) 72%, transparent)",
     };
   }, []);
@@ -145,7 +152,14 @@ function BudgetCoverageRobustChart({ token }) {
           Sin presupuesto: {formatCurrency(row.without_budget)}
         </p>
 
-        <p style={{ marginTop: 6, marginBottom: 0, fontWeight: 800, color: ui.text }}>
+        <p
+          style={{
+            marginTop: 6,
+            marginBottom: 0,
+            fontWeight: 800,
+            color: ui.text,
+          }}
+        >
           Cobertura: {Number(row.coverage_pct || 0).toFixed(2)}%
         </p>
       </div>
@@ -159,7 +173,7 @@ function BudgetCoverageRobustChart({ token }) {
     axios
       .get(`${api}/analytics/budget-coverage-robust`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { year },
+        params: { year: Number(year) },
       })
       .then((res) => setReport(res?.data?.data || null))
       .catch((err) => console.error("Error cargando cobertura robusta:", err))
@@ -207,45 +221,47 @@ function BudgetCoverageRobustChart({ token }) {
             Cobertura real de presupuestos
           </h3>
           <p className="text-sm mt-1" style={{ color: ui.muted }}>
-            Un gasto solo cuenta como cubierto hasta el límite del presupuesto. El exceso
-            y lo sin presupuesto se consideran no cubiertos.
+            Un gasto solo cuenta como cubierto hasta el límite del presupuesto.
+            El exceso y lo sin presupuesto se consideran no cubiertos.
           </p>
         </div>
 
-        <div className="flex flex-col items-end">
-          <label
-            className="text-[11px] uppercase tracking-[0.18em]"
-            style={{ color: ui.muted }}
-          >
-            Año
-          </label>
+        <div className="w-full md:w-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-2 items-end">
+            <div className="flex flex-col gap-1 sm:items-end md:items-end">
+              <label
+                className="text-[11px] uppercase tracking-[0.18em]"
+                style={{ color: ui.muted }}
+              >
+                Año
+              </label>
 
-          <select
-            value={year}
-            onChange={(e) => setYear(parseInt(e.target.value, 10))}
-            style={ui.select}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = "var(--control-border-focus)";
-              e.currentTarget.style.boxShadow = "var(--control-focus-shadow)";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = "var(--control-border)";
-              e.currentTarget.style.boxShadow = "none";
-            }}
-          >
-            {yearOptions.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
+              <FFSelect
+                value={year}
+                onChange={(v) => setYear(String(v))}
+                options={yearOptions}
+                placeholder="Selecciona año..."
+                searchable={false}
+                clearable={false}
+                className="w-full sm:w-[170px]"
+                getOptionLabel={(o) => o.label}
+                getOptionValue={(o) => o.value}
+              />
 
-          <p className="text-xs mt-2" style={{ color: ui.text }}>
-            Cobertura anual:{" "}
-            <span style={{ fontWeight: 800, color: ui.covered }}>
-              {Number(totals.coverage_pct || 0).toFixed(2)}%
-            </span>
-          </p>
+              <p
+                className="text-xs mt-1 sm:text-right"
+                style={{ color: ui.text }}
+              >
+                Cobertura anual:{" "}
+                <span style={{ fontWeight: 800, color: ui.covered }}>
+                  {Number(totals.coverage_pct || 0).toFixed(2)}%
+                </span>
+              </p>
+            </div>
+
+            {/* Slot libre para futuros filtros sin romper el layout */}
+            <div className="hidden sm:block md:hidden" />
+          </div>
         </div>
       </div>
 
@@ -270,7 +286,10 @@ function BudgetCoverageRobustChart({ token }) {
           >
             Cubierto (real)
           </p>
-          <p className="text-xl font-extrabold mt-1" style={{ color: ui.covered }}>
+          <p
+            className="text-xl font-extrabold mt-1"
+            style={{ color: ui.covered }}
+          >
             {formatCurrency(totals.covered)}
           </p>
         </div>
@@ -294,7 +313,10 @@ function BudgetCoverageRobustChart({ token }) {
           >
             Sin presupuesto
           </p>
-          <p className="text-xl font-extrabold mt-1" style={{ color: ui.without }}>
+          <p
+            className="text-xl font-extrabold mt-1"
+            style={{ color: ui.without }}
+          >
             {formatCurrency(totals.without_budget)}
           </p>
         </div>
@@ -352,7 +374,8 @@ function BudgetCoverageRobustChart({ token }) {
           </ResponsiveContainer>
 
           <p className="text-xs mt-2" style={{ color: ui.muted }}>
-            Click en un mes para ver el detalle por categorías (exceso y sin presupuesto).
+            Click en un mes para ver el detalle por categorías (exceso y sin
+            presupuesto).
           </p>
         </div>
 
@@ -539,7 +562,10 @@ function BudgetCoverageRobustChart({ token }) {
                 </h4>
 
                 {detail.without_budget_categories?.length ? (
-                  <div className="max-h-[320px] overflow-auto" style={ui.tableWrap}>
+                  <div
+                    className="max-h-[320px] overflow-auto"
+                    style={ui.tableWrap}
+                  >
                     <table className="w-full text-sm">
                       <thead className="sticky top-0" style={ui.thead}>
                         <tr style={{ color: ui.text }}>
@@ -553,13 +579,18 @@ function BudgetCoverageRobustChart({ token }) {
                             key={r.category_id}
                             style={{ borderTop: ui.rowDivider }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = ui.rowHover;
+                              e.currentTarget.style.backgroundColor =
+                                ui.rowHover;
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = "transparent";
+                              e.currentTarget.style.backgroundColor =
+                                "transparent";
                             }}
                           >
-                            <td className="px-3 py-2" style={{ color: ui.text }}>
+                            <td
+                              className="px-3 py-2"
+                              style={{ color: ui.text }}
+                            >
                               {r.category_name}
                             </td>
                             <td
@@ -590,7 +621,10 @@ function BudgetCoverageRobustChart({ token }) {
                 </h4>
 
                 {detail.over_budget_categories?.length ? (
-                  <div className="max-h-[320px] overflow-auto" style={ui.tableWrap}>
+                  <div
+                    className="max-h-[320px] overflow-auto"
+                    style={ui.tableWrap}
+                  >
                     <table className="w-full text-sm">
                       <thead className="sticky top-0" style={ui.thead}>
                         <tr style={{ color: ui.text }}>
@@ -606,16 +640,24 @@ function BudgetCoverageRobustChart({ token }) {
                             key={r.category_id}
                             style={{ borderTop: ui.rowDivider }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = ui.rowHover;
+                              e.currentTarget.style.backgroundColor =
+                                ui.rowHover;
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = "transparent";
+                              e.currentTarget.style.backgroundColor =
+                                "transparent";
                             }}
                           >
-                            <td className="px-3 py-2" style={{ color: ui.text }}>
+                            <td
+                              className="px-3 py-2"
+                              style={{ color: ui.text }}
+                            >
                               {r.category_name}
                             </td>
-                            <td className="px-3 py-2 text-right" style={{ color: ui.text }}>
+                            <td
+                              className="px-3 py-2 text-right"
+                              style={{ color: ui.text }}
+                            >
                               {formatCurrency(r.budgeted)}
                             </td>
                             <td
@@ -653,7 +695,10 @@ function BudgetCoverageRobustChart({ token }) {
               </h4>
 
               {detail.categories_summary?.length ? (
-                <div className="max-h-[360px] overflow-auto" style={ui.tableWrap}>
+                <div
+                  className="max-h-[360px] overflow-auto"
+                  style={ui.tableWrap}
+                >
                   <table className="w-full text-sm">
                     <thead className="sticky top-0" style={ui.thead}>
                       <tr style={{ color: ui.text }}>
@@ -667,23 +712,32 @@ function BudgetCoverageRobustChart({ token }) {
                     <tbody>
                       {detail.categories_summary.slice(0, 15).map((r) => {
                         const uncovered =
-                          (Number(r.over_budget) || 0) + (Number(r.without_budget) || 0);
+                          (Number(r.over_budget) || 0) +
+                          (Number(r.without_budget) || 0);
 
                         return (
                           <tr
                             key={r.category_id}
                             style={{ borderTop: ui.rowDivider }}
                             onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = ui.rowHover;
+                              e.currentTarget.style.backgroundColor =
+                                ui.rowHover;
                             }}
                             onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = "transparent";
+                              e.currentTarget.style.backgroundColor =
+                                "transparent";
                             }}
                           >
-                            <td className="px-3 py-2" style={{ color: ui.text }}>
+                            <td
+                              className="px-3 py-2"
+                              style={{ color: ui.text }}
+                            >
                               {r.category_name}
                             </td>
-                            <td className="px-3 py-2 text-right" style={{ color: ui.text }}>
+                            <td
+                              className="px-3 py-2 text-right"
+                              style={{ color: ui.text }}
+                            >
                               {formatCurrency(r.budgeted)}
                             </td>
                             <td
@@ -701,7 +755,10 @@ function BudgetCoverageRobustChart({ token }) {
                             <td
                               className="px-3 py-2 text-right font-semibold"
                               style={{
-                                color: uncovered > 0 ? ui.over : "color-mix(in srgb, var(--muted) 85%, transparent)",
+                                color:
+                                  uncovered > 0
+                                    ? ui.over
+                                    : "color-mix(in srgb, var(--muted) 85%, transparent)",
                               }}
                             >
                               {formatCurrency(uncovered)}

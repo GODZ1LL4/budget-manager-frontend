@@ -161,7 +161,7 @@ function PortalDropdown({ anchorEl, open, onClose, children }) {
         ref={dropdownRef}
         // ✅ estilos visuales aquí; posición se aplica por DOM
         style={{
-          background: "var(--select-bg)",
+          background: "var(--control-bg)",
           borderColor: "var(--border-rgba)",
           boxShadow: "var(--select-shadow)",
         }}
