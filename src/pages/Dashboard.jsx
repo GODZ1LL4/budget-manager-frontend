@@ -39,6 +39,7 @@ import BudgetCoverageRobustChart from "../components/reports/BudgetCoverageRobus
 import ItemExpenseForecast from "../components/reports/ItemExpenseForecast";
 import AntExpensesReport from "../components/reports/AntExpensesReport";
 import ItemPurchaseHistoryReport from "../components/reports/ItemPurchaseHistoryReport";
+import TopVariableCategoriesChart from "../components/reports/TopVariableCategoriesChart";
 
 function Dashboard({ token }) {
   const api = import.meta.env.VITE_API_URL;
@@ -387,6 +388,13 @@ function Dashboard({ token }) {
             short: "Resumen anual",
             render: () => <BudgetVsActualSummaryChart token={token} />,
           },
+          {
+            id: "top-variable",
+            title: "32- Gastos por categoría - estabilidad",
+            keywords: "resumen anual",
+            short: "Gastos x Categoria ",
+            render: () => <TopVariableCategoriesChart token={token} />,
+          },
         ],
       },
 
@@ -499,6 +507,7 @@ function Dashboard({ token }) {
             title: "27- Proyección de flujo por período",
             keywords: "forecast flujo",
             short: "Forecast",
+            badge: "Pro",
             render: () => <ExpenseForecastChart token={token} />,
           },
           {
