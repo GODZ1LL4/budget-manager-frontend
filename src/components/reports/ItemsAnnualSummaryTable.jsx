@@ -1,25 +1,105 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 
 function ItemsAnnualSummaryTable({ token }) {
   const api = import.meta.env.VITE_API_URL;
 
+  // ✅ valores aplicados (los que realmente consulta el backend)
   const [year, setYear] = useState(new Date().getFullYear());
+  const [top, setTop] = useState(""); // "" => sin límite (trae todos los items con compras del año)
+
+  // ✅ valores en edición (NO disparan requests)
+  const [yearDraft, setYearDraft] = useState(new Date().getFullYear());
+  const [topDraft, setTopDraft] = useState("");
+
   const [data, setData] = useState([]);
   const [search, setSearch] = useState("");
 
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  // ✅ abort controller para cancelar requests anteriores si refrescan rápido
+  const abortRef = useRef(null);
+
+  const fetchData = useCallback(
+    async ({ year: y, top: t } = {}) => {
+      if (!token) return;
+
+      const effectiveYear = y ?? year;
+      const effectiveTop = t ?? top;
+
+      // Cancela request anterior si existe
+      if (abortRef.current) abortRef.current.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        setLoading(true);
+        setErrorMsg("");
+
+        const params = new URLSearchParams();
+        params.set("year", String(effectiveYear));
+
+        const topTrim = String(effectiveTop ?? "").trim();
+        if (topTrim !== "") params.set("top", topTrim); // ✅ solo si viene
+
+        const res = await axios.get(
+          `${api}/analytics/items-annual-summary?${params.toString()}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal,
+          }
+        );
+
+        setData(res.data?.data || []);
+      } catch (err) {
+        // Abort no es error real
+        if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") return;
+
+        console.error("Error al cargar resumen anual de ítems:", err);
+        setData([]);
+        setErrorMsg("No se pudo cargar el resumen. Presiona Refrescar para reintentar.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [token, api, year, top]
+  );
+
+  // ✅ carga inicial: al entrar (o cuando cambia token)
   useEffect(() => {
     if (!token) return;
 
-    axios
-      .get(`${api}/analytics/items-annual-summary?year=${year}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setData(res.data.data || []))
-      .catch((err) => {
-        console.error("Error al cargar resumen anual de ítems:", err);
-      });
-  }, [token, year, api]);
+    // sincroniza drafts con lo aplicado actual
+    setYearDraft(year);
+    setTopDraft(top);
+
+    fetchData({ year, top });
+
+    return () => {
+      if (abortRef.current) abortRef.current.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]); // intencional: NO depende de year/top
+
+  // ✅ aplicar filtros y refrescar (único punto que consulta)
+  const handleRefresh = async () => {
+    const nextYear = Number(yearDraft) || new Date().getFullYear();
+
+    // top: "" => sin límite
+    const nextTopTrim = String(topDraft ?? "").trim();
+    const nextTop = nextTopTrim === "" ? "" : nextTopTrim;
+
+    setYear(nextYear);
+    setTop(nextTop);
+
+    await fetchData({ year: nextYear, top: nextTop });
+  };
+
+  // ✅ Enter en inputs => refrescar
+  const onKeyDownRefresh = (e) => {
+    if (e.key === "Enter") handleRefresh();
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -49,6 +129,7 @@ function ItemsAnnualSummaryTable({ token }) {
   // ✅ usa ff-input (si ya existe) y solo ajusta extras
   const inputClass = "ff-input text-sm px-3 py-2 rounded-lg";
   const yearInputClass = `${inputClass} w-28`;
+  const topInputClass = `${inputClass} w-28`;
 
   const searchInputClass =
     `${inputClass} flex-1 min-w-[220px] ` +
@@ -94,35 +175,64 @@ function ItemsAnnualSummaryTable({ token }) {
     "text-xs leading-relaxed text-[color-mix(in srgb,var(--muted)_80%,transparent)]";
   const noteStrong = "text-[color-mix(in srgb,var(--text)_90%,transparent)]";
 
+  const buttonClass =
+    "px-4 py-2 rounded-lg text-sm border border-[var(--border-rgba)] " +
+    "bg-[color-mix(in srgb,var(--panel)_70%,transparent)] " +
+    "hover:bg-[color-mix(in srgb,var(--panel)_85%,transparent)] " +
+    "disabled:opacity-60 disabled:cursor-not-allowed";
+
+  const errorClass =
+    "text-xs px-3 py-2 rounded-lg border border-[color-mix(in srgb,var(--danger)_35%,transparent)] " +
+    "bg-[color-mix(in srgb,var(--danger)_12%,transparent)] " +
+    "text-[color-mix(in srgb,var(--text)_92%,transparent)]";
+
   return (
     <div className={cardClass}>
       {/* TÍTULO */}
       <div>
         <h3 className={titleClass}>Resumen anual de artículos</h3>
         <p className={descClass}>
-          Cantidad total, gasto total y precio promedio por artículo en el año seleccionado.
+          Cantidad total, gasto total y precio promedio por artículo en el año
+          seleccionado.
         </p>
       </div>
 
       {/* FILTROS */}
-      <div className="flex flex-wrap gap-3 items-center">
-        {/* Año */}
+      <div className="flex flex-wrap gap-3 items-end">
+        {/* Año (draft) */}
         <div className="flex flex-col">
           <label className="text-[11px] uppercase tracking-[0.18em] text-[color-mix(in srgb,var(--text)_65%,transparent)]">
             Año
           </label>
           <input
             type="number"
-            value={year}
+            value={yearDraft}
             onChange={(e) =>
-              setYear(Number(e.target.value) || new Date().getFullYear())
+              setYearDraft(Number(e.target.value) || new Date().getFullYear())
             }
+            onKeyDown={onKeyDownRefresh}
             className={yearInputClass}
             min="2000"
           />
         </div>
 
-        {/* Búsqueda */}
+        {/* Top (draft) */}
+        <div className="flex flex-col">
+          <label className="text-[11px] uppercase tracking-[0.18em] text-[color-mix(in srgb,var(--text)_65%,transparent)]">
+            Top
+          </label>
+          <input
+            type="number"
+            value={topDraft}
+            onChange={(e) => setTopDraft(e.target.value)}
+            onKeyDown={onKeyDownRefresh}
+            placeholder="(todos)"
+            className={topInputClass}
+            min="1"
+          />
+        </div>
+
+        {/* Búsqueda (solo UI) */}
         <div className="flex-1 min-w-[220px]">
           <label className="text-[11px] uppercase tracking-[0.18em] text-[color-mix(in srgb,var(--text)_65%,transparent)]">
             Buscar
@@ -135,7 +245,21 @@ function ItemsAnnualSummaryTable({ token }) {
             className={searchInputClass}
           />
         </div>
+
+        {/* Refrescar */}
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={loading || !token}
+          className={buttonClass}
+          title="Aplica Año/Top y vuelve a cargar los datos"
+        >
+          {loading ? "Cargando..." : "Refrescar"}
+        </button>
       </div>
+
+      {/* Error */}
+      {errorMsg ? <div className={errorClass}>{errorMsg}</div> : null}
 
       {/* TABLA */}
       <div className={tableWrapClass}>
@@ -166,12 +290,15 @@ function ItemsAnnualSummaryTable({ token }) {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={4} className={emptyClass}>
-                  Sin datos para el año seleccionado.
+                  {loading ? "Cargando datos..." : "Sin datos para el año seleccionado."}
                 </td>
               </tr>
             ) : (
               filtered.map((row, idx) => (
-                <tr key={row.item_id || `${row.item}-${idx}`} className={rowBase}>
+                <tr
+                  key={row.item_id || `${row.item}-${idx}`}
+                  className={rowBase}
+                >
                   <td className={tdItem}>{row.item}</td>
 
                   <td className={tdNum}>
@@ -188,12 +315,20 @@ function ItemsAnnualSummaryTable({ token }) {
         </table>
       </div>
 
-      {/* NOTA INFORMATIVA */}
-      <p className={noteClass}>
-        El precio promedio se calcula como{" "}
-        <strong className={noteStrong}>Gasto total ÷ Cantidad total</strong>. Los
-        valores incluyen ITBIS si el artículo lo aplica.
-      </p>
+      {/* NOTA + CONTADOR */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className={noteClass}>
+          El precio promedio se calcula como{" "}
+          <strong className={noteStrong}>Gasto total ÷ Cantidad total</strong>.
+          Los valores incluyen ITBIS si el artículo lo aplica.
+        </p>
+
+        <span className="text-xs text-[color-mix(in srgb,var(--muted)_80%,transparent)]">
+          Mostrando:{" "}
+          <strong className={noteStrong}>{filtered.length}</strong> de{" "}
+          <strong className={noteStrong}>{data.length}</strong>
+        </span>
+      </div>
     </div>
   );
 }
