@@ -75,11 +75,12 @@ function TopVariableCategoriesChart({ token }) {
       },
 
       tooltip: {
-        backgroundColor: "var(--tooltip-bg, #020617)",
+        backgroundColor:
+          "color-mix(in srgb, var(--panel) 88%, var(--bg-2) 12%)",
         border: `1px solid ${border}`,
-        color: "var(--tooltip-text, #e5e7eb)",
-        borderRadius: "0.5rem",
-        boxShadow: "0 18px 45px rgba(0,0,0,0.9)",
+        color: "var(--text)",
+        borderRadius: "var(--radius-md)",
+        boxShadow: "var(--shadow-lg, 0 18px 45px rgba(0,0,0,0.9))",
       },
 
       gridStroke: "color-mix(in srgb, var(--muted) 22%, transparent)",
@@ -332,9 +333,16 @@ function TopVariableCategoriesChart({ token }) {
                 <Tooltip
                   formatter={(val) => formatMoney(val)}
                   labelFormatter={(name) => name}
-                  contentStyle={{ ...ui.tooltip, fontSize: "0.85rem" }}
-                  itemStyle={{ color: ui.text }}
+                  cursor={{
+                    fill: "color-mix(in srgb, var(--ring) 10%, transparent)",
+                  }}
+                  contentStyle={{
+                    ...ui.tooltip,
+                    fontSize: "0.85rem",
+                  }}
+                  itemStyle={{ color: ui.text, fontWeight: 500 }}
                   labelStyle={{ color: ui.text, fontWeight: 700 }}
+                  wrapperStyle={{ outline: "none" }}
                 />
                 <Bar dataKey="total" fill={ui.warning} radius={[6, 6, 6, 6]}>
                   <LabelList dataKey="total" content={<CustomRightLabel />} />

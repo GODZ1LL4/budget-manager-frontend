@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import supabase from "./lib/supabase"; // Asegúrate de importar correctamente
+import supabase from "./lib/supabase";
 import Login from "./pages/Login";
 import Categories from "./pages/Categories";
 import Accounts from "./pages/Accounts";
@@ -19,7 +19,6 @@ function App() {
   const [session, setSession] = useState(null);
   const [view, setView] = useState("dashboard");
 
-  // ✅ Obtener sesión al cargar la app
   useEffect(() => {
     const restoreSession = async () => {
       const { data } = await supabase.auth.getSession();
@@ -30,7 +29,6 @@ function App() {
 
     restoreSession();
 
-    // ✅ Escuchar cambios de sesión y actualizaciones del token
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (session) {
@@ -46,7 +44,6 @@ function App() {
     };
   }, []);
 
-  // ✅ Logout real
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setSession(null);
@@ -58,7 +55,16 @@ function App() {
       {!session ? (
         <Login onLogin={() => setView("dashboard")} />
       ) : (
-        <AppLayout onLogout={handleLogout} setView={setView}>
+        <AppLayout
+          onLogout={handleLogout}
+          setView={setView}
+          contentWidth={
+            view === "dashboard" || view === "moderndashboard"
+              ? "dashboard"
+              : "default"
+          }
+
+        >
           {view === "categories" && <Categories token={session.access_token} />}
           {view === "accounts" && <Accounts token={session.access_token} />}
           {view === "transactions" && (
@@ -67,10 +73,12 @@ function App() {
           {view === "budgets" && <Budgets token={session.access_token} />}
           {view === "items" && <Items token={session.access_token} />}
           {view === "goals" && <Goals token={session.access_token} />}
-          {view === "dashboard" && <Dashboard token={session.access_token} />}
+          {view === "dashboard" && (
+            <Dashboard token={session.access_token} setView={setView} />
+          )}
           {view === "scenarios" && <Scenarios token={session.access_token} />}
           {view === "moderndashboard" && (
-            <ModernDashboard token={session.access_token} />
+            <ModernDashboard token={session.access_token} setView={setView} />
           )}
           {view === "theme" && <Theme />}
         </AppLayout>

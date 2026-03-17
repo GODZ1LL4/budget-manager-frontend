@@ -12,6 +12,48 @@ import {
   ReferenceLine,
 } from "recharts";
 
+const STORAGE_KEY = "report:expense-forecast:params";
+
+const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+
+function sanitizeForecastParams(raw) {
+  return {
+    months: Number.isFinite(Number(raw?.months))
+      ? clamp(Number(raw.months), 1, 36)
+      : 3,
+    minOccurrences: Number.isFinite(Number(raw?.minOccurrences))
+      ? clamp(Number(raw.minOccurrences), 2, 50)
+      : 3,
+    includeOccasional:
+      typeof raw?.includeOccasional === "boolean"
+        ? raw.includeOccasional
+        : false,
+    includeNoise:
+      typeof raw?.includeNoise === "boolean" ? raw.includeNoise : true,
+    minIntervalDays: Number.isFinite(Number(raw?.minIntervalDays))
+      ? clamp(Number(raw.minIntervalDays), 1, 365)
+      : 3,
+    maxIntervalDays: Number.isFinite(Number(raw?.maxIntervalDays))
+      ? clamp(Number(raw.maxIntervalDays), 1, 3650)
+      : 70,
+    maxCoefVariation: Number.isFinite(Number(raw?.maxCoefVariation))
+      ? Number(raw.maxCoefVariation)
+      : 0.6,
+  };
+}
+
+function getForecastParams() {
+  if (typeof window === "undefined") return sanitizeForecastParams({});
+
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return sanitizeForecastParams({});
+    return sanitizeForecastParams(JSON.parse(saved));
+  } catch {
+    return sanitizeForecastParams({});
+  }
+}
+
 function ProjectedVsActualExpenseByCategoryChart({ token }) {
   const [data, setData] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -61,9 +103,20 @@ function ProjectedVsActualExpenseByCategoryChart({ token }) {
   useEffect(() => {
     if (!token) return;
 
+    const params = getForecastParams();
+
     axios
       .get(`${api}/analytics/projected-vs-actual-expense-by-category`, {
         headers: { Authorization: `Bearer ${token}` },
+        params: {
+          months: params.months,
+          min_occurrences: params.minOccurrences,
+          include_occasional: params.includeOccasional,
+          include_noise: params.includeNoise,
+          min_interval_days: params.minIntervalDays,
+          max_interval_days: params.maxIntervalDays,
+          max_coef_variation: params.maxCoefVariation,
+        },
       })
       .then((res) => {
         setData(Array.isArray(res.data?.data) ? res.data.data : []);
@@ -132,7 +185,7 @@ function ProjectedVsActualExpenseByCategoryChart({ token }) {
           Proyección vs realidad por categoría
         </h3>
         <p className="text-sm mt-1" style={{ color: ui.muted }}>
-          Compara lo proyectado (mediana histórica) con el gasto real del mes{" "}
+          Compara lo proyectado por el motor de forecast con el gasto real del mes{" "}
           <span style={{ color: ui.text, fontWeight: 600 }}>
             {meta?.month || ""}
           </span>

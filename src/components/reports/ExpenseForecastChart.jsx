@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 
+const STORAGE_KEY = "report:expense-forecast:params";
+
 /* ================= Utils ================= */
 
 function toISODate(d) {
@@ -31,6 +33,48 @@ function formatDateShort(iso) {
   const [y, m, d] = String(iso).split("-");
   if (!y || !m || !d) return iso;
   return `${d}/${m}/${y}`;
+}
+
+function sanitizeParams(raw) {
+  return {
+    months: Number.isFinite(Number(raw?.months))
+      ? clamp(Number(raw.months), 1, 36)
+      : 3,
+    minOccurrences: Number.isFinite(Number(raw?.minOccurrences))
+      ? clamp(Number(raw.minOccurrences), 2, 50)
+      : 3,
+    limit: Number.isFinite(Number(raw?.limit))
+      ? clamp(Number(raw.limit), 1, 50)
+      : 15,
+    includeOccasional:
+      typeof raw?.includeOccasional === "boolean"
+        ? raw.includeOccasional
+        : false,
+    includeNoise:
+      typeof raw?.includeNoise === "boolean" ? raw.includeNoise : true,
+    tab: raw?.tab === "cashflow" ? "cashflow" : "expense",
+    minIntervalDays: Number.isFinite(Number(raw?.minIntervalDays))
+      ? clamp(Number(raw.minIntervalDays), 1, 365)
+      : 3,
+    maxIntervalDays: Number.isFinite(Number(raw?.maxIntervalDays))
+      ? clamp(Number(raw.maxIntervalDays), 1, 3650)
+      : 70,
+    maxCoefVariation: Number.isFinite(Number(raw?.maxCoefVariation))
+      ? Number(raw.maxCoefVariation)
+      : 0.6,
+  };
+}
+
+function getInitialParams() {
+  if (typeof window === "undefined") return sanitizeParams({});
+
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return sanitizeParams({});
+    return sanitizeParams(JSON.parse(saved));
+  } catch {
+    return sanitizeParams({});
+  }
 }
 
 /* ================= Token helpers ================= */
@@ -85,13 +129,13 @@ function StatCard({ label, value, tone = "default", size = "md" }) {
 
   return (
     <div
-      className={`
+      className="
         rounded-2xl border
         px-4 py-4
         min-h-[96px]
         flex flex-col justify-between
         min-w-0
-      `}
+      "
       style={{
         borderColor: "var(--border-rgba)",
         background:
@@ -135,12 +179,12 @@ function MiniMetric({ label, value, tone = "default" }) {
       </div>
 
       <div
-        className={`
+        className="
           font-extrabold tabular-nums
           whitespace-nowrap
           leading-tight
           text-[clamp(12px,1.5vw,16px)]
-        `}
+        "
         style={{ color: `color-mix(in srgb, ${token} 92%, var(--text))` }}
         title={value}
       >
@@ -167,11 +211,6 @@ function Badge({ tone = "default", children }) {
   );
 }
 
-/**
- * Tooltip reutilizable (tokenizado)
- * Requiere primitives en index.css:
- *  - .ff-tooltip
- */
 function InfoTip({ children, widthClass = "w-56" }) {
   return (
     <span className="relative inline-flex items-center group cursor-help select-none">
@@ -199,6 +238,7 @@ function InfoTip({ children, widthClass = "w-56" }) {
 
 export default function GeneralMonthlyProjection({ token }) {
   const api = import.meta.env.VITE_API_URL;
+  const initialParams = useMemo(() => getInitialParams(), []);
 
   const todayISO = useMemo(() => toISODate(new Date()), []);
   const defaultDateTo = useMemo(() => lastDayOfMonthISO(todayISO), [todayISO]);
@@ -206,20 +246,30 @@ export default function GeneralMonthlyProjection({ token }) {
   const [dateFrom, setDateFrom] = useState(todayISO);
   const [dateTo, setDateTo] = useState(defaultDateTo);
 
-  const [months, setMonths] = useState(3);
-  const [minOccurrences, setMinOccurrences] = useState(3);
-  const [limit, setLimit] = useState(15);
+  const [months, setMonths] = useState(initialParams.months);
+  const [minOccurrences, setMinOccurrences] = useState(
+    initialParams.minOccurrences
+  );
+  const [limit, setLimit] = useState(initialParams.limit);
 
-  const [includeOccasional, setIncludeOccasional] = useState(false);
-  const [includeNoise, setIncludeNoise] = useState(true);
+  const [includeOccasional, setIncludeOccasional] = useState(
+    initialParams.includeOccasional
+  );
+  const [includeNoise, setIncludeNoise] = useState(initialParams.includeNoise);
 
-  const [tab, setTab] = useState("expense"); // "expense" | "cashflow"
+  const [tab, setTab] = useState(initialParams.tab);
   const includeIncome = tab === "cashflow";
   const includeBalance = tab === "cashflow";
 
-  const [minIntervalDays, setMinIntervalDays] = useState(3);
-  const [maxIntervalDays, setMaxIntervalDays] = useState(70);
-  const [maxCoefVariation, setMaxCoefVariation] = useState(0.6);
+  const [minIntervalDays, setMinIntervalDays] = useState(
+    initialParams.minIntervalDays
+  );
+  const [maxIntervalDays, setMaxIntervalDays] = useState(
+    initialParams.maxIntervalDays
+  );
+  const [maxCoefVariation, setMaxCoefVariation] = useState(
+    initialParams.maxCoefVariation
+  );
 
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -234,6 +284,41 @@ export default function GeneralMonthlyProjection({ token }) {
     if (!dateFrom) return;
     setDateTo(lastDayOfMonthISO(dateFrom));
   }, [dateFrom]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const paramsToSave = sanitizeParams({
+      months,
+      minOccurrences,
+      limit,
+      includeOccasional,
+      includeNoise,
+      tab,
+      minIntervalDays,
+      maxIntervalDays,
+      maxCoefVariation,
+    });
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(paramsToSave));
+    } catch (e) {
+      console.error(
+        "No se pudieron guardar los parámetros de expense forecast:",
+        e
+      );
+    }
+  }, [
+    months,
+    minOccurrences,
+    limit,
+    includeOccasional,
+    includeNoise,
+    tab,
+    minIntervalDays,
+    maxIntervalDays,
+    maxCoefVariation,
+  ]);
 
   const loadData = async () => {
     if (!token) return;
@@ -282,16 +367,13 @@ export default function GeneralMonthlyProjection({ token }) {
     if (!token || didInitialLoad.current) return;
     didInitialLoad.current = true;
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   useEffect(() => {
     if (!didInitialLoad.current) return;
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab]);
 
-  // Derived
   const totalIncome = Number(summary?.total_income || 0);
   const totalExpense = Number(summary?.total_expense || 0);
   const txExpected = Number(summary?.transactions_expected || 0);
@@ -331,16 +413,16 @@ export default function GeneralMonthlyProjection({ token }) {
         boxShadow: "0 18px 55px rgba(0,0,0,0.45)",
       }}
     >
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 min-w-0">
+      <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4 min-w-0">
         <div className="flex-1 min-w-0">
           <h3 className="text-xl sm:text-2xl font-bold text-[var(--text)] tracking-tight">
-            Proyeccion de flujo por período
+            Proyección de flujo por período
           </h3>
+
           <p className="text-sm text-[color-mix(in srgb,var(--text)_86%,transparent)] mt-1 max-w-4xl">
             Proyección por período basada en patrones recurrentes + eventos. En
-            Flujo se incluye ingresos y balance disponible (restando lo asignado
-            a metas).
+            Flujo se incluyen ingresos y balance disponible, restando lo
+            asignado a metas.
           </p>
 
           <div className="mt-3 flex flex-wrap items-center gap-3 min-w-0">
@@ -351,6 +433,7 @@ export default function GeneralMonthlyProjection({ token }) {
               >
                 Gastos
               </TabPill>
+
               <TabPill
                 active={tab === "cashflow"}
                 onClick={() => setTab("cashflow")}
@@ -371,7 +454,7 @@ export default function GeneralMonthlyProjection({ token }) {
         <button
           onClick={loadData}
           disabled={loading}
-          className="ff-btn ff-btn-primary self-start lg:self-auto disabled:opacity-60"
+          className="ff-btn ff-btn-primary self-start xl:self-auto disabled:opacity-60"
         >
           {loading ? "Proyectando..." : "Proyectar"}
         </button>
@@ -390,7 +473,6 @@ export default function GeneralMonthlyProjection({ token }) {
         </div>
       ) : null}
 
-      {/* KPIs */}
       <div className="space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard
@@ -425,7 +507,6 @@ export default function GeneralMonthlyProjection({ token }) {
           />
         </div>
 
-        {/* Balance */}
         <div className="grid grid-cols-1">
           <div
             className="rounded-2xl border p-4"
@@ -481,7 +562,6 @@ export default function GeneralMonthlyProjection({ token }) {
         </div>
       </div>
 
-      {/* Filters */}
       <div
         className="rounded-2xl border p-4"
         style={{
@@ -489,150 +569,178 @@ export default function GeneralMonthlyProjection({ token }) {
           background: "color-mix(in srgb, var(--panel) 35%, transparent)",
         }}
       >
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-end">
-          <div className="lg:col-span-5">
-            <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
-              Rango
-            </label>
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+          <div className="xl:col-span-9 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+              <div className="xl:col-span-2">
+                <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
+                  Rango
+                </label>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 min-w-0">
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="ff-input w-full min-w-0"
-              />
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="ff-input w-full min-w-0"
-              />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 min-w-0">
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="ff-input w-full min-w-0"
+                  />
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="ff-input w-full min-w-0"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
+                  Historial (meses)
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={36}
+                  value={months}
+                  onChange={(e) =>
+                    setMonths(clamp(Number(e.target.value), 1, 36))
+                  }
+                  className="ff-input w-full"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
+                  Min. ocurrencias
+                </label>
+                <input
+                  type="number"
+                  min={2}
+                  max={50}
+                  value={minOccurrences}
+                  onChange={(e) =>
+                    setMinOccurrences(clamp(Number(e.target.value), 2, 50))
+                  }
+                  className="ff-input w-full"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
+                  Top
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={limit}
+                  onChange={(e) =>
+                    setLimit(clamp(Number(e.target.value), 1, 50))
+                  }
+                  className="ff-input w-full"
+                />
+              </div>
             </div>
+
+            <details className="rounded-xl border px-3 py-3"
+              style={{
+                borderColor: "var(--border-rgba)",
+                background: "color-mix(in srgb, var(--panel) 45%, transparent)",
+              }}
+            >
+              <summary className="cursor-pointer text-sm text-[var(--text)] select-none font-semibold">
+                Ajustes avanzados
+              </summary>
+
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
+                    Min intervalo (días)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={minIntervalDays}
+                    onChange={(e) =>
+                      setMinIntervalDays(clamp(Number(e.target.value), 1, 365))
+                    }
+                    className="ff-input w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
+                    Max intervalo (días)
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={maxIntervalDays}
+                    onChange={(e) =>
+                      setMaxIntervalDays(clamp(Number(e.target.value), 1, 3650))
+                    }
+                    className="ff-input w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
+                    Coef. variación máx
+                  </label>
+                  <input
+                    type="number"
+                    step="0.05"
+                    min={0.05}
+                    max={2}
+                    value={maxCoefVariation}
+                    onChange={(e) => setMaxCoefVariation(Number(e.target.value))}
+                    className="ff-input w-full"
+                  />
+                </div>
+              </div>
+            </details>
           </div>
 
-          <div className="lg:col-span-2">
-            <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
-              Historial (meses)
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={36}
-              value={months}
-              onChange={(e) => setMonths(clamp(Number(e.target.value), 1, 36))}
-              className="ff-input w-full"
-            />
-          </div>
+          <div className="xl:col-span-3">
+            <div
+              className="rounded-2xl border p-4 h-full"
+              style={{
+                borderColor: "var(--border-rgba)",
+                background: "color-mix(in srgb, var(--panel) 50%, transparent)",
+              }}
+            >
+              <div className="text-xs uppercase tracking-[0.18em] text-[color-mix(in srgb,var(--text)_72%,transparent)] mb-3">
+                Inclusión
+              </div>
 
-          <div className="lg:col-span-2">
-            <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
-              Min. ocurrencias
-            </label>
-            <input
-              type="number"
-              min={2}
-              max={50}
-              value={minOccurrences}
-              onChange={(e) =>
-                setMinOccurrences(clamp(Number(e.target.value), 2, 50))
-              }
-              className="ff-input w-full"
-            />
-          </div>
+              <div className="flex flex-col gap-3">
+                <label className="flex items-center gap-2 text-sm text-[var(--text)]">
+                  <input
+                    type="checkbox"
+                    checked={includeOccasional}
+                    onChange={(e) => setIncludeOccasional(e.target.checked)}
+                    className="accent-[var(--primary)]"
+                  />
+                  Incluir ocasionales
+                </label>
 
-          <div className="lg:col-span-1">
-            <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
-              Top
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={50}
-              value={limit}
-              onChange={(e) => setLimit(clamp(Number(e.target.value), 1, 50))}
-              className="ff-input w-full"
-            />
-          </div>
+                <label className="flex items-center gap-2 text-sm text-[var(--text)]">
+                  <input
+                    type="checkbox"
+                    checked={includeNoise}
+                    onChange={(e) => setIncludeNoise(e.target.checked)}
+                    className="accent-[var(--primary)]"
+                  />
+                  Incluir eventos
+                </label>
 
-          <div className="lg:col-span-2 flex flex-col gap-2">
-            <label className="flex items-center gap-2 text-sm text-[var(--text)]">
-              <input
-                type="checkbox"
-                checked={includeOccasional}
-                onChange={(e) => setIncludeOccasional(e.target.checked)}
-                className="accent-[var(--primary)]"
-              />
-              Incluir ocasionales
-            </label>
-
-            <label className="flex items-center gap-2 text-sm text-[var(--text)]">
-              <input
-                type="checkbox"
-                checked={includeNoise}
-                onChange={(e) => setIncludeNoise(e.target.checked)}
-                className="accent-[var(--primary)]"
-              />
-              Incluir eventos
-            </label>
+                
+              </div>
+            </div>
           </div>
         </div>
-
-        <details className="mt-3">
-          <summary className="cursor-pointer text-sm text-[var(--text)] select-none">
-            Ajustes avanzados
-          </summary>
-
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
-                Min intervalo (días)
-              </label>
-              <input
-                type="number"
-                min={1}
-                value={minIntervalDays}
-                onChange={(e) =>
-                  setMinIntervalDays(clamp(Number(e.target.value), 1, 365))
-                }
-                className="ff-input w-full"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
-                Max intervalo (días)
-              </label>
-              <input
-                type="number"
-                min={1}
-                value={maxIntervalDays}
-                onChange={(e) =>
-                  setMaxIntervalDays(clamp(Number(e.target.value), 1, 3650))
-                }
-                className="ff-input w-full"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
-                Coef. variación máx
-              </label>
-              <input
-                type="number"
-                step="0.05"
-                min={0.05}
-                max={2}
-                value={maxCoefVariation}
-                onChange={(e) => setMaxCoefVariation(Number(e.target.value))}
-                className="ff-input w-full"
-              />
-            </div>
-          </div>
-        </details>
       </div>
 
-      {/* Table */}
       <div
         className="relative overflow-hidden rounded-2xl border"
         style={{
@@ -771,7 +879,6 @@ export default function GeneralMonthlyProjection({ token }) {
                     </td>
 
                     <td className="px-2 py-2 text-center align-top">
-                      {/* regla app: ingreso=success, gasto=danger */}
                       <Badge tone={isIncomeRow ? "success" : "danger"}>
                         {isIncomeRow ? "Ingreso" : "Gasto"}
                       </Badge>

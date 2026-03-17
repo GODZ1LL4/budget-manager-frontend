@@ -1,13 +1,49 @@
-// src/components/reports/AntExpensesReport.jsx
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Modal from "../Modal";
 import FFSelect from "../FFSelect";
 
-function AntExpensesReport({ token }) {
+const STORAGE_KEY = "report:ant-expenses:params";
+
+function clamp(n, min, max) {
+  const num = Number(n);
+  if (!Number.isFinite(num)) return min;
+  return Math.max(min, Math.min(max, num));
+}
+
+function sanitizeParams(raw) {
+  return {
+    maxAmount: Number.isFinite(Number(raw?.maxAmount))
+      ? clamp(raw.maxAmount, 1, 100000)
+      : 200,
+    minCount: Number.isFinite(Number(raw?.minCount))
+      ? clamp(raw.minCount, 1, 100)
+      : 3,
+    groupBy: raw?.groupBy === "category" ? "category" : "description",
+    excludeAuto:
+      typeof raw?.excludeAuto === "boolean" ? raw.excludeAuto : true,
+    limit: Number.isFinite(Number(raw?.limit))
+      ? clamp(raw.limit, 5, 50)
+      : 15,
+  };
+}
+
+function getInitialParams() {
+  if (typeof window === "undefined") return sanitizeParams({});
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return sanitizeParams({});
+    return sanitizeParams(JSON.parse(saved));
+  } catch {
+    return sanitizeParams({});
+  }
+}
+
+function AntExpensesReport({ token, compact = false }) {
   const api = import.meta.env.VITE_API_URL;
 
-  // defaults: últimos 30 días
+  const initialParams = useMemo(() => getInitialParams(), []);
+
   const today = new Date();
   const toDefault = today.toISOString().split("T")[0];
   const fromDefault = new Date(
@@ -20,17 +56,16 @@ function AntExpensesReport({ token }) {
 
   const [dateFrom, setDateFrom] = useState(fromDefault);
   const [dateTo, setDateTo] = useState(toDefault);
-  const [maxAmount, setMaxAmount] = useState(200);
-  const [minCount, setMinCount] = useState(3);
-  const [groupBy, setGroupBy] = useState("description"); // description|category
-  const [excludeAuto, setExcludeAuto] = useState(true);
-  const [limit, setLimit] = useState(15);
+  const [maxAmount, setMaxAmount] = useState(initialParams.maxAmount);
+  const [minCount, setMinCount] = useState(initialParams.minCount);
+  const [groupBy, setGroupBy] = useState(initialParams.groupBy);
+  const [excludeAuto, setExcludeAuto] = useState(initialParams.excludeAuto);
+  const [limit, setLimit] = useState(initialParams.limit);
 
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // modal de detalle (TODAS)
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(null);
 
@@ -56,10 +91,21 @@ function AntExpensesReport({ token }) {
         background: cardBg,
         boxShadow: "0 16px 40px rgba(0,0,0,0.85)",
       },
+      compactCard: {
+        border: "none",
+        background: "transparent",
+        boxShadow: "none",
+        padding: 0,
+      },
       tableWrap: {
         border: `1px solid ${border}`,
         borderRadius: "var(--radius-md)",
         background: surface,
+      },
+      compactTableWrap: {
+        border: `1px solid ${border}`,
+        borderRadius: "18px",
+        background: "color-mix(in srgb, var(--bg-2) 70%, var(--panel))",
       },
       theadBg: headerBg,
       rowHover: "color-mix(in srgb, var(--panel-2) 55%, transparent)",
@@ -83,6 +129,11 @@ function AntExpensesReport({ token }) {
         borderRadius: "var(--radius-md)",
       },
       danger: "var(--danger)",
+      filterCard: {
+        border: `1px solid ${border}`,
+        borderRadius: "var(--radius-md)",
+        background: "color-mix(in srgb, var(--panel) 40%, transparent)",
+      },
     };
   }, []);
 
@@ -92,6 +143,27 @@ function AntExpensesReport({ token }) {
       currency: "DOP",
       minimumFractionDigits: 2,
     }).format(Number.isFinite(Number(value)) ? Number(value) : 0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const paramsToSave = sanitizeParams({
+      maxAmount,
+      minCount,
+      groupBy,
+      excludeAuto,
+      limit,
+    });
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(paramsToSave));
+    } catch (e) {
+      console.error(
+        "No se pudieron guardar los parámetros de gastos hormiga:",
+        e
+      );
+    }
+  }, [maxAmount, minCount, groupBy, excludeAuto, limit]);
 
   const fetchData = async () => {
     if (!token) return;
@@ -122,7 +194,6 @@ function AntExpensesReport({ token }) {
 
   useEffect(() => {
     if (token) fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const fetchDetail = async (row) => {
@@ -134,10 +205,6 @@ function AntExpensesReport({ token }) {
     setDetailError("");
 
     try {
-      // 👇 IMPORTANTE:
-      // - Para category: key = category_id
-      // - Para description: key = la "llave" del grupo (en tu endpoint /ant-expenses es normalizedDesc)
-      //   Por eso el backend /ant-expenses-detail debe filtrar por normalizeDesc(description) === key
       const res = await axios.get(`${api}/analytics/ant-expenses-detail`, {
         headers: { Authorization: `Bearer ${token}` },
         params: {
@@ -147,7 +214,7 @@ function AntExpensesReport({ token }) {
           date_to: dateTo,
           max_amount: maxAmount,
           exclude_auto: excludeAuto ? 1 : 0,
-          limit: 2000, // “todas” (cap de seguridad)
+          limit: 2000,
           offset: 0,
         },
       });
@@ -181,143 +248,309 @@ function AntExpensesReport({ token }) {
     setDetailLoading(false);
   };
 
+  const thClass = compact
+    ? "px-2 py-1.5 text-left font-medium text-xs"
+    : "px-3 py-2 text-left font-medium";
+  const tdClass = compact ? "px-2 py-1.5" : "px-3 py-2";
+
   return (
-    <div className="rounded-2xl p-6 space-y-4" style={ui.card}>
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h3
-            className="text-lg md:text-xl font-semibold"
-            style={{ color: ui.text }}
-          >
-            Gastos hormiga
-          </h3>
-          <p className="text-sm mt-1" style={{ color: ui.muted }}>
-            Detecta gastos pequeños y repetitivos que se acumulan con el tiempo.
-          </p>
+    <div
+      className={compact ? "space-y-4" : "rounded-2xl p-6 space-y-4"}
+      style={compact ? ui.compactCard : ui.card}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          {!compact ? (
+            <>
+              <h3
+                className="text-lg md:text-xl font-semibold"
+                style={{ color: ui.text }}
+              >
+                Gastos hormiga
+              </h3>
+              <p className="text-sm mt-1" style={{ color: ui.muted }}>
+                Detecta gastos pequeños y repetitivos que se acumulan con el tiempo.
+              </p>
+            </>
+          ) : (
+            <>
+              <p
+                className="text-[10px] uppercase tracking-[0.18em] font-bold"
+                style={{ color: ui.muted }}
+              >
+                Escaneo de microgastos
+              </p>
+              <p className="text-sm mt-1" style={{ color: ui.text, fontWeight: 700 }}>
+                Top gastos hormiga del período
+              </p>
+            </>
+          )}
         </div>
 
-        <button
-          className="px-3 py-2 text-sm"
-          style={ui.btn}
-          onClick={fetchData}
-          disabled={loading}
-          title="Actualizar"
-        >
-          {loading ? "Cargando..." : "Actualizar"}
-        </button>
+        <div className="flex items-center gap-2">
+          {compact ? (
+            <details>
+              <summary
+                className="px-3 py-2 text-xs rounded-xl cursor-pointer select-none"
+                style={ui.btn}
+              >
+                Filtros
+              </summary>
+
+              <div
+                className="mt-2 rounded-2xl p-3 w-[min(92vw,420px)]"
+                style={ui.filterCard}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <span style={{ color: ui.muted }}>Desde</span>
+                    <input
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      style={ui.input}
+                      className="px-2 h-10"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <span style={{ color: ui.muted }}>Hasta</span>
+                    <input
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      style={ui.input}
+                      className="px-2 h-10"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <span style={{ color: ui.muted }}>Máximo</span>
+                    <input
+                      type="number"
+                      value={maxAmount}
+                      min="1"
+                      onChange={(e) =>
+                        setMaxAmount(clamp(Number(e.target.value), 1, 100000))
+                      }
+                      style={ui.input}
+                      className="px-2 h-10"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <span style={{ color: ui.muted }}>Mínimo veces</span>
+                    <input
+                      type="number"
+                      value={minCount}
+                      min="1"
+                      onChange={(e) =>
+                        setMinCount(clamp(Number(e.target.value), 1, 100))
+                      }
+                      style={ui.input}
+                      className="px-2 h-10"
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1 sm:col-span-2">
+                    <span style={{ color: ui.muted }}>Agrupar por</span>
+                    <div className="h-10">
+                      <FFSelect
+                        value={groupBy}
+                        onChange={(v) => setGroupBy(v)}
+                        options={[
+                          { id: "description", name: "Descripción" },
+                          { id: "category", name: "Categoría" },
+                        ]}
+                        placeholder="Selecciona..."
+                        searchable={false}
+                        clearable={false}
+                        getOptionValue={(o) => o.id}
+                        getOptionLabel={(o) => o.name}
+                        className="h-10"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <span style={{ color: ui.muted }}>Top</span>
+                    <input
+                      type="number"
+                      value={limit}
+                      min="5"
+                      max="50"
+                      onChange={(e) =>
+                        setLimit(clamp(Number(e.target.value), 5, 50))
+                      }
+                      style={ui.input}
+                      className="px-2 h-10"
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2 select-none text-sm pt-7">
+                    <input
+                      type="checkbox"
+                      checked={excludeAuto}
+                      onChange={(e) => setExcludeAuto(e.target.checked)}
+                    />
+                    <span style={{ color: ui.text }}>Excluir [AUTO]</span>
+                  </label>
+                </div>
+              </div>
+            </details>
+          ) : null}
+
+          <button
+            className="px-3 py-2 text-sm"
+            style={ui.btn}
+            onClick={fetchData}
+            disabled={loading}
+            title="Actualizar"
+          >
+            {loading ? "Cargando..." : compact ? "Refrescar" : "Actualizar"}
+          </button>
+        </div>
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-wrap gap-3 text-sm items-end">
-        <div className="flex flex-col gap-1">
-          <span style={{ color: ui.muted }}>Desde</span>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            style={ui.input}
-            className="px-2 h-10"
-            onFocus={(e) => {
-              e.currentTarget.style.boxShadow = ui.inputFocusRing;
-              e.currentTarget.style.borderColor = ui.inputHoverBorder;
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.boxShadow = "none";
-              e.currentTarget.style.borderColor = ui.border;
-            }}
-          />
-        </div>
+      {!compact && (
+        <div
+          className="grid grid-cols-1 xl:grid-cols-12 gap-4 p-4"
+          style={ui.filterCard}
+        >
+          <div className="xl:col-span-9 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-3 items-end">
+              <div className="xl:col-span-2 flex flex-col gap-1">
+                <span style={{ color: ui.muted }}>Rango</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    style={ui.input}
+                    className="px-2 h-10"
+                    onFocus={(e) => {
+                      e.currentTarget.style.boxShadow = ui.inputFocusRing;
+                      e.currentTarget.style.borderColor = ui.inputHoverBorder;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.boxShadow = "none";
+                      e.currentTarget.style.borderColor = ui.border;
+                    }}
+                  />
+                  <input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    style={ui.input}
+                    className="px-2 h-10"
+                    onFocus={(e) => {
+                      e.currentTarget.style.boxShadow = ui.inputFocusRing;
+                      e.currentTarget.style.borderColor = ui.inputHoverBorder;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.boxShadow = "none";
+                      e.currentTarget.style.borderColor = ui.border;
+                    }}
+                  />
+                </div>
+              </div>
 
-        <div className="flex flex-col gap-1">
-          <span style={{ color: ui.muted }}>Hasta</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            style={ui.input}
-            className="px-2 h-10"
-            onFocus={(e) => {
-              e.currentTarget.style.boxShadow = ui.inputFocusRing;
-              e.currentTarget.style.borderColor = ui.inputHoverBorder;
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.boxShadow = "none";
-              e.currentTarget.style.borderColor = ui.border;
-            }}
-          />
-        </div>
+              <div className="flex flex-col gap-1">
+                <span style={{ color: ui.muted }}>Máximo por compra</span>
+                <input
+                  type="number"
+                  value={maxAmount}
+                  min="1"
+                  onChange={(e) =>
+                    setMaxAmount(clamp(Number(e.target.value), 1, 100000))
+                  }
+                  style={ui.input}
+                  className="w-full px-2 h-10"
+                />
+              </div>
 
-        <div className="flex flex-col gap-1">
-          <span style={{ color: ui.muted }}>Máximo por compra</span>
-          <input
-            type="number"
-            value={maxAmount}
-            min="1"
-            onChange={(e) => setMaxAmount(Number(e.target.value))}
-            style={ui.input}
-            className="w-32 px-2 h-10"
-          />
-        </div>
+              <div className="flex flex-col gap-1">
+                <span style={{ color: ui.muted }}>Mínimo veces</span>
+                <input
+                  type="number"
+                  value={minCount}
+                  min="1"
+                  onChange={(e) =>
+                    setMinCount(clamp(Number(e.target.value), 1, 100))
+                  }
+                  style={ui.input}
+                  className="w-full px-2 h-10"
+                />
+              </div>
 
-        <div className="flex flex-col gap-1">
-          <span style={{ color: ui.muted }}>Mínimo veces</span>
-          <input
-            type="number"
-            value={minCount}
-            min="1"
-            onChange={(e) => setMinCount(Number(e.target.value))}
-            style={ui.input}
-            className="w-28 px-2 h-10"
-          />
-        </div>
+              <div className="flex flex-col gap-1">
+                <span style={{ color: ui.muted }}>Agrupar por</span>
+                <div className="h-10">
+                  <FFSelect
+                    value={groupBy}
+                    onChange={(v) => setGroupBy(v)}
+                    options={[
+                      { id: "description", name: "Descripción" },
+                      { id: "category", name: "Categoría" },
+                    ]}
+                    placeholder="Selecciona..."
+                    searchable={false}
+                    clearable={false}
+                    getOptionValue={(o) => o.id}
+                    getOptionLabel={(o) => o.name}
+                    className="h-10"
+                  />
+                </div>
+              </div>
 
-        {/* FFSelect alineado */}
-        <div className="flex flex-col gap-1 w-[220px]">
-          <span style={{ color: ui.muted }}>Agrupar por</span>
-          <div className="h-10">
-            <FFSelect
-              value={groupBy}
-              onChange={(v) => setGroupBy(v)}
-              options={[
-                { id: "description", name: "Descripción" },
-                { id: "category", name: "Categoría" },
-              ]}
-              placeholder="Selecciona..."
-              searchable={false}
-              clearable={false}
-              getOptionValue={(o) => o.id}
-              getOptionLabel={(o) => o.name}
-              className="h-10"
-            />
+              <div className="flex flex-col gap-1">
+                <span style={{ color: ui.muted }}>Top</span>
+                <input
+                  type="number"
+                  value={limit}
+                  min="5"
+                  max="50"
+                  onChange={(e) =>
+                    setLimit(clamp(Number(e.target.value), 5, 50))
+                  }
+                  style={ui.input}
+                  className="w-full px-2 h-10"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="xl:col-span-3">
+            <div
+              className="rounded-2xl border p-4 h-full"
+              style={{
+                borderColor: ui.border,
+                background: "color-mix(in srgb, var(--panel) 50%, transparent)",
+              }}
+            >
+              <div
+                className="text-xs uppercase tracking-[0.18em] mb-3"
+                style={{ color: ui.muted }}
+              >
+                Inclusión
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <label className="flex items-center gap-2 select-none">
+                  <input
+                    type="checkbox"
+                    checked={excludeAuto}
+                    onChange={(e) => setExcludeAuto(e.target.checked)}
+                  />
+                  <span style={{ color: ui.text }}>Excluir [AUTO]</span>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
+      )}
 
-        <label className="flex items-center gap-2 select-none h-10 pb-[2px]">
-          <input
-            type="checkbox"
-            checked={excludeAuto}
-            onChange={(e) => setExcludeAuto(e.target.checked)}
-          />
-          <span style={{ color: ui.muted }}>Excluir [AUTO]</span>
-        </label>
-
-        <div className="flex flex-col gap-1">
-          <span style={{ color: ui.muted }}>Top</span>
-          <input
-            type="number"
-            value={limit}
-            min="5"
-            max="50"
-            onChange={(e) => setLimit(Number(e.target.value))}
-            style={ui.input}
-            className="w-20 px-2 h-10"
-          />
-        </div>
-      </div>
-
-      {/* Meta */}
-      {meta ? (
+      {meta && !compact ? (
         <div className="flex flex-wrap gap-3 text-xs sm:text-sm">
           <div
             className="rounded-xl px-3 py-2"
@@ -350,7 +583,6 @@ function AntExpensesReport({ token }) {
         </div>
       ) : null}
 
-      {/* Tabla */}
       {loading ? (
         <p className="text-sm" style={{ color: ui.muted }}>
           Cargando gastos hormiga...
@@ -360,18 +592,61 @@ function AntExpensesReport({ token }) {
           No se detectaron gastos hormiga con esos filtros.
         </p>
       ) : (
-        <div className="overflow-x-auto" style={ui.tableWrap}>
+        <div
+          className={compact ? "overflow-x-auto max-h-[360px]" : "overflow-x-auto"}
+          style={compact ? ui.compactTableWrap : ui.tableWrap}
+        >
           <table className="min-w-full text-sm">
             <thead>
               <tr style={{ background: ui.theadBg, color: ui.muted }}>
-                <th className="px-3 py-2 text-left font-medium">
+                <th className={thClass}>
                   {groupBy === "category" ? "Categoría" : "Descripción"}
                 </th>
-                <th className="px-3 py-2 text-right font-medium">Veces</th>
-                <th className="px-3 py-2 text-right font-medium">Total</th>
-                <th className="px-3 py-2 text-right font-medium">Promedio</th>
-                <th className="px-3 py-2 text-right font-medium">Última vez</th>
-                <th className="px-3 py-2 text-right font-medium">Detalle</th>
+                <th
+                  className={
+                    compact
+                      ? "px-2 py-1.5 text-right font-medium text-xs"
+                      : "px-3 py-2 text-right font-medium"
+                  }
+                >
+                  Veces
+                </th>
+                <th
+                  className={
+                    compact
+                      ? "px-2 py-1.5 text-right font-medium text-xs"
+                      : "px-3 py-2 text-right font-medium"
+                  }
+                >
+                  Total
+                </th>
+                <th
+                  className={
+                    compact
+                      ? "px-2 py-1.5 text-right font-medium text-xs"
+                      : "px-3 py-2 text-right font-medium"
+                  }
+                >
+                  Promedio
+                </th>
+                <th
+                  className={
+                    compact
+                      ? "px-2 py-1.5 text-right font-medium text-xs"
+                      : "px-3 py-2 text-right font-medium"
+                  }
+                >
+                  Última vez
+                </th>
+                <th
+                  className={
+                    compact
+                      ? "px-2 py-1.5 text-right font-medium text-xs"
+                      : "px-3 py-2 text-right font-medium"
+                  }
+                >
+                  Detalle
+                </th>
               </tr>
             </thead>
 
@@ -396,34 +671,34 @@ function AntExpensesReport({ token }) {
                       e.currentTarget.style.background = baseBg;
                     }}
                   >
-                    <td className="px-3 py-2" style={{ color: ui.text }}>
+                    <td className={tdClass} style={{ color: ui.text }}>
                       {r.label}
                     </td>
                     <td
-                      className="px-3 py-2 text-right"
+                      className={compact ? "px-2 py-1.5 text-right" : "px-3 py-2 text-right"}
                       style={{ color: ui.text }}
                     >
                       {r.count}
                     </td>
                     <td
-                      className="px-3 py-2 text-right"
+                      className={compact ? "px-2 py-1.5 text-right" : "px-3 py-2 text-right"}
                       style={{ color: ui.text }}
                     >
                       {formatCurrency(r.total)}
                     </td>
                     <td
-                      className="px-3 py-2 text-right"
+                      className={compact ? "px-2 py-1.5 text-right" : "px-3 py-2 text-right"}
                       style={{ color: ui.text }}
                     >
                       {formatCurrency(r.avg)}
                     </td>
                     <td
-                      className="px-3 py-2 text-right"
+                      className={compact ? "px-2 py-1.5 text-right" : "px-3 py-2 text-right"}
                       style={{ color: ui.text }}
                     >
                       {r.last_date || "—"}
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className={compact ? "px-2 py-1.5 text-right" : "px-3 py-2 text-right"}>
                       <button
                         className="px-2 py-1 text-xs"
                         style={ui.btn}
@@ -440,7 +715,6 @@ function AntExpensesReport({ token }) {
         </div>
       )}
 
-      {/* Modal: TODAS las transacciones del grupo */}
       <Modal
         isOpen={open}
         onClose={closeModal}
@@ -475,7 +749,6 @@ function AntExpensesReport({ token }) {
             </div>
           </div>
 
-          {/* Estado de carga/error */}
           {detailLoading ? (
             <p className="text-sm" style={{ color: ui.muted }}>
               Cargando transacciones del grupo...
@@ -568,8 +841,6 @@ function AntExpensesReport({ token }) {
                   </tbody>
                 </table>
               </div>
-
-              
             </>
           )}
         </div>

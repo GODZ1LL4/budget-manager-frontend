@@ -33,11 +33,11 @@ function GroupCollapse({ title, count, open, onToggle, children }) {
           color: "var(--text)",
         }}
       >
-        <span className="text-[11px] font-bold uppercase tracking-[0.18em]">
+        <span className="text-[11px] font-bold uppercase tracking-[0.18em] truncate">
           {title}
         </span>
 
-        <span className="flex items-center gap-2">
+        <span className="flex items-center gap-2 shrink-0">
           <span
             className="text-[10px] px-2 py-0.5 rounded-full"
             style={{
@@ -73,7 +73,6 @@ export default function ReportsNavRail({
   groupStorageKey = "reports_group_open_map",
   searchInputRef,
 }) {
-  // Sidebar colapsable (ancho)
   const [railCollapsed, setRailCollapsed] = useLocalStorageState(
     railStorageKey,
     false
@@ -91,7 +90,6 @@ export default function ReportsNavRail({
     localStorage.setItem(storageKey, activeId);
   }, [activeId, storageKey]);
 
-  // Estado abierto/cerrado por grupo
   const [openMap, setOpenMap] = useLocalStorageState(groupStorageKey, {});
 
   const filteredSections = useMemo(() => {
@@ -121,46 +119,44 @@ export default function ReportsNavRail({
     [flat, activeId]
   );
 
-  // Si el filtro sacó el active, mover al primero visible
   useEffect(() => {
     if (!active && flat[0]) setActiveId(flat[0].id);
   }, [active, flat]);
 
-  // Preload del siguiente para UX suave
   const next = useMemo(() => {
     if (!preloadNext || !active) return null;
     const idx = flat.findIndex((x) => x.id === active.id);
     return idx >= 0 ? flat[idx + 1] : null;
   }, [preloadNext, flat, active]);
 
-  // Auto-open de grupos cuando hay búsqueda
   useEffect(() => {
     if (!query.trim()) return;
     const nextMap = { ...openMap };
     for (const g of filteredSections) nextMap[g.groupId] = true;
     setOpenMap(nextMap);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
-  const railWidth = railCollapsed ? "72px" : "240px";
+  const railWidth = railCollapsed ? "84px" : "280px";
 
   return (
-    <div className="grid gap-4" style={{ gridTemplateColumns: `${railWidth} 1fr` }}>
-      {/* LEFT RAIL */}
+    <div
+      className="grid gap-5 items-start"
+      style={{ gridTemplateColumns: `${railWidth} minmax(0, 1fr)` }}
+    >
       <aside
-        className="rounded-2xl p-2 md:sticky md:top-4"
+        className="rounded-[28px] p-3 sticky top-4"
         style={{
           height: "calc(100vh - 2rem)",
           background: "color-mix(in srgb, var(--panel) 85%, transparent)",
           border: "var(--border-w) solid var(--border-rgba)",
           boxShadow: "var(--glow-shadow)",
           overflow: "hidden",
+          minWidth: 0,
         }}
       >
-        {/* Header rail */}
         <div className="flex items-center justify-between gap-2 px-1 py-1">
           {!railCollapsed ? (
-            <div>
+            <div className="min-w-0">
               <div
                 className="text-[11px] font-bold uppercase tracking-[0.18em]"
                 style={{ color: "var(--text)" }}
@@ -184,7 +180,7 @@ export default function ReportsNavRail({
           <button
             type="button"
             onClick={() => setRailCollapsed((v) => !v)}
-            className="px-2 py-1 rounded-lg"
+            className="px-2 py-1 rounded-lg shrink-0"
             style={{
               background: "color-mix(in srgb, var(--panel) 70%, transparent)",
               border: "1px solid var(--border-rgba)",
@@ -196,7 +192,6 @@ export default function ReportsNavRail({
           </button>
         </div>
 
-        {/* Search */}
         {!railCollapsed ? (
           <div className="mt-2 px-1">
             <input
@@ -218,7 +213,6 @@ export default function ReportsNavRail({
               type="button"
               onClick={() => {
                 setRailCollapsed(false);
-                // en el siguiente tick para asegurar que el input exista
                 setTimeout(() => searchInputRef?.current?.focus(), 0);
               }}
               className="w-full px-2 py-2 rounded-lg"
@@ -234,7 +228,6 @@ export default function ReportsNavRail({
           </div>
         )}
 
-        {/* Scrollable nav */}
         <div
           className="mt-3 px-1 pb-2"
           style={{
@@ -244,11 +237,16 @@ export default function ReportsNavRail({
         >
           {filteredSections.map((group) => {
             const isOpen =
-              openMap[group.groupId] ?? (query.trim() ? true : false); // default abierto
+              openMap[group.groupId] ?? (query.trim() ? true : false);
+
             return (
               <GroupCollapse
                 key={group.groupId}
-                title={railCollapsed ? group.groupTitle.slice(0, 2) : group.groupTitle}
+                title={
+                  railCollapsed
+                    ? group.groupTitle.replace(/\s+/g, "").slice(0, 2)
+                    : group.groupTitle
+                }
                 count={group.items.length}
                 open={!railCollapsed && isOpen}
                 onToggle={() =>
@@ -261,7 +259,6 @@ export default function ReportsNavRail({
                 {group.items.map((it) => {
                   const isActive = active?.id === it.id;
 
-                  // En modo colapsado: botones “icon style” (aquí usamos el short como mini label)
                   if (railCollapsed) {
                     return (
                       <button
@@ -302,12 +299,12 @@ export default function ReportsNavRail({
                       }}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-semibold">
+                        <span className="text-sm font-semibold truncate">
                           {it.short || it.title}
                         </span>
                         {it.badge ? (
                           <span
-                            className="text-[10px] px-2 py-0.5 rounded-full"
+                            className="text-[10px] px-2 py-0.5 rounded-full shrink-0"
                             style={{
                               background:
                                 "color-mix(in srgb, var(--panel) 60%, transparent)",
@@ -337,9 +334,8 @@ export default function ReportsNavRail({
         </div>
       </aside>
 
-      {/* RIGHT PANEL */}
       <main
-        className="rounded-2xl p-4 min-h-[240px]"
+        className="rounded-[28px] p-5 xl:p-6 min-h-[240px] min-w-0"
         style={{
           background: "color-mix(in srgb, var(--panel) 85%, transparent)",
           border: "var(--border-w) solid var(--border-rgba)",
@@ -348,7 +344,13 @@ export default function ReportsNavRail({
       >
         {active ? (
           <>
-            <div className="mb-3">
+            <div
+              className="mb-5 pb-3"
+              style={{
+                borderBottom:
+                  "1px solid color-mix(in srgb, var(--border-rgba) 70%, transparent)",
+              }}
+            >
               <h3
                 className="text-sm font-bold uppercase tracking-[0.18em]"
                 style={{ color: "var(--text)" }}
@@ -362,7 +364,7 @@ export default function ReportsNavRail({
               ) : null}
             </div>
 
-            <div>{active.render()}</div>
+            <div className="min-w-0">{active.render()}</div>
 
             {next ? <div className="hidden">{next.render()}</div> : null}
           </>

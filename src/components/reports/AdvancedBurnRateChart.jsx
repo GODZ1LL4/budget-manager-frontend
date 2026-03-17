@@ -10,6 +10,58 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+import Modal from "../Modal";
+
+const STORAGE_KEY = "report:advanced-burn-rate:params";
+
+const DEFAULT_PARAMS = {
+  months: 6,
+  minOccurrences: 3,
+  includeOccasional: false,
+  includeNoise: true,
+  minIntervalDays: 3,
+  maxIntervalDays: 70,
+  maxCoefVariation: 0.6,
+};
+
+function sanitizeParams(raw) {
+  return {
+    months: Number.isFinite(Number(raw?.months))
+      ? Number(raw.months)
+      : DEFAULT_PARAMS.months,
+    minOccurrences: Number.isFinite(Number(raw?.minOccurrences))
+      ? Number(raw.minOccurrences)
+      : DEFAULT_PARAMS.minOccurrences,
+    includeOccasional:
+      typeof raw?.includeOccasional === "boolean"
+        ? raw.includeOccasional
+        : DEFAULT_PARAMS.includeOccasional,
+    includeNoise:
+      typeof raw?.includeNoise === "boolean"
+        ? raw.includeNoise
+        : DEFAULT_PARAMS.includeNoise,
+    minIntervalDays: Number.isFinite(Number(raw?.minIntervalDays))
+      ? Number(raw.minIntervalDays)
+      : DEFAULT_PARAMS.minIntervalDays,
+    maxIntervalDays: Number.isFinite(Number(raw?.maxIntervalDays))
+      ? Number(raw.maxIntervalDays)
+      : DEFAULT_PARAMS.maxIntervalDays,
+    maxCoefVariation: Number.isFinite(Number(raw?.maxCoefVariation))
+      ? Number(raw.maxCoefVariation)
+      : DEFAULT_PARAMS.maxCoefVariation,
+  };
+}
+
+function getInitialParams() {
+  if (typeof window === "undefined") return DEFAULT_PARAMS;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return DEFAULT_PARAMS;
+    return sanitizeParams(JSON.parse(saved));
+  } catch {
+    return DEFAULT_PARAMS;
+  }
+}
 
 function formatCurrencyDOP(value) {
   const num = Number(value) || 0;
@@ -20,7 +72,11 @@ function formatCurrencyDOP(value) {
   }).format(num);
 }
 
-// Tooltip custom: Expected vs Real (sin duplicar área)
+function formatPercent(value) {
+  if (value == null || !Number.isFinite(Number(value))) return "—";
+  return `${Number(value).toFixed(2)}%`;
+}
+
 function AdvancedBurnRateTooltip({ active, payload, label }) {
   if (!active || !payload || !payload.length) return null;
 
@@ -44,9 +100,7 @@ function AdvancedBurnRateTooltip({ active, payload, label }) {
         minWidth: 220,
       }}
     >
-      <p style={{ marginBottom: 6, fontWeight: 800 }}>
-        Día {label}
-      </p>
+      <p style={{ marginBottom: 6, fontWeight: 800 }}>Día {label}</p>
 
       {filtered.map((entry) => (
         <div
@@ -61,7 +115,9 @@ function AdvancedBurnRateTooltip({ active, payload, label }) {
           <span style={{ color: "var(--muted)", fontWeight: 700 }}>
             {entry.dataKey === "Expected" ? "Esperado" : "Real"}
           </span>
-          <span style={{ fontWeight: 800 }}>{formatCurrencyDOP(entry.value)}</span>
+          <span style={{ fontWeight: 800 }}>
+            {formatCurrencyDOP(entry.value)}
+          </span>
         </div>
       ))}
     </div>
@@ -70,25 +126,33 @@ function AdvancedBurnRateTooltip({ active, payload, label }) {
 
 export default function AdvancedBurnRateChart({ token }) {
   const api = import.meta.env.VITE_API_URL;
+  const initialParams = getInitialParams();
 
-  // ===== Params (editables) =====
-  const [months, setMonths] = useState(6);
-  const [minOccurrences, setMinOccurrences] = useState(3);
-  const [includeOccasional, setIncludeOccasional] = useState(false);
-  const [includeNoise, setIncludeNoise] = useState(true);
+  const [months, setMonths] = useState(initialParams.months);
+  const [minOccurrences, setMinOccurrences] = useState(
+    initialParams.minOccurrences
+  );
+  const [includeOccasional, setIncludeOccasional] = useState(
+    initialParams.includeOccasional
+  );
+  const [includeNoise, setIncludeNoise] = useState(initialParams.includeNoise);
+  const [minIntervalDays, setMinIntervalDays] = useState(
+    initialParams.minIntervalDays
+  );
+  const [maxIntervalDays, setMaxIntervalDays] = useState(
+    initialParams.maxIntervalDays
+  );
+  const [maxCoefVariation, setMaxCoefVariation] = useState(
+    initialParams.maxCoefVariation
+  );
 
-  const [minIntervalDays, setMinIntervalDays] = useState(3);
-  const [maxIntervalDays, setMaxIntervalDays] = useState(70);
-  const [maxCoefVariation, setMaxCoefVariation] = useState(0.6);
-
-  // ===== Data =====
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errMsg, setErrMsg] = useState("");
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const didInitialLoad = useRef(false);
 
-  // ===== Tokenized UI styles =====
   const ui = useMemo(() => {
     const card = {
       background:
@@ -122,14 +186,14 @@ export default function AdvancedBurnRateChart({ token }) {
       label,
       control: controlBase,
       helper: { color: "var(--muted)" },
-
       axisLine: { stroke: "var(--border-rgba)" },
       tick: { fill: "var(--text)", fontSize: 14 },
-      cursor: { stroke: "var(--muted)", strokeWidth: 1, strokeDasharray: "3 3" },
-
+      cursor: {
+        stroke: "var(--muted)",
+        strokeWidth: 1,
+        strokeDasharray: "3 3",
+      },
       legend: { fontSize: "0.95rem", color: "var(--text)" },
-
-      // Botón principal (recalcular) como “warning/primary” según tus tokens
       btn: {
         backgroundColor: "var(--btn-warning-bg)",
         color: "var(--btn-warning-text)",
@@ -137,14 +201,19 @@ export default function AdvancedBurnRateChart({ token }) {
         borderRadius: "var(--btn-radius)",
         padding: "10px 14px",
         fontWeight: 800,
-        boxShadow: "0 0 var(--btn-glow-blur) 0 color-mix(in srgb, var(--glow-color) 40%, transparent)",
+        boxShadow:
+          "0 0 var(--btn-glow-blur) 0 color-mix(in srgb, var(--glow-color) 40%, transparent)",
         transition: "filter 150ms ease, transform 120ms ease, opacity 150ms ease",
       },
-
       detailsBox: {
         border: "1px solid var(--border-rgba)",
         backgroundColor: "color-mix(in srgb, var(--panel) 55%, transparent)",
         borderRadius: "var(--radius-md)",
+      },
+      tableCell: {
+        padding: "12px 10px",
+        borderTop: "1px solid var(--border-rgba)",
+        verticalAlign: "top",
       },
     };
   }, []);
@@ -176,19 +245,47 @@ export default function AdvancedBurnRateChart({ token }) {
     } catch (e) {
       console.error("Advanced burn rate error:", e);
       setData(null);
-      setErrMsg(e.response?.data?.error || "No se pudo calcular el burn rate.");
+      setErrMsg(
+        e.response?.data?.error || "No se pudo calcular el burn rate."
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // 1 carga inicial
   useEffect(() => {
     if (!token || didInitialLoad.current) return;
     didInitialLoad.current = true;
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const paramsToSave = sanitizeParams({
+      months,
+      minOccurrences,
+      includeOccasional,
+      includeNoise,
+      minIntervalDays,
+      maxIntervalDays,
+      maxCoefVariation,
+    });
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(paramsToSave));
+    } catch (e) {
+      console.error("No se pudieron guardar los parámetros del reporte:", e);
+    }
+  }, [
+    months,
+    minOccurrences,
+    includeOccasional,
+    includeNoise,
+    minIntervalDays,
+    maxIntervalDays,
+    maxCoefVariation,
+  ]);
 
   const chartData = useMemo(() => {
     const series = data?.series || [];
@@ -200,6 +297,17 @@ export default function AdvancedBurnRateChart({ token }) {
       isToday: d.day === data?.day_of_month,
     }));
   }, [data]);
+
+  const categoryBreakdown = useMemo(() => {
+    return (data?.category_breakdown || []).filter(
+      (row) =>
+        Number(row.expected_to_date || 0) > 0 ||
+        Number(row.actual_to_date || 0) > 0 ||
+        Number(row.forecast_end_of_month || 0) > 0
+    );
+  }, [data]);
+
+  const categoryTotals = data?.category_totals || null;
 
   if (loading) {
     return (
@@ -216,7 +324,7 @@ export default function AdvancedBurnRateChart({ token }) {
         style={{
           ...ui.card,
           backgroundColor: "color-mix(in srgb, var(--danger) 14%, transparent)",
-          border: `1px solid color-mix(in srgb, var(--danger) 55%, var(--border-rgba))`,
+          border: "1px solid color-mix(in srgb, var(--danger) 55%, var(--border-rgba))",
         }}
       >
         <p style={{ color: "var(--text)", fontWeight: 700 }}>{errMsg}</p>
@@ -248,7 +356,6 @@ export default function AdvancedBurnRateChart({ token }) {
     meta,
   } = data;
 
-  // Histórico usado para aprender patrones
   const historyFrom = meta?.history_from || "—";
   const historyTo = meta?.history_to || "—";
 
@@ -256,7 +363,6 @@ export default function AdvancedBurnRateChart({ token }) {
     chartData[day_of_month - 1] || chartData[chartData.length - 1];
 
   const isOverExpected = (lastPoint?.Real || 0) > (lastPoint?.Expected || 0);
-
   const realLineColor = isOverExpected ? "var(--danger)" : "var(--success)";
   const expectedLineColor = "var(--primary)";
 
@@ -277,7 +383,6 @@ export default function AdvancedBurnRateChart({ token }) {
 
   return (
     <div className="rounded-2xl p-6 space-y-4" style={ui.card}>
-      {/* ===== Header + histórico usado ===== */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h3 style={{ color: "var(--heading)", fontWeight: 800, fontSize: 18 }}>
@@ -285,13 +390,15 @@ export default function AdvancedBurnRateChart({ token }) {
           </h3>
 
           <p className="mt-1" style={{ color: "var(--muted)", fontSize: 13 }}>
-            Histórico usado: <strong style={{ color: "var(--text)" }}>{historyFrom}</strong>{" "}
-            → <strong style={{ color: "var(--text)" }}>{historyTo}</strong>
+            Histórico usado:{" "}
+            <strong style={{ color: "var(--text)" }}>{historyFrom}</strong> →{" "}
+            <strong style={{ color: "var(--text)" }}>{historyTo}</strong>
           </p>
         </div>
+
+        
       </div>
 
-      {/* ===== Controls ===== */}
       <div className="flex flex-wrap gap-4 items-end">
         <div>
           <label style={ui.label}>Historial (meses)</label>
@@ -303,14 +410,6 @@ export default function AdvancedBurnRateChart({ token }) {
             onChange={(e) => setMonths(Number(e.target.value))}
             style={ui.control}
             className="w-24 mt-1"
-            onFocus={(e) => {
-              e.currentTarget.style.border = "1px solid var(--control-border-focus)";
-              e.currentTarget.style.boxShadow = "var(--control-focus-shadow)";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.border = "1px solid var(--control-border)";
-              e.currentTarget.style.boxShadow = "none";
-            }}
           />
         </div>
 
@@ -323,19 +422,14 @@ export default function AdvancedBurnRateChart({ token }) {
             onChange={(e) => setMinOccurrences(Number(e.target.value))}
             style={ui.control}
             className="w-24 mt-1"
-            onFocus={(e) => {
-              e.currentTarget.style.border = "1px solid var(--control-border-focus)";
-              e.currentTarget.style.boxShadow = "var(--control-focus-shadow)";
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.border = "1px solid var(--control-border)";
-              e.currentTarget.style.boxShadow = "none";
-            }}
           />
         </div>
 
         <div className="flex items-center gap-4 pb-1">
-          <label className="flex items-center gap-2 text-sm" style={{ color: "var(--text)" }}>
+          <label
+            className="flex items-center gap-2 text-sm"
+            style={{ color: "var(--text)" }}
+          >
             <input
               type="checkbox"
               checked={includeOccasional}
@@ -345,7 +439,10 @@ export default function AdvancedBurnRateChart({ token }) {
             Incluir ocasionales
           </label>
 
-          <label className="flex items-center gap-2 text-sm" style={{ color: "var(--text)" }}>
+          <label
+            className="flex items-center gap-2 text-sm"
+            style={{ color: "var(--text)" }}
+          >
             <input
               type="checkbox"
               checked={includeNoise}
@@ -356,41 +453,43 @@ export default function AdvancedBurnRateChart({ token }) {
           </label>
         </div>
 
-        <button
-          onClick={load}
-          disabled={loading}
-          style={{
-            ...ui.btn,
-            opacity: loading ? 0.6 : 1,
-            cursor: loading ? "not-allowed" : "pointer",
-          }}
-          className="ml-auto"
-          onMouseDown={(e) => {
-            if (!loading) e.currentTarget.style.transform = "scale(0.98)";
-          }}
-          onMouseUp={(e) => {
-            e.currentTarget.style.transform = "scale(1)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "scale(1)";
-          }}
-          onMouseEnter={(e) => {
-            if (!loading) e.currentTarget.style.filter = "brightness(1.05)";
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.filter = "none";
-            e.currentTarget.style.transform = "scale(1)";
-          }}
-        >
-          {loading ? "Calculando..." : "Recalcular"}
-        </button>
+                <div className="ml-auto flex items-center gap-2">
+          
+
+          <button
+            onClick={load}
+            disabled={loading}
+            style={{
+              ...ui.btn,
+              opacity: loading ? 0.6 : 1,
+              cursor: loading ? "not-allowed" : "pointer",
+            }}
+          >
+            {loading ? "Calculando..." : "Recalcular"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setDetailOpen(true)}
+            style={{
+              ...ui.btn,
+              padding: "10px 14px",
+              backgroundColor: "transparent",
+              color: "var(--text)",
+              border: "1px solid var(--border-rgba)",
+              boxShadow: "none",
+            }}
+          >
+            Ver detalle
+          </button>
+        </div>
+
       </div>
 
-      <details
-        style={ui.detailsBox}
-        className="px-3 py-2"
-      >
-        <summary className="cursor-pointer text-sm" style={{ color: "var(--text)", fontWeight: 700 }}>
+      <details style={ui.detailsBox} className="px-3 py-2">
+        <summary
+          className="cursor-pointer text-sm"
+          style={{ color: "var(--text)", fontWeight: 700 }}
+        >
           Ajustes avanzados
         </summary>
 
@@ -404,14 +503,6 @@ export default function AdvancedBurnRateChart({ token }) {
               onChange={(e) => setMinIntervalDays(Number(e.target.value))}
               style={ui.control}
               className="w-28 mt-1"
-              onFocus={(e) => {
-                e.currentTarget.style.border = "1px solid var(--control-border-focus)";
-                e.currentTarget.style.boxShadow = "var(--control-focus-shadow)";
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.border = "1px solid var(--control-border)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
             />
           </div>
 
@@ -424,14 +515,6 @@ export default function AdvancedBurnRateChart({ token }) {
               onChange={(e) => setMaxIntervalDays(Number(e.target.value))}
               style={ui.control}
               className="w-28 mt-1"
-              onFocus={(e) => {
-                e.currentTarget.style.border = "1px solid var(--control-border-focus)";
-                e.currentTarget.style.boxShadow = "var(--control-focus-shadow)";
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.border = "1px solid var(--control-border)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
             />
           </div>
 
@@ -446,28 +529,19 @@ export default function AdvancedBurnRateChart({ token }) {
               onChange={(e) => setMaxCoefVariation(Number(e.target.value))}
               style={ui.control}
               className="w-28 mt-1"
-              onFocus={(e) => {
-                e.currentTarget.style.border = "1px solid var(--control-border-focus)";
-                e.currentTarget.style.boxShadow = "var(--control-focus-shadow)";
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.border = "1px solid var(--control-border)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
             />
           </div>
         </div>
       </details>
 
-      {/* ===== Banner ===== */}
       <div style={bannerStyle}>
         <p
-          className="font-semibold flex items-center gap-2 text-base"
+          className="font-semibold text-base"
           style={{ color: isOverExpected ? "var(--danger)" : "var(--success)" }}
         >
           {isOverExpected
-            ? "🔥 Estás gastando por encima de lo esperado según tus patrones."
-            : "🟢 Vas por debajo de lo esperado según tus patrones."}
+            ? "Estás gastando por encima de lo esperado según tus patrones."
+            : "Vas por debajo de lo esperado según tus patrones."}
         </p>
 
         <div className="mt-1 text-sm" style={{ color: "var(--text)" }}>
@@ -476,24 +550,28 @@ export default function AdvancedBurnRateChart({ token }) {
             <strong>{formatCurrencyDOP(variance_to_expected)}</strong>
           </p>
           <p style={{ margin: 0 }}>
-            Diferencia proyectada vs esperado del mes:{" "}
+            Forecast al cierre vs esperado del mes:{" "}
             <strong>{formatCurrencyDOP(variance_to_expected_end)}</strong>
           </p>
         </div>
       </div>
 
-      {/* ===== Resumen ===== */}
-      <div className="text-sm space-y-1 leading-relaxed" style={{ color: "var(--text)" }}>
+      <div
+        className="text-sm space-y-1 leading-relaxed"
+        style={{ color: "var(--text)" }}
+      >
         <p>
-          <span style={{ color: "var(--muted)" }}>Mes:</span> <strong>{month}</strong>{" "}
-          <span style={{ color: "var(--muted)" }}>— Hoy:</span> <strong>{today}</strong>{" "}
+          <span style={{ color: "var(--muted)" }}>Mes:</span>{" "}
+          <strong>{month}</strong>{" "}
+          <span style={{ color: "var(--muted)" }}>| Hoy:</span>{" "}
+          <strong>{today}</strong>{" "}
           <span style={{ color: "var(--muted)" }}>
             (día {day_of_month} de {days_in_month})
           </span>
         </p>
 
         <p>
-          <span style={{ color: "var(--muted)" }}>Esperado mes (por patrones):</span>{" "}
+          <span style={{ color: "var(--muted)" }}>Esperado mes:</span>{" "}
           <strong>{formatCurrencyDOP(expected_total)}</strong>
         </p>
 
@@ -505,12 +583,11 @@ export default function AdvancedBurnRateChart({ token }) {
         </p>
 
         <p>
-          <span style={{ color: "var(--muted)" }}>Proyección real al cierre del mes:</span>{" "}
+          <span style={{ color: "var(--muted)" }}>Forecast cierre real:</span>{" "}
           <strong>{formatCurrencyDOP(projected_end_of_month)}</strong>
         </p>
       </div>
 
-      {/* ===== Chart ===== */}
       <div style={{ width: "100%", height: 300 }}>
         <ResponsiveContainer>
           <ComposedChart data={chartData}>
@@ -525,9 +602,7 @@ export default function AdvancedBurnRateChart({ token }) {
               axisLine={ui.axisLine}
               tickLine={ui.axisLine}
             />
-
             <Tooltip content={<AdvancedBurnRateTooltip />} cursor={ui.cursor} />
-
             <Legend
               wrapperStyle={ui.legend}
               payload={[
@@ -545,7 +620,6 @@ export default function AdvancedBurnRateChart({ token }) {
                 },
               ]}
             />
-
             <Area
               type="monotone"
               dataKey="RealArea"
@@ -554,7 +628,6 @@ export default function AdvancedBurnRateChart({ token }) {
               fillOpacity={0.08}
               isAnimationActive={false}
             />
-
             <Line
               type="monotone"
               dataKey="Expected"
@@ -563,7 +636,6 @@ export default function AdvancedBurnRateChart({ token }) {
               strokeWidth={2}
               dot={false}
             />
-
             <Line
               type="monotone"
               dataKey="Real"
@@ -590,10 +662,208 @@ export default function AdvancedBurnRateChart({ token }) {
       </div>
 
       <p className="text-sm leading-relaxed" style={{ color: "var(--text)" }}>
-        La línea <strong>Esperado</strong> se construye con tu{" "}
-        <strong>histórico usado</strong> (arriba). La línea <strong>Real</strong>{" "}
-        es tu gasto acumulado día a día.
+        La línea <strong>Esperado</strong> usa tus patrones históricos. La línea{" "}
+        <strong>Real</strong> muestra tu gasto acumulado real día a día.
       </p>
+
+      <Modal
+        isOpen={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        title="Detalle del burn rate por categoría"
+        size="xl"
+      >
+        <div className="space-y-4">
+          <p className="text-sm" style={{ color: "var(--muted)" }}>
+            El detalle compara cómo vas hoy contra lo esperado y cómo podría
+            cerrar el mes usando forecast real por categoría.
+          </p>
+
+          {!categoryBreakdown.length ? (
+            <p className="text-sm" style={{ color: "var(--muted)" }}>
+              No hay detalle por categorías disponible.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr style={{ color: "var(--muted)", textAlign: "left" }}>
+                    <th className="py-2 pr-4">Categoría</th>
+                    <th className="py-2 pr-4">Esperado hoy</th>
+                    <th className="py-2 pr-4">Real hoy</th>
+                    <th className="py-2 pr-4">Desv. hoy</th>
+                    <th className="py-2 pr-4">% hoy</th>
+                    <th className="py-2 pr-4">Esperado cierre</th>
+                    <th className="py-2 pr-4">Forecast cierre</th>
+                    <th className="py-2 pr-4">Desv. cierre</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {categoryBreakdown.map((row) => {
+                    const isOverToday = Number(row.variance_to_date || 0) > 0;
+                    const isOverEnd = Number(row.variance_to_end || 0) > 0;
+
+                    return (
+                      <tr key={row.category}>
+                        <td style={ui.tableCell}>
+                          <div style={{ color: "var(--text)", fontWeight: 700 }}>
+                            {row.category}
+                          </div>
+                        </td>
+                        <td style={ui.tableCell}>
+                          {formatCurrencyDOP(row.expected_to_date)}
+                        </td>
+                        <td style={ui.tableCell}>
+                          {formatCurrencyDOP(row.actual_to_date)}
+                        </td>
+                        <td
+                          style={{
+                            ...ui.tableCell,
+                            color: isOverToday
+                              ? "var(--danger)"
+                              : "var(--success)",
+                            fontWeight: 800,
+                          }}
+                        >
+                          {Number(row.variance_to_date) > 0 ? "+" : ""}
+                          {formatCurrencyDOP(row.variance_to_date)}
+                        </td>
+                        <td style={ui.tableCell}>
+                          {formatPercent(row.variance_to_date_pct)}
+                        </td>
+                        <td style={ui.tableCell}>
+                          {formatCurrencyDOP(row.expected_end_of_month)}
+                        </td>
+                        <td style={ui.tableCell}>
+                          {formatCurrencyDOP(row.forecast_end_of_month)}
+                        </td>
+                        <td
+                          style={{
+                            ...ui.tableCell,
+                            color: isOverEnd
+                              ? "var(--danger)"
+                              : "var(--success)",
+                            fontWeight: 800,
+                          }}
+                        >
+                          {Number(row.variance_to_end) > 0 ? "+" : ""}
+                          {formatCurrencyDOP(row.variance_to_end)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {categoryTotals && (
+                    <tr>
+                      <td
+                        style={{
+                          ...ui.tableCell,
+                          fontWeight: 800,
+                          color: "var(--heading)",
+                          background:
+                            "color-mix(in srgb, var(--panel) 70%, transparent)",
+                        }}
+                      >
+                        Total
+                      </td>
+                      <td
+                        style={{
+                          ...ui.tableCell,
+                          fontWeight: 800,
+                          background:
+                            "color-mix(in srgb, var(--panel) 70%, transparent)",
+                        }}
+                      >
+                        {formatCurrencyDOP(categoryTotals.expected_to_date)}
+                      </td>
+                      <td
+                        style={{
+                          ...ui.tableCell,
+                          fontWeight: 800,
+                          background:
+                            "color-mix(in srgb, var(--panel) 70%, transparent)",
+                        }}
+                      >
+                        {formatCurrencyDOP(categoryTotals.actual_to_date)}
+                      </td>
+                      <td
+                        style={{
+                          ...ui.tableCell,
+                          fontWeight: 800,
+                          color:
+                            Number(categoryTotals.variance_to_date) > 0
+                              ? "var(--danger)"
+                              : "var(--success)",
+                          background:
+                            "color-mix(in srgb, var(--panel) 70%, transparent)",
+                        }}
+                      >
+                        {Number(categoryTotals.variance_to_date) > 0 ? "+" : ""}
+                        {formatCurrencyDOP(categoryTotals.variance_to_date)}
+                      </td>
+                      <td
+                        style={{
+                          ...ui.tableCell,
+                          fontWeight: 800,
+                          background:
+                            "color-mix(in srgb, var(--panel) 70%, transparent)",
+                        }}
+                      >
+                        {formatPercent(categoryTotals.variance_to_date_pct)}
+                      </td>
+                      <td
+                        style={{
+                          ...ui.tableCell,
+                          fontWeight: 800,
+                          background:
+                            "color-mix(in srgb, var(--panel) 70%, transparent)",
+                        }}
+                      >
+                        {formatCurrencyDOP(categoryTotals.expected_end_of_month)}
+                      </td>
+                      <td
+                        style={{
+                          ...ui.tableCell,
+                          fontWeight: 800,
+                          background:
+                            "color-mix(in srgb, var(--panel) 70%, transparent)",
+                        }}
+                      >
+                        {formatCurrencyDOP(categoryTotals.forecast_end_of_month)}
+                      </td>
+                      <td
+                        style={{
+                          ...ui.tableCell,
+                          fontWeight: 800,
+                          color:
+                            Number(categoryTotals.variance_to_end) > 0
+                              ? "var(--danger)"
+                              : "var(--success)",
+                          background:
+                            "color-mix(in srgb, var(--panel) 70%, transparent)",
+                        }}
+                      >
+                        {Number(categoryTotals.variance_to_end) > 0 ? "+" : ""}
+                        {formatCurrencyDOP(categoryTotals.variance_to_end)}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setDetailOpen(false)}
+              style={ui.btn}
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
