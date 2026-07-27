@@ -4,7 +4,10 @@ import "./index.css";
 import "./styles/theme.css";
 
 import { loadTheme, applyTheme } from "./theme/themeStore";
+import { installBackendNetworkGuards } from "./lib/repositories/networkFallback";
 import App from "./App.jsx";
+
+installBackendNetworkGuards();
 
 const persisted = loadTheme();
 if (persisted) applyTheme(persisted);

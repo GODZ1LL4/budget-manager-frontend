@@ -1,42 +1,57 @@
-import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "../components/Modal";
 import FFSelect from "../components/FFSelect";
-
-// 🔔 react-toastify
-import { ToastContainer, toast } from "react-toastify";
+import { HiDotsVertical } from "react-icons/hi";
+import {
+  createAccount,
+  createTransfer,
+  deleteAccount,
+  listAccountBalances,
+  listAccounts,
+  syncPendingAccounts,
+  updateAccount,
+} from "../lib/repositories/accountsRepository";
+import { syncPendingTransactions } from "../lib/repositories/transactionsRepository";
+import { useAppPreferences } from "../context/AppPreferencesContext";
+import useClickOutside from "../hooks/useClickOutside";
+import useOverflowMenuPosition from "../hooks/useOverflowMenuPosition";
+import { todayDateKey } from "../lib/dates/localDate";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-function Accounts({ token }) {
-  const api = import.meta.env.VITE_API_URL;
-
+function Accounts({ token, subscriptionMode }) {
   const [name, setName] = useState("");
   const [accounts, setAccounts] = useState([]);
   const [editId, setEditId] = useState(null);
-
-  // balances map: { [accountId]: { current, reserved, available } }
   const [balances, setBalances] = useState({});
-
   const [showTransfer, setShowTransfer] = useState(false);
   const [tFrom, setTFrom] = useState("");
   const [tFromName, setTFromName] = useState("");
   const [tTo, setTTo] = useState("");
   const [tAmount, setTAmount] = useState("");
   const [tDate, setTDate] = useState(
-    () => new Date().toISOString().split("T")[0]
+    () => todayDateKey()
   );
   const [tDesc, setTDesc] = useState("");
   const [tLoading, setTLoading] = useState(false);
   const [tError, setTError] = useState("");
-
-  // Estados para el modal de eliminar
   const [showDelete, setShowDelete] = useState(false);
   const [deleteAcc, setDeleteAcc] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [mobileMenuId, setMobileMenuId] = useState(null);
+  const mobileMenuRef = useRef(null);
+  const { t, formatCurrency } = useAppPreferences();
+
+  useClickOutside(mobileMenuRef, () => setMobileMenuId(null), Boolean(mobileMenuId));
+  const mobileMenuPlacement = useOverflowMenuPosition(
+    mobileMenuRef,
+    Boolean(mobileMenuId)
+  );
 
   const openDelete = (acc) => {
     setDeleteAcc(acc);
     setShowDelete(true);
+    setMobileMenuId(null);
   };
 
   const closeDelete = () => {
@@ -48,33 +63,20 @@ function Accounts({ token }) {
 
   const fetchAccounts = async () => {
     try {
-      const res = await axios.get(`${api}/accounts`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setAccounts(res.data.data || []);
+      const res = await listAccounts({ token, subscriptionMode });
+      setAccounts(res.data || []);
     } catch {
-      toast.error("Error al obtener cuentas");
+      toast.error(t("accounts.fetchError"));
     }
   };
 
   const fetchBalances = async () => {
     try {
-      const res = await axios.get(`${api}/accounts/balances`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const map = {};
-      for (const a of res.data.data || []) {
-        map[a.id] = {
-          current: Number(a.current_balance ?? 0),
-          reserved: Number(a.reserved_total ?? 0),
-          available: Number(a.available_balance ?? 0),
-        };
-      }
-      setBalances(map);
+      const res = await listAccountBalances({ token, subscriptionMode });
+      setBalances(res.data || {});
     } catch (err) {
       console.error("No se pudo cargar balances", err);
-      toast.error("Error al cargar saldos");
+      toast.error(t("accounts.balancesError"));
     }
   };
 
@@ -85,42 +87,51 @@ function Accounts({ token }) {
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!name.trim()) {
-      toast.error("El nombre de la cuenta es obligatorio");
+      toast.error(t("accounts.nameRequired"));
       return;
     }
 
     try {
-      await axios.post(
-        `${api}/accounts`,
-        { name },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const result = await createAccount({
+        token,
+        name: name.trim(),
+        subscriptionMode,
+      });
       setName("");
       await reload();
-      toast.success("Cuenta creada correctamente");
+      toast.success(
+        result.offline
+          ? t("accounts.createdOffline")
+          : t("accounts.created")
+      );
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Error al crear cuenta");
+      toast.error(err?.response?.data?.error || t("accounts.createError"));
     }
   };
 
   const handleUpdate = async (id) => {
     if (!name.trim()) {
-      toast.error("El nombre de la cuenta es obligatorio");
+      toast.error(t("accounts.nameRequired"));
       return;
     }
 
     try {
-      await axios.put(
-        `${api}/accounts/${id}`,
-        { name },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const result = await updateAccount({
+        token,
+        id,
+        name: name.trim(),
+        subscriptionMode,
+      });
       setEditId(null);
       setName("");
       await reload();
-      toast.success("Cuenta actualizada");
+      toast.success(
+        result.offline
+          ? t("accounts.updatedOffline")
+          : t("accounts.updated")
+      );
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Error al actualizar cuenta");
+      toast.error(err?.response?.data?.error || t("accounts.updateError"));
     }
   };
 
@@ -129,14 +140,20 @@ function Accounts({ token }) {
     setDeleteLoading(true);
 
     try {
-      await axios.delete(`${api}/accounts/${deleteAcc.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const result = await deleteAccount({
+        token,
+        account: deleteAcc,
+        subscriptionMode,
       });
       await reload();
-      toast.success(`Cuenta "${deleteAcc.name}" eliminada`);
+      toast.success(
+        result.offline
+          ? t("accounts.deletedOffline", { name: deleteAcc.name })
+          : t("accounts.deleted", { name: deleteAcc.name })
+      );
       closeDelete();
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Error al eliminar cuenta");
+      toast.error(err?.response?.data?.error || t("accounts.deleteError"));
     } finally {
       setDeleteLoading(false);
     }
@@ -147,60 +164,119 @@ function Accounts({ token }) {
     setName(acc.name);
   };
 
+  const cancelEdit = () => {
+    setEditId(null);
+    setName("");
+    setMobileMenuId(null);
+  };
+
+  const openTransfer = (acc) => {
+    setTFrom(acc.id);
+    setTFromName(acc.name);
+    setTTo("");
+    setTAmount("");
+    setTDate(todayDateKey());
+    setTDesc("");
+    setTError("");
+    setShowTransfer(true);
+    setMobileMenuId(null);
+  };
+
   useEffect(() => {
     if (token) reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, subscriptionMode]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const runSync = async () => {
+      const accountsResult = await syncPendingAccounts({
+        token,
+        subscriptionMode,
+      });
+      const transactionsResult = await syncPendingTransactions({
+        token,
+        subscriptionMode,
+      });
+      const totalSynced =
+        Number(accountsResult?.synced || 0) +
+        Number(transactionsResult?.synced || 0);
+
+      if (totalSynced > 0) {
+        await reload();
+        toast.success(t("accounts.synced", { count: totalSynced }));
+      }
+    };
+
+    runSync();
+
+    const handleOnline = () => {
+      runSync();
+    };
+
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, subscriptionMode, t]);
 
   const submitTransfer = async (e) => {
     e.preventDefault();
     setTError("");
 
     if (!tFrom || !tTo || !tDate || tAmount === "") {
-      toast.error("Completa todos los campos.");
+      toast.error(t("accounts.fillAllFields"));
       return;
     }
 
     const amountNum = Number(tAmount);
     if (Number.isNaN(amountNum) || amountNum <= 0) {
-      toast.error("Monto inválido.");
+      toast.error(t("accounts.invalidAmount"));
       return;
     }
 
     if (tFrom === tTo) {
-      toast.error("Las cuentas deben ser distintas.");
+      toast.error(t("accounts.differentAccounts"));
       return;
     }
 
-    // valida contra saldo REAL (current)
     const fromBalance = balances[tFrom]?.current ?? 0;
-
     if (fromBalance < amountNum) {
-      toast.error("Saldo insuficiente en la cuenta origen.");
+      toast.error(t("accounts.insufficientFunds"));
       return;
     }
 
     try {
       setTLoading(true);
 
-      await axios.post(
-        `${api}/accounts/transfer`,
-        {
+      const result = await createTransfer({
+        token,
+        payload: {
           from_account_id: tFrom,
           to_account_id: tTo,
           amount: amountNum,
           date: tDate,
           description: tDesc || null,
         },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+        subscriptionMode,
+      });
 
       const toName =
-        accounts.find((a) => a.id === tTo)?.name || "cuenta destino";
+        accounts.find((account) => account.id === tTo)?.name ||
+        t("accounts.destinationAccount");
+      const amountLabel = formatCurrency(amountNum);
       toast.success(
-        `Transferencia realizada: ${amountNum.toFixed(
-          2
-        )} DOP de ${tFromName} a ${toName}`
+        result?.offline
+          ? t("accounts.transferOffline", {
+              amount: amountLabel,
+              fromName: tFromName,
+              toName,
+            })
+          : t("accounts.transferDone", {
+              amount: amountLabel,
+              fromName: tFromName,
+              toName,
+            })
       );
 
       setShowTransfer(false);
@@ -212,7 +288,9 @@ function Accounts({ token }) {
     } catch (err) {
       console.error(err);
       const msg =
-        err?.response?.data?.error || "No se pudo realizar la transferencia.";
+        err?.code === "OFFLINE_TRANSFER_NOT_SUPPORTED"
+          ? t("accounts.transferConnectionRequired")
+          : err?.response?.data?.error || t("accounts.transferError");
       setTError(msg);
       toast.error(msg);
     } finally {
@@ -220,55 +298,281 @@ function Accounts({ token }) {
     }
   };
 
-  const fmt = (n) => Number(n ?? 0).toFixed(2);
-
   const transferOptions = useMemo(() => {
     return accounts.map((acc) => ({
       value: acc.id,
       label: acc.name,
       disabled: String(acc.id) === String(tFrom),
-      subLabel: String(acc.id) === String(tFrom) ? "Misma cuenta" : "",
+      subLabel:
+        String(acc.id) === String(tFrom) ? t("accounts.sameAccount") : "",
     }));
-  }, [accounts, tFrom]);
+  }, [accounts, tFrom, t]);
+
+  const renderDesktopBalanceSummary = (bal, compact = false) => (
+    <>
+      <p
+        className={compact ? "text-base font-semibold" : "text-xl font-semibold"}
+        style={{ color: "var(--text)" }}
+      >
+        {formatCurrency(bal.current)}
+      </p>
+      <p className="mt-2 text-xs leading-5" style={{ color: "var(--muted)" }}>
+        {t("accounts.reserved")}: {formatCurrency(bal.reserved)}
+        <br />
+        {t("common.available")}: {formatCurrency(bal.available)}
+      </p>
+    </>
+  );
 
   return (
-    <div className="ff-card p-6 space-y-4">
-      <ToastContainer position="top-right" autoClose={2500} />
-
-      <h2 className="ff-h1 ff-heading-accent mb-2">Cuentas</h2>
+    <div className="ff-card p-4 sm:p-6 space-y-4">
+      <h2 className="ff-h1 ff-heading-accent mb-2">{t("accounts.title")}</h2>
 
       <p className="ff-heading-muted text-sm mb-4">
-        Gestioná tus cuentas. El saldo se calcula automáticamente…
+        {t("accounts.subtitle")}
       </p>
 
-      {/* Formulario crear / editar nombre */}
       <form
         onSubmit={handleCreate}
-        className="flex flex-wrap gap-3 mb-6 items-end"
+        className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
       >
-        <div className="flex flex-col">
-          <label className="ff-label">Nombre de la cuenta</label>
+        <div className="flex flex-col sm:max-w-sm sm:flex-1">
+          <label className="ff-label">{t("accounts.name")}</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ej: Caja de ahorro"
-            className="ff-input w-64"
+            placeholder={t("accounts.namePlaceholder")}
+            className="ff-input w-full sm:w-64"
           />
         </div>
 
-        <button type="submit" className="ff-btn ff-btn-primary">
-          Agregar
+        <button type="submit" className="ff-btn ff-btn-primary w-full sm:w-auto">
+          {t("common.add")}
         </button>
       </form>
 
-      {/* Tabla de cuentas */}
-      <div className="overflow-hidden">
+      <div className="space-y-3 md:hidden">
+        {accounts.map((acc) => {
+          const bal = balances[acc.id] || {
+            current: 0,
+            reserved: 0,
+            available: 0,
+          };
+
+          return (
+            <section
+              key={acc.id}
+              className="relative rounded-[var(--radius-lg)] border p-4"
+              style={{
+                borderColor: "var(--border-rgba)",
+                background: "color-mix(in srgb, var(--panel) 88%, transparent)",
+              }}
+            >
+              {editId === acc.id ? (
+                <div className="space-y-4">
+                  <div className="flex flex-col space-y-1">
+                    <label className="ff-label">{t("accounts.name")}</label>
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="ff-input"
+                    />
+                  </div>
+
+                  <div
+                    className="rounded-[var(--radius-md)] border px-3 py-2"
+                    style={{
+                      borderColor:
+                        "color-mix(in srgb, var(--border-rgba) 80%, transparent)",
+                    }}
+                  >
+                    <p
+                      className="text-[11px] uppercase tracking-[0.14em]"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      {t("accounts.balance")}
+                    </p>
+                    <p className="mt-2 text-xl font-semibold" style={{ color: "var(--text)" }}>
+                      {formatCurrency(bal.current)}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdate(acc.id)}
+                      className="ff-btn ff-btn-primary w-full"
+                    >
+                      {t("common.save")}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={cancelEdit}
+                      className="ff-btn ff-btn-outline w-full"
+                    >
+                      {t("common.cancel")}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className="text-[11px] uppercase tracking-[0.14em]"
+                        style={{ color: "var(--muted)" }}
+                      >
+                        {t("accounts.name")}
+                      </p>
+                      <p className="mt-2 truncate text-lg font-semibold" style={{ color: "var(--text)" }}>
+                        {acc.name}
+                      </p>
+                    </div>
+
+                    <div
+                      ref={mobileMenuId === acc.id ? mobileMenuRef : null}
+                      className="relative shrink-0"
+                    >
+                      <button
+                        type="button"
+                        data-overflow-trigger="true"
+                        aria-label={t("accounts.actions")}
+                        onClick={() =>
+                          setMobileMenuId((prev) => (prev === acc.id ? null : acc.id))
+                        }
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-full border"
+                        style={{
+                          borderColor:
+                            "color-mix(in srgb, var(--border-rgba) 80%, transparent)",
+                          background:
+                            "color-mix(in srgb, var(--panel) 92%, transparent)",
+                          color: "var(--text)",
+                        }}
+                      >
+                        <HiDotsVertical size={18} />
+                      </button>
+
+                      {mobileMenuId === acc.id && (
+                        <div
+                          data-overflow-menu="true"
+                          className="absolute right-0 top-12 z-10 min-w-[180px] rounded-[var(--radius-md)] border p-2 shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
+                          style={{
+                            top:
+                              mobileMenuPlacement === "up" ? "auto" : "3rem",
+                            bottom:
+                              mobileMenuPlacement === "up" ? "3rem" : "auto",
+                            borderColor:
+                              "color-mix(in srgb, var(--border-rgba) 80%, transparent)",
+                            background: "color-mix(in srgb, var(--panel) 96%, transparent)",
+                          }}
+                        >
+                          <div className="grid grid-cols-1 gap-2">
+                            <button
+                              onClick={() => openTransfer(acc)}
+                              className="ff-btn ff-btn-primary w-full"
+                              type="button"
+                            >
+                              {t("accounts.transfer")}
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                startEdit(acc);
+                                setMobileMenuId(null);
+                              }}
+                              className="ff-btn ff-btn-warning w-full"
+                              type="button"
+                            >
+                              {t("common.edit")}
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                openDelete(acc);
+                                setMobileMenuId(null);
+                              }}
+                              className="ff-btn ff-btn-danger w-full"
+                              type="button"
+                            >
+                              {t("common.delete")}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div
+                      className="rounded-[var(--radius-md)] border px-3 py-2"
+                      style={{
+                        borderColor:
+                          "color-mix(in srgb, var(--border-rgba) 80%, transparent)",
+                      }}
+                    >
+                      <p
+                        className="text-[11px] uppercase tracking-[0.14em]"
+                        style={{ color: "var(--muted)" }}
+                      >
+                        {t("accounts.balance")}
+                      </p>
+                      <p className="mt-2 text-base font-semibold" style={{ color: "var(--text)" }}>
+                        {formatCurrency(bal.current)}
+                      </p>
+                    </div>
+
+                    <div
+                      className="rounded-[var(--radius-md)] border px-3 py-2"
+                      style={{
+                        borderColor:
+                          "color-mix(in srgb, var(--border-rgba) 80%, transparent)",
+                      }}
+                    >
+                      <p
+                        className="text-[11px] uppercase tracking-[0.14em]"
+                        style={{ color: "var(--muted)" }}
+                      >
+                        {t("accounts.reserved")}
+                      </p>
+                      <p className="mt-2 text-sm font-medium" style={{ color: "var(--text)" }}>
+                        {formatCurrency(bal.reserved)}
+                      </p>
+                    </div>
+
+                    <div
+                      className="rounded-[var(--radius-md)] border px-3 py-2"
+                      style={{
+                        borderColor:
+                          "color-mix(in srgb, var(--border-rgba) 80%, transparent)",
+                      }}
+                    >
+                      <p
+                        className="text-[11px] uppercase tracking-[0.14em]"
+                        style={{ color: "var(--muted)" }}
+                      >
+                        {t("common.available")}
+                      </p>
+                      <p className="mt-2 text-sm font-medium" style={{ color: "var(--text)" }}>
+                        {formatCurrency(bal.available)}
+                      </p>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
+
+      <div className="hidden overflow-hidden md:block">
         <table className="ff-table text-sm">
           <thead>
             <tr>
-              <th className="ff-th">Nombre</th>
-              <th className="ff-th">Saldo</th>
-              <th className="ff-th text-center">Acciones</th>
+              <th className="ff-th">{t("accounts.name")}</th>
+              <th className="ff-th">{t("accounts.balance")}</th>
+              <th className="ff-th text-center">{t("accounts.actions")}</th>
             </tr>
           </thead>
 
@@ -293,36 +597,25 @@ function Accounts({ token }) {
                       </td>
 
                       <td className="ff-td">
-                        <div className="text-xl">{fmt(bal.current)} DOP</div>
-                        <div
-                          className="text-xs"
-                          style={{ color: "var(--muted)" }}
-                        >
-                          Reservado: {fmt(bal.reserved)} • Disponible:{" "}
-                          {fmt(bal.available)}
-                        </div>
+                        {renderDesktopBalanceSummary(bal)}
                       </td>
 
                       <td className="ff-td">
                         <div className="flex justify-center flex-wrap gap-2">
-                          {/* Guardar: lo dejo Primary porque no pediste cambiarlo */}
                           <button
                             type="button"
                             onClick={() => handleUpdate(acc.id)}
                             className="ff-btn ff-btn-primary"
                           >
-                            Guardar
+                            {t("common.save")}
                           </button>
 
                           <button
                             type="button"
-                            onClick={() => {
-                              setEditId(null);
-                              setName("");
-                            }}
+                            onClick={cancelEdit}
                             className="ff-btn ff-btn-outline"
                           >
-                            Cancelar
+                            {t("common.cancel")}
                           </button>
                         </div>
                       </td>
@@ -332,52 +625,33 @@ function Accounts({ token }) {
                       <td className="ff-td">{acc.name}</td>
 
                       <td className="ff-td">
-                        <div className="text-ms">{fmt(bal.current)} DOP</div>
-                        <div
-                          className="text-xs"
-                          style={{ color: "var(--muted)" }}
-                        >
-                          Reservado: {fmt(bal.reserved)} • Disponible:{" "}
-                          {fmt(bal.available)}
-                        </div>
+                        {renderDesktopBalanceSummary(bal, true)}
                       </td>
 
                       <td className="ff-td">
                         <div className="flex justify-center flex-wrap gap-2">
-                          {/* Transferir -> Primary */}
                           <button
-                            onClick={() => {
-                              setTFrom(acc.id);
-                              setTFromName(acc.name);
-                              setTTo("");
-                              setTAmount("");
-                              setTDate(new Date().toISOString().split("T")[0]);
-                              setTDesc("");
-                              setTError("");
-                              setShowTransfer(true);
-                            }}
+                            onClick={() => openTransfer(acc)}
                             className="ff-btn ff-btn-primary"
                             type="button"
                           >
-                            Transferir
+                            {t("accounts.transfer")}
                           </button>
 
-                          {/* Editar -> Warning */}
                           <button
                             onClick={() => startEdit(acc)}
                             className="ff-btn ff-btn-warning"
                             type="button"
                           >
-                            Editar
+                            {t("common.edit")}
                           </button>
 
-                          {/* Eliminar -> Warning (tal cual pediste) */}
                           <button
                             onClick={() => openDelete(acc)}
                             className="ff-btn ff-btn-danger"
                             type="button"
                           >
-                            Eliminar
+                            {t("common.delete")}
                           </button>
                         </div>
                       </td>
@@ -390,11 +664,10 @@ function Accounts({ token }) {
         </table>
       </div>
 
-      {/* Modal Transferencia */}
       <Modal
         isOpen={showTransfer}
         onClose={() => !tLoading && setShowTransfer(false)}
-        title={`Transferir desde ${tFromName}`}
+        title={t("accounts.fromTransfer", { name: tFromName })}
       >
         <form onSubmit={submitTransfer} className="space-y-4">
           {tError && (
@@ -412,23 +685,25 @@ function Accounts({ token }) {
           )}
 
           <div className="flex flex-col space-y-1">
-            <label className="ff-label">Hacia</label>
-
-            {/* ✅ FFSelect (custom) */}
+            <label className="ff-label">{t("accounts.toLabel")}</label>
             <FFSelect
               value={tTo}
               onChange={(v) => setTTo(v)}
               options={[
-                { value: "", label: "Selecciona una cuenta", disabled: true },
+                {
+                  value: "",
+                  label: t("accounts.selectAccount"),
+                  disabled: true,
+                },
                 ...transferOptions,
               ]}
-              placeholder="Selecciona una cuenta"
+              placeholder={t("accounts.selectAccount")}
               disabled={tLoading}
             />
           </div>
 
           <div className="flex flex-col space-y-1">
-            <label className="ff-label">Monto</label>
+            <label className="ff-label">{t("accounts.amount")}</label>
             <input
               type="number"
               inputMode="decimal"
@@ -447,19 +722,19 @@ function Accounts({ token }) {
             />
 
             <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
-              Saldo real:{" "}
+              {t("accounts.realBalance")}:{" "}
               <span style={{ color: "var(--text)", fontWeight: 600 }}>
-                {fmt(balances[tFrom]?.current)}
+                {formatCurrency(balances[tFrom]?.current)}
               </span>{" "}
-              • Disponible:{" "}
+              • {t("common.available")}:{" "}
               <span style={{ color: "var(--text)", fontWeight: 600 }}>
-                {fmt(balances[tFrom]?.available)}
+                {formatCurrency(balances[tFrom]?.available)}
               </span>
             </p>
           </div>
 
           <div className="flex flex-col space-y-1">
-            <label className="ff-label">Fecha</label>
+            <label className="ff-label">{t("accounts.date")}</label>
             <input
               type="date"
               value={tDate}
@@ -471,41 +746,42 @@ function Accounts({ token }) {
           </div>
 
           <div className="flex flex-col space-y-1">
-            <label className="ff-label">Descripción (opcional)</label>
+            <label className="ff-label">{t("accounts.descriptionOptional")}</label>
             <input
               type="text"
               value={tDesc}
               onChange={(e) => setTDesc(e.target.value)}
               className="ff-input"
               disabled={tLoading}
-              placeholder="Ej: mover a ahorro"
+              placeholder={t("accounts.descriptionPlaceholder")}
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2">
-            {/* Confirmar transferencia (Primary por acción principal) */}
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
             <button
               type="submit"
-              className="ff-btn ff-btn-primary"
+              className="ff-btn ff-btn-primary w-full sm:w-auto"
               disabled={tLoading}
             >
-              {tLoading ? "Transfiriendo..." : "Confirmar transferencia"}
+              {tLoading ? t("accounts.transferring") : t("accounts.confirmTransfer")}
             </button>
-
             <button
               type="button"
               onClick={() => setShowTransfer(false)}
-              className="ff-btn ff-btn-outline"
+              className="ff-btn ff-btn-outline w-full sm:w-auto"
               disabled={tLoading}
             >
-              Cancelar
-            </button>
+              {t("common.cancel")}
+            </button>     
           </div>
         </form>
       </Modal>
 
-      {/* Modal eliminar cuenta */}
-      <Modal isOpen={showDelete} onClose={closeDelete} title="Eliminar cuenta">
+      <Modal
+        isOpen={showDelete}
+        onClose={closeDelete}
+        title={t("accounts.deleteTitle")}
+      >
         {(() => {
           const bal = deleteAcc ? balances[deleteAcc.id] : null;
           const current = Number(bal?.current ?? 0);
@@ -515,14 +791,14 @@ function Accounts({ token }) {
             <div className="space-y-4">
               <div className="text-sm" style={{ color: "var(--text)" }}>
                 <p>
-                  ¿Seguro que deseas eliminar la cuenta{" "}
+                  {t("accounts.deleteConfirm")}{" "}
                   <strong style={{ color: "var(--text)" }}>
                     {deleteAcc?.name}
                   </strong>
                   ?
                 </p>
                 <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
-                  Esta acción no se puede deshacer.
+                  {t("accounts.deleteIrreversible")}
                 </p>
 
                 {hasBalance && (
@@ -535,33 +811,34 @@ function Accounts({ token }) {
                       color: "var(--text)",
                     }}
                   >
-                    La cuenta tiene un saldo real de{" "}
-                    <strong>{fmt(current)}</strong>. Te recomiendo transferir o
-                    ajustar el saldo antes de eliminarla.
+                    {t("accounts.balanceWarning", {
+                      amount: formatCurrency(current),
+                    })}
                   </div>
                 )}
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
-                {/* Eliminar -> Warning (según tu regla) */}
+              <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end"> 
                 <button
                   type="button"
                   onClick={confirmDelete}
-                  className="ff-btn ff-btn-danger"
+                  className="ff-btn ff-btn-danger w-full sm:w-auto"
                   disabled={deleteLoading || hasBalance}
                   style={hasBalance ? { opacity: 0.6 } : undefined}
                 >
-                  {deleteLoading ? "Eliminando..." : "Eliminar"}
+                  {deleteLoading ? t("accounts.deleting") : t("accounts.yesDelete")}
                 </button>
 
                 <button
                   type="button"
                   onClick={closeDelete}
-                  className="ff-btn ff-btn-outline"
+                  className="ff-btn ff-btn-outline w-full sm:w-auto"
                   disabled={deleteLoading}
                 >
-                  Cancelar
+                  {t("common.cancel")}
                 </button>
+
+               
               </div>
             </div>
           );

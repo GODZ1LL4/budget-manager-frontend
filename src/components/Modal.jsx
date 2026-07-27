@@ -16,6 +16,23 @@ function Modal({ isOpen, onClose, title, children, size = "md" }) {
       ? "max-w-6xl"
       : "max-w-md";
 
+  const viewportStyle = {
+    "--modal-pad-top":
+      "calc(1rem + var(--app-safe-top, env(safe-area-inset-top, 0px)))",
+    "--modal-pad-right":
+      "calc(1rem + var(--app-safe-right, env(safe-area-inset-right, 0px)))",
+    "--modal-pad-bottom":
+      "calc(1.75rem + var(--app-safe-bottom, env(safe-area-inset-bottom, 0px)))",
+    "--modal-pad-left":
+      "calc(1rem + var(--app-safe-left, env(safe-area-inset-left, 0px)))",
+    boxSizing: "border-box",
+    height: "100dvh",
+    paddingTop: "var(--modal-pad-top)",
+    paddingRight: "var(--modal-pad-right)",
+    paddingBottom: "var(--modal-pad-bottom)",
+    paddingLeft: "var(--modal-pad-left)",
+  };
+
   return (
     <Transition appear show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-50" onClose={onClose}>
@@ -40,8 +57,11 @@ function Modal({ isOpen, onClose, title, children, size = "md" }) {
           />
         </Transition.Child>
 
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4 text-center">
+        <div
+          className="fixed inset-0 overflow-y-auto overscroll-contain"
+          style={viewportStyle}
+        >
+          <div className="flex min-h-full items-center justify-center text-center">
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-200"
@@ -53,7 +73,8 @@ function Modal({ isOpen, onClose, title, children, size = "md" }) {
             >
               <Dialog.Panel
                 className={`
-                  relative w-full ${sizeClass}
+                  relative flex w-full ${sizeClass}
+                  max-h-full flex-col
                   overflow-hidden
                   rounded-[var(--radius-lg)]
                   text-left align-middle
@@ -63,6 +84,8 @@ function Modal({ isOpen, onClose, title, children, size = "md" }) {
                   /* ✅ 100% controlado por tokens */
                   background: "var(--modal-panel)",
                   border: "var(--border-w) solid var(--modal-border)",
+                  maxHeight:
+                    "calc(100dvh - var(--modal-pad-top) - var(--modal-pad-bottom))",
 
                   /* ✅ Shadow premium (profundo + limpio) */
                   boxShadow:
@@ -110,7 +133,7 @@ function Modal({ isOpen, onClose, title, children, size = "md" }) {
                 />
 
                 {/* Content */}
-                <div className="relative p-6">
+                <div className="relative min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6">
                   {title && (
                     <Dialog.Title
                       className="text-lg sm:text-xl font-semibold mb-4"

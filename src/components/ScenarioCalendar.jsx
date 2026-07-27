@@ -66,7 +66,7 @@ function ScenarioCalendar({
       </h3>
 
       <div
-        className="rounded-2xl p-3 sm:p-4 border"
+        className="rounded-2xl p-3 sm:p-4 border fc-theme-dark text-xs sm:text-sm"
         style={{
           background: "color-mix(in srgb, var(--panel) 55%, transparent)",
           borderColor: "var(--border-rgba)",
@@ -97,7 +97,6 @@ function ScenarioCalendar({
 
             onViewRangeChange?.(gridStart, gridEnd, monthStart);
           }}
-          className="fc-theme-dark text-xs sm:text-sm"
         />
 
         {/* Leyenda (tokenizada) */}

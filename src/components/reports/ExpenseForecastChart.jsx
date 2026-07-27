@@ -1,18 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import {
+  lastDayOfMonthDateKey,
+  todayDateKey,
+  withUserTimeZone,
+} from "../../lib/dates/localDate";
 
 const STORAGE_KEY = "report:expense-forecast:params";
 
 /* ================= Utils ================= */
 
-function toISODate(d) {
-  return new Date(d).toISOString().split("T")[0];
-}
-
 function lastDayOfMonthISO(dateISO) {
-  const d = new Date(`${dateISO}T00:00:00`);
-  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  return toISODate(last);
+  return lastDayOfMonthDateKey(dateISO);
 }
 
 function formatMoney(v) {
@@ -28,6 +27,19 @@ function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
 }
 
+function parseDraftNumber(value) {
+  const normalized = String(value ?? "").trim().replace(",", ".");
+  if (!normalized) return null;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : null;
+}
+
+function clampDraftNumber(value, min, max, fallback) {
+  const number = parseDraftNumber(value);
+  if (number == null) return fallback;
+  return clamp(number, min, max);
+}
+
 function formatDateShort(iso) {
   if (!iso) return "—";
   const [y, m, d] = String(iso).split("-");
@@ -36,16 +48,12 @@ function formatDateShort(iso) {
 }
 
 function sanitizeParams(raw) {
+  const minIntervalDays = clampDraftNumber(raw?.minIntervalDays, 1, 365, 3);
+
   return {
-    months: Number.isFinite(Number(raw?.months))
-      ? clamp(Number(raw.months), 1, 36)
-      : 3,
-    minOccurrences: Number.isFinite(Number(raw?.minOccurrences))
-      ? clamp(Number(raw.minOccurrences), 2, 50)
-      : 3,
-    limit: Number.isFinite(Number(raw?.limit))
-      ? clamp(Number(raw.limit), 1, 50)
-      : 15,
+    months: clampDraftNumber(raw?.months, 1, 36, 3),
+    minOccurrences: clampDraftNumber(raw?.minOccurrences, 2, 50, 3),
+    limit: clampDraftNumber(raw?.limit, 1, 50, 15),
     includeOccasional:
       typeof raw?.includeOccasional === "boolean"
         ? raw.includeOccasional
@@ -53,15 +61,14 @@ function sanitizeParams(raw) {
     includeNoise:
       typeof raw?.includeNoise === "boolean" ? raw.includeNoise : true,
     tab: raw?.tab === "cashflow" ? "cashflow" : "expense",
-    minIntervalDays: Number.isFinite(Number(raw?.minIntervalDays))
-      ? clamp(Number(raw.minIntervalDays), 1, 365)
-      : 3,
-    maxIntervalDays: Number.isFinite(Number(raw?.maxIntervalDays))
-      ? clamp(Number(raw.maxIntervalDays), 1, 3650)
-      : 70,
-    maxCoefVariation: Number.isFinite(Number(raw?.maxCoefVariation))
-      ? Number(raw.maxCoefVariation)
-      : 0.6,
+    minIntervalDays,
+    maxIntervalDays: clampDraftNumber(
+      raw?.maxIntervalDays,
+      minIntervalDays,
+      3650,
+      Math.max(70, minIntervalDays)
+    ),
+    maxCoefVariation: clampDraftNumber(raw?.maxCoefVariation, 0.05, 2, 0.6),
   };
 }
 
@@ -240,17 +247,17 @@ export default function GeneralMonthlyProjection({ token }) {
   const api = import.meta.env.VITE_API_URL;
   const initialParams = useMemo(() => getInitialParams(), []);
 
-  const todayISO = useMemo(() => toISODate(new Date()), []);
+  const todayISO = useMemo(() => todayDateKey(), []);
   const defaultDateTo = useMemo(() => lastDayOfMonthISO(todayISO), [todayISO]);
 
   const [dateFrom, setDateFrom] = useState(todayISO);
   const [dateTo, setDateTo] = useState(defaultDateTo);
 
-  const [months, setMonths] = useState(initialParams.months);
+  const [months, setMonths] = useState(String(initialParams.months));
   const [minOccurrences, setMinOccurrences] = useState(
-    initialParams.minOccurrences
+    String(initialParams.minOccurrences)
   );
-  const [limit, setLimit] = useState(initialParams.limit);
+  const [limit, setLimit] = useState(String(initialParams.limit));
 
   const [includeOccasional, setIncludeOccasional] = useState(
     initialParams.includeOccasional
@@ -262,13 +269,13 @@ export default function GeneralMonthlyProjection({ token }) {
   const includeBalance = tab === "cashflow";
 
   const [minIntervalDays, setMinIntervalDays] = useState(
-    initialParams.minIntervalDays
+    String(initialParams.minIntervalDays)
   );
   const [maxIntervalDays, setMaxIntervalDays] = useState(
-    initialParams.maxIntervalDays
+    String(initialParams.maxIntervalDays)
   );
   const [maxCoefVariation, setMaxCoefVariation] = useState(
-    initialParams.maxCoefVariation
+    String(initialParams.maxCoefVariation)
   );
 
   const [rows, setRows] = useState([]);
@@ -328,24 +335,38 @@ export default function GeneralMonthlyProjection({ token }) {
 
     try {
       const types = includeIncome ? "expense,income" : "expense";
-
-      const res = await axios.get(`${api}/analytics/expense-forecast`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: {
-          date_from: dateFrom,
-          date_to: dateTo,
-          months,
-          min_occurrences: minOccurrences,
-          limit,
-          include_occasional: includeOccasional,
-          include_noise: includeNoise,
-          min_interval_days: minIntervalDays,
-          max_interval_days: maxIntervalDays,
-          max_coef_variation: maxCoefVariation,
-          types,
-          include_balance: includeBalance,
-        },
+      const params = sanitizeParams({
+        months,
+        minOccurrences,
+        limit,
+        includeOccasional,
+        includeNoise,
+        tab,
+        minIntervalDays,
+        maxIntervalDays,
+        maxCoefVariation,
       });
+
+      const res = await axios.get(
+        `${api}/analytics/expense-forecast`,
+        withUserTimeZone({
+          headers: { Authorization: `Bearer ${token}` },
+          params: {
+            date_from: dateFrom,
+            date_to: dateTo,
+            months: params.months,
+            min_occurrences: params.minOccurrences,
+            limit: params.limit,
+            include_occasional: params.includeOccasional,
+            include_noise: params.includeNoise,
+            min_interval_days: params.minIntervalDays,
+            max_interval_days: params.maxIntervalDays,
+            max_coef_variation: params.maxCoefVariation,
+            types,
+            include_balance: includeBalance,
+          },
+        })
+      );
 
       setRows(res.data?.data || []);
       setMeta(res.data?.meta || null);
@@ -598,13 +619,12 @@ export default function GeneralMonthlyProjection({ token }) {
                   Historial (meses)
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   min={1}
                   max={36}
                   value={months}
-                  onChange={(e) =>
-                    setMonths(clamp(Number(e.target.value), 1, 36))
-                  }
+                  onChange={(e) => setMonths(e.target.value)}
                   className="ff-input w-full"
                 />
               </div>
@@ -614,13 +634,12 @@ export default function GeneralMonthlyProjection({ token }) {
                   Min. ocurrencias
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   min={2}
                   max={50}
                   value={minOccurrences}
-                  onChange={(e) =>
-                    setMinOccurrences(clamp(Number(e.target.value), 2, 50))
-                  }
+                  onChange={(e) => setMinOccurrences(e.target.value)}
                   className="ff-input w-full"
                 />
               </div>
@@ -630,13 +649,12 @@ export default function GeneralMonthlyProjection({ token }) {
                   Top
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   min={1}
                   max={50}
                   value={limit}
-                  onChange={(e) =>
-                    setLimit(clamp(Number(e.target.value), 1, 50))
-                  }
+                  onChange={(e) => setLimit(e.target.value)}
                   className="ff-input w-full"
                 />
               </div>
@@ -658,12 +676,11 @@ export default function GeneralMonthlyProjection({ token }) {
                     Min intervalo (días)
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     min={1}
                     value={minIntervalDays}
-                    onChange={(e) =>
-                      setMinIntervalDays(clamp(Number(e.target.value), 1, 365))
-                    }
+                    onChange={(e) => setMinIntervalDays(e.target.value)}
                     className="ff-input w-full"
                   />
                 </div>
@@ -673,12 +690,11 @@ export default function GeneralMonthlyProjection({ token }) {
                     Max intervalo (días)
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     min={1}
                     value={maxIntervalDays}
-                    onChange={(e) =>
-                      setMaxIntervalDays(clamp(Number(e.target.value), 1, 3650))
-                    }
+                    onChange={(e) => setMaxIntervalDays(e.target.value)}
                     className="ff-input w-full"
                   />
                 </div>
@@ -688,12 +704,13 @@ export default function GeneralMonthlyProjection({ token }) {
                     Coef. variación máx
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     step="0.05"
                     min={0.05}
                     max={2}
                     value={maxCoefVariation}
-                    onChange={(e) => setMaxCoefVariation(Number(e.target.value))}
+                    onChange={(e) => setMaxCoefVariation(e.target.value)}
                     className="ff-input w-full"
                   />
                 </div>

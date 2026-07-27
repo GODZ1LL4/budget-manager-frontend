@@ -1,6 +1,7 @@
 // src/components/reports/TopVariableCategoriesChart.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { todayDateKey } from "../../lib/dates/localDate";
 import {
   BarChart,
   Bar,
@@ -26,20 +27,34 @@ const formatMoney = (v) => {
 const STABILITIES = ["fixed", "variable", "occasional"];
 
 // Fechas por defecto
-const today = new Date();
-const year = today.getFullYear();
+const today = todayDateKey();
+const year = today.slice(0, 4);
 const defaultDateFrom = `${year}-01-01`;
-const defaultDateTo = today.toISOString().split("T")[0];
+const defaultDateTo = today;
+
+function parseDraftNumber(value) {
+  const normalized = String(value ?? "").trim().replace(",", ".");
+  if (!normalized) return null;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : null;
+}
+
+function clampDraftNumber(value, min, max, fallback) {
+  const number = parseDraftNumber(value);
+  if (number == null) return fallback;
+  return Math.max(min, Math.min(max, number));
+}
 
 function TopVariableCategoriesChart({ token }) {
   const api = import.meta.env.VITE_API_URL;
 
   const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const [selectedStabilities, setSelectedStabilities] = useState(["variable"]);
   const [dateFrom, setDateFrom] = useState(defaultDateFrom);
   const [dateTo, setDateTo] = useState(defaultDateTo);
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState("10");
 
   const ui = useMemo(() => {
     const border = "var(--border-rgba)";
@@ -150,7 +165,9 @@ function TopVariableCategoriesChart({ token }) {
     return Math.max(260, base + count * perBar);
   }, [data]);
 
-  const loadData = async () => {
+  const appliedLimit = clampDraftNumber(limit, 1, 50, 10);
+
+  const loadData = useCallback(async () => {
     if (!token) return;
 
     const params = new URLSearchParams();
@@ -161,9 +178,10 @@ function TopVariableCategoriesChart({ token }) {
 
     params.set("date_from", dateFrom);
     params.set("date_to", dateTo);
-    params.set("limit", String(limit));
+    params.set("limit", String(clampDraftNumber(limit, 1, 50, 10)));
 
     try {
+      setLoading(true);
       const res = await axios.get(
         `${api}/analytics/top-variable-categories?${params.toString()}`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -172,19 +190,20 @@ function TopVariableCategoriesChart({ token }) {
     } catch (err) {
       console.error("Error al cargar categorías top:", err);
       setData([]);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [api, dateFrom, dateTo, limit, selectedStabilities, token]);
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, api, selectedStabilities, dateFrom, dateTo, limit]);
+  }, [loadData]);
 
   return (
     <div className="rounded-2xl p-6 space-y-4" style={ui.card}>
       <div>
         <h3 className="text-lg font-semibold mb-1" style={{ color: ui.text }}>
-          Top {limit} {titleStabilityPart} con más gasto
+          Top {appliedLimit} {titleStabilityPart} con más gasto
         </h3>
         <p className="text-sm" style={{ color: ui.muted }}>
           Filtra por tipo de estabilidad, rango de fechas y cantidad de
@@ -280,11 +299,12 @@ function TopVariableCategoriesChart({ token }) {
           </span>
 
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
             min={1}
             max={50}
             value={limit}
-            onChange={(e) => setLimit(Number(e.target.value) || 10)}
+            onChange={(e) => setLimit(e.target.value)}
             className="w-20 px-3 py-2 text-sm outline-none"
             style={ui.control}
             onFocus={(e) => {
@@ -298,6 +318,19 @@ function TopVariableCategoriesChart({ token }) {
             }}
           />
         </div>
+
+        <button
+          type="button"
+          onClick={loadData}
+          disabled={loading || !token}
+          className="px-3 py-2 text-sm font-semibold outline-none disabled:opacity-60"
+          style={{
+            ...ui.control,
+            cursor: loading || !token ? "not-allowed" : "pointer",
+          }}
+        >
+          {loading ? "Cargando..." : "Refrescar"}
+        </button>
       </div>
 
       {/* Gráfico */}

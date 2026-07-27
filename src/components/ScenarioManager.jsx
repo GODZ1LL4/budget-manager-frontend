@@ -11,6 +11,7 @@ import ScenarioForm from "./ScenarioForm";
 import ScenarioCalendar from "./ScenarioCalendar";
 import Modal from "./Modal";
 import TransactionForm from "./TransactionForm";
+import FFSelect from "./FFSelect";
 import { toast } from "react-toastify";
 import ConfirmModal from "./ConfirmModal";
 
@@ -129,6 +130,29 @@ function BudgetsDiff({ aiMonth, aiBudgets, currentBudgets, categoriesById }) {
   );
 }
 
+function normalizeCategoryAdjustments(adjustments = []) {
+  const byCategory = new Map();
+
+  for (const item of adjustments) {
+    const categoryId = item?.category_id;
+    const percent = Number(item?.percent);
+
+    if (!categoryId || !Number.isFinite(percent) || percent === 0) continue;
+
+    byCategory.set(String(categoryId), {
+      category_id: categoryId,
+      percent: Math.max(-100, Math.min(500, Number(percent.toFixed(2)))),
+    });
+  }
+
+  return Array.from(byCategory.values());
+}
+
+function formatSignedPercent(value) {
+  const n = Number(value || 0);
+  return `${n > 0 ? "+" : ""}${n.toFixed(2).replace(/\.00$/, "")}%`;
+}
+
 function ScenarioManager({ token }) {
   const [scenarios, setScenarios] = useState([]);
   const [selectedScenario, setSelectedScenario] = useState(null);
@@ -151,6 +175,11 @@ function ScenarioManager({ token }) {
     min_interval_days: 3,
     max_interval_days: 70,
     max_coef_variation: 0.6,
+  });
+  const [categoryAdjustments, setCategoryAdjustments] = useState([]);
+  const [categoryAdjustmentDraft, setCategoryAdjustmentDraft] = useState({
+    category_id: "",
+    percent: 0,
   });
 
   const [showModal, setShowModal] = useState(false);
@@ -181,6 +210,9 @@ function ScenarioManager({ token }) {
     useState(false);
   const [scenarioToDelete, setScenarioToDelete] = useState(null);
   const [deleteScenarioLoading, setDeleteScenarioLoading] = useState(false);
+  const [focusedMonthStart, setFocusedMonthStart] = useState(
+    dayjs().startOf("month").format("YYYY-MM-DD")
+  );
 
   // ✅ NUEVO: merge de eventos (lo que pinta el calendario)
   const mergedProjection = useMemo(() => {
@@ -189,8 +221,8 @@ function ScenarioManager({ token }) {
   }, [projection, advPreview, advEnabled]);
 
   const visibleMonthKey = useMemo(() => {
-    return dayjs(calendarRange.start).add(15, "day").format("YYYY-MM");
-  }, [calendarRange]);
+    return dayjs(focusedMonthStart).startOf("month").format("YYYY-MM");
+  }, [focusedMonthStart]);
 
   const monthProjection = useMemo(
     () =>
@@ -221,16 +253,32 @@ function ScenarioManager({ token }) {
     };
   }, [monthProjection]);
 
-  const [focusedMonthStart, setFocusedMonthStart] = useState(
-    dayjs().startOf("month").format("YYYY-MM-DD")
-  );
-
   const [confirmDeleteTxOpen, setConfirmDeleteTxOpen] = useState(false);
   const [deleteTxLoading, setDeleteTxLoading] = useState(false);
   const [txToDelete, setTxToDelete] = useState(null);
   // opcional: guarda info para mostrar en el modal (nombre/fecha/monto)
 
   const api = import.meta.env.VITE_API_URL;
+  const expenseCategories = useMemo(
+    () => categories.filter((cat) => cat.type === "expense"),
+    [categories]
+  );
+  const categoryNameById = useMemo(() => {
+    const map = new Map();
+    for (const cat of categories) map.set(String(cat.id), cat.name);
+    return map;
+  }, [categories]);
+  const serializedCategoryAdjustments = useMemo(
+    () => normalizeCategoryAdjustments(categoryAdjustments),
+    [categoryAdjustments]
+  );
+  const expenseCategoryEntries = useMemo(
+    () =>
+      Object.entries(stats.categoryTotals).sort(
+        ([, a], [, b]) => Number(b || 0) - Number(a || 0)
+      ),
+    [stats.categoryTotals]
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -272,18 +320,28 @@ function ScenarioManager({ token }) {
 
   // ✅ NUEVO: fetch preview avanzado (rango visible)
   const fetchAdvancedPreview = useCallback(
-    async (scenarioId, start, end) => {
-      if (!scenarioId || !advEnabled) return;
+    async (
+      scenarioId,
+      start,
+      end,
+      focused = focusedMonthStart,
+      adjustmentsOverride = null
+    ) => {
+      if (!scenarioId) return;
 
       setAdvLoading(true);
       try {
+        const adjustments =
+          adjustmentsOverride ?? serializedCategoryAdjustments;
         const res = await axios.get(
           `${api}/scenarios/${scenarioId}/advanced-forecast/preview`,
           {
             params: {
-              start,
-              end,
+              focused: dayjs(focused).format("YYYY-MM-DD"),
+              start: dayjs(start).format("YYYY-MM-DD"),
+              end: dayjs(end).format("YYYY-MM-DD"),
               ...advParams,
+              category_adjustments: JSON.stringify(adjustments),
             },
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -298,6 +356,8 @@ function ScenarioManager({ token }) {
           type: e.type || "expense",
           category_id: e.category_id || null,
           category_name: e.category_name || "Sin categoría",
+          category_stability: e.category_stability || null,
+          forecast_bucket: e.forecast_bucket || null,
           account_id: e.account_id || null,
           account_name: e.account_name || null,
           isProjected: true,
@@ -318,7 +378,13 @@ function ScenarioManager({ token }) {
         setAdvLoading(false);
       }
     },
-    [api, token, advEnabled, advParams]
+    [
+      api,
+      token,
+      advParams,
+      focusedMonthStart,
+      serializedCategoryAdjustments,
+    ]
   );
 
   // ✅ NUEVO: registrar forecast avanzado (replace)
@@ -339,7 +405,10 @@ function ScenarioManager({ token }) {
           focused: focusedMonthStart, // 👈 recomendado
           start: mStart, // opcional, por compat
           end: mEnd, // inclusivo
-          params: advParams,
+          params: {
+            ...advParams,
+            category_adjustments: serializedCategoryAdjustments,
+          },
           mode: "replace",
         },
         { headers: { Authorization: `Bearer ${token}` } }
@@ -383,11 +452,14 @@ function ScenarioManager({ token }) {
       .format("YYYY-MM-DD");
 
     setCalendarRange({ start, end: endExclusive });
+    setFocusedMonthStart(start);
 
     // reset de preview avanzado al cambiar escenario
     setAdvPreview([]);
     setAdvMeta(null);
     setAdvEnabled(false);
+    setCategoryAdjustments([]);
+    setCategoryAdjustmentDraft({ category_id: "", percent: 0 });
 
     fetchProjectionRange(scenario.id, start, endExclusive);
   };
@@ -580,6 +652,8 @@ function ScenarioManager({ token }) {
         setAdvPreview([]);
         setAdvMeta(null);
         setAdvEnabled(false);
+        setCategoryAdjustments([]);
+        setCategoryAdjustmentDraft({ category_id: "", percent: 0 });
       }
 
       toast.success("Escenario eliminado ✅");
@@ -625,6 +699,51 @@ function ScenarioManager({ token }) {
     [api, token, selectedScenario]
   );
 
+  const refreshPreviewWithAdjustments = async (nextAdjustments) => {
+    if (!advEnabled || !selectedScenario) return;
+
+    await fetchAdvancedPreview(
+      selectedScenario.id,
+      calendarRange.start,
+      calendarRange.end,
+      focusedMonthStart,
+      nextAdjustments
+    );
+  };
+
+  const handleUpsertCategoryAdjustment = async () => {
+    const categoryId = categoryAdjustmentDraft.category_id;
+    const percent = Number(categoryAdjustmentDraft.percent);
+
+    if (!categoryId) {
+      toast.warning("Selecciona una categoria de gasto.");
+      return;
+    }
+
+    if (!Number.isFinite(percent)) {
+      toast.warning("Ingresa un porcentaje valido.");
+      return;
+    }
+
+    const next = normalizeCategoryAdjustments([
+      ...categoryAdjustments.filter(
+        (item) => String(item.category_id) !== String(categoryId)
+      ),
+      { category_id: categoryId, percent },
+    ]);
+
+    setCategoryAdjustments(next);
+    await refreshPreviewWithAdjustments(next);
+  };
+
+  const handleRemoveCategoryAdjustment = async (categoryId) => {
+    const next = categoryAdjustments.filter(
+      (item) => String(item.category_id) !== String(categoryId)
+    );
+    setCategoryAdjustments(next);
+    await refreshPreviewWithAdjustments(next);
+  };
+
   return (
     <div className="p-6 space-y-6 text-[var(--text)]">
       <h2 className="ff-h2 flex items-center justify-between">
@@ -639,6 +758,8 @@ function ScenarioManager({ token }) {
           setAdvPreview([]);
           setAdvMeta(null);
           setAdvEnabled(false);
+          setCategoryAdjustments([]);
+          setCategoryAdjustmentDraft({ category_id: "", percent: 0 });
           axios
             .get(`${api}/scenarios`, {
               headers: { Authorization: `Bearer ${token}` },
@@ -770,7 +891,8 @@ function ScenarioManager({ token }) {
                       await fetchAdvancedPreview(
                         selectedScenario.id,
                         calendarRange.start,
-                        calendarRange.end
+                        calendarRange.end,
+                        focusedMonthStart
                       );
                     }
                   }}
@@ -865,6 +987,83 @@ function ScenarioManager({ token }) {
               </div>
             </div>
 
+            <div className="ff-surface mt-4 p-3">
+              <div className="grid grid-cols-1 md:grid-cols-[minmax(220px,1fr)_140px_auto] gap-3 items-end">
+                <div className="space-y-1">
+                  <label className="ff-label">Categoria de gasto</label>
+                  <FFSelect
+                    value={categoryAdjustmentDraft.category_id}
+                    onChange={(v) =>
+                      setCategoryAdjustmentDraft((draft) => ({
+                        ...draft,
+                        category_id: v || "",
+                      }))
+                    }
+                    placeholder="Selecciona categoria"
+                    options={expenseCategories}
+                    getOptionValue={(cat) => cat.id}
+                    getOptionLabel={(cat) => cat.name}
+                  />
+                </div>
+
+                <FieldNumber
+                  label="% ajuste"
+                  value={categoryAdjustmentDraft.percent}
+                  min={-100}
+                  max={500}
+                  step={1}
+                  onChange={(v) =>
+                    setCategoryAdjustmentDraft((draft) => ({
+                      ...draft,
+                      percent: v,
+                    }))
+                  }
+                />
+
+                <button
+                  type="button"
+                  className="ff-btn ff-btn-outline"
+                  disabled={advLoading || expenseCategories.length === 0}
+                  onClick={handleUpsertCategoryAdjustment}
+                >
+                  Aplicar
+                </button>
+              </div>
+
+              {serializedCategoryAdjustments.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {serializedCategoryAdjustments.map((adj) => (
+                    <span
+                      key={adj.category_id}
+                      className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs"
+                      style={{
+                        borderColor:
+                          "color-mix(in srgb, var(--border-rgba) 70%, transparent)",
+                        background:
+                          "color-mix(in srgb, var(--panel) 82%, transparent)",
+                        color: "var(--text)",
+                      }}
+                    >
+                      <span>
+                        {categoryNameById.get(String(adj.category_id)) ||
+                          "Categoria"}{" "}
+                        <strong>{formatSignedPercent(adj.percent)}</strong>
+                      </span>
+                      <button
+                        type="button"
+                        className="text-[var(--muted)] hover:text-[var(--text)]"
+                        onClick={() =>
+                          handleRemoveCategoryAdjustment(adj.category_id)
+                        }
+                      >
+                        Quitar
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="mt-4 flex flex-wrap items-center gap-2 justify-end">
               <button
                 type="button"
@@ -874,7 +1073,8 @@ function ScenarioManager({ token }) {
                   fetchAdvancedPreview(
                     selectedScenario.id,
                     calendarRange.start,
-                    calendarRange.end
+                    calendarRange.end,
+                    focusedMonthStart
                   )
                 }
               >
@@ -965,39 +1165,39 @@ function ScenarioManager({ token }) {
             </div>
 
             <div className="mt-4">
-              <h4 className="text-sm font-semibold mb-2 text-[var(--text)]">
+              <h4 className="text-sm font-semibold mb-2 text-center text-[var(--text)]">
                 Gastos por categoría
               </h4>
 
-              <ul className="space-y-1 text-xs md:text-sm text-[var(--text)]">
-                {Object.entries(stats.categoryTotals).map(([cat, total]) => (
-                  <li
+              <div className="mx-auto max-w-xl overflow-hidden rounded-[var(--radius-md)] border text-xs md:text-sm text-[var(--text)] border-[var(--border-rgba)]">
+                {expenseCategoryEntries.map(([cat, total]) => (
+                  <div
                     key={cat}
-                    className="flex justify-between py-1"
+                    className="grid grid-cols-[minmax(0,1fr)_9rem] items-center gap-3 px-3 py-2"
                     style={{
                       borderBottom:
                         "var(--border-w) solid color-mix(in srgb, var(--border-rgba) 60%, transparent)",
                     }}
                   >
-                    <span>{cat}</span>
-                    <span className="text-right font-medium">
+                    <span className="min-w-0 truncate">{cat}</span>
+                    <span className="text-left font-medium tabular-nums">
                       RD$ {total.toFixed(2)}
                     </span>
-                  </li>
+                  </div>
                 ))}
 
-                {Object.keys(stats.categoryTotals).length === 0 && (
-                  <li
-                    className="italic"
+                {expenseCategoryEntries.length === 0 && (
+                  <div
+                    className="px-3 py-2 italic"
                     style={{
                       color:
                         "color-mix(in srgb, var(--muted) 70%, transparent)",
                     }}
                   >
                     No hay gastos registrados
-                  </li>
+                  </div>
                 )}
-              </ul>
+              </div>
             </div>
           </div>
 
@@ -1020,17 +1220,18 @@ function ScenarioManager({ token }) {
 
                 // 2) advanced preview: usa SOLO el mes
                 if (advEnabled) {
-                  const mStart = dayjs(focusedMonthStart)
+                  const mStart = dayjs(monthStart)
                     .startOf("month")
                     .format("YYYY-MM-DD");
-                  const mEndExcl = dayjs(focusedMonthStart)
+                  const mEndExcl = dayjs(monthStart)
                     .endOf("month")
                     .add(1, "day")
                     .format("YYYY-MM-DD");
                   await fetchAdvancedPreview(
                     selectedScenario.id,
                     mStart,
-                    mEndExcl
+                    mEndExcl,
+                    monthStart
                   );
                 }
               }

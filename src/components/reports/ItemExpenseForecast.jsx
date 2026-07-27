@@ -1,16 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
+import {
+  lastDayOfMonthDateKey,
+  todayDateKey,
+  withUserTimeZone,
+} from "../../lib/dates/localDate";
 
 /* ================= Utils ================= */
 
-function toISODate(d) {
-  return new Date(d).toISOString().split("T")[0];
-}
-
 function lastDayOfMonthISO(dateISO) {
-  const d = new Date(`${dateISO}T00:00:00`);
-  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  return toISODate(last);
+  return lastDayOfMonthDateKey(dateISO);
 }
 
 function formatMoney(v) {
@@ -22,8 +21,17 @@ function formatMoney(v) {
   }).format(n);
 }
 
-function clamp(n, a, b) {
-  return Math.max(a, Math.min(b, n));
+function parseDraftNumber(value) {
+  const normalized = String(value ?? "").trim().replace(",", ".");
+  if (!normalized) return null;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : null;
+}
+
+function clampDraftNumber(value, min, max, fallback) {
+  const number = parseDraftNumber(value);
+  if (number == null) return fallback;
+  return Math.max(min, Math.min(max, number));
 }
 
 function formatDateShort(iso) {
@@ -150,21 +158,21 @@ function InfoTip({ children, widthClass = "w-56" }) {
 export default function ItemExpenseForecast({ token }) {
   const api = import.meta.env.VITE_API_URL;
 
-  const todayISO = useMemo(() => toISODate(new Date()), []);
+  const todayISO = useMemo(() => todayDateKey(), []);
   const defaultDateTo = useMemo(() => lastDayOfMonthISO(todayISO), [todayISO]);
 
   const [dateFrom, setDateFrom] = useState(todayISO);
   const [dateTo, setDateTo] = useState(defaultDateTo);
 
-  const [months, setMonths] = useState(6);
-  const [minOccurrences, setMinOccurrences] = useState(3);
-  const [limit, setLimit] = useState(15);
+  const [months, setMonths] = useState("6");
+  const [minOccurrences, setMinOccurrences] = useState("3");
+  const [limit, setLimit] = useState("15");
 
   const [includeNoise, setIncludeNoise] = useState(true);
 
-  const [minIntervalDays, setMinIntervalDays] = useState(3);
-  const [maxIntervalDays, setMaxIntervalDays] = useState(70);
-  const [maxCoefVariation, setMaxCoefVariation] = useState(0.6);
+  const [minIntervalDays, setMinIntervalDays] = useState("3");
+  const [maxIntervalDays, setMaxIntervalDays] = useState("70");
+  const [maxCoefVariation, setMaxCoefVariation] = useState("0.6");
 
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -187,20 +195,38 @@ export default function ItemExpenseForecast({ token }) {
     setError("");
 
     try {
-      const res = await axios.get(`${api}/analytics/item-expense-forecast`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: {
-          date_from: dateFrom,
-          date_to: dateTo,
-          months,
-          min_occurrences: minOccurrences,
-          limit,
-          include_noise: includeNoise,
-          min_interval_days: minIntervalDays,
-          max_interval_days: maxIntervalDays,
-          max_coef_variation: maxCoefVariation,
-        },
-      });
+      const minInterval = clampDraftNumber(minIntervalDays, 1, 365, 3);
+      const params = {
+        months: clampDraftNumber(months, 1, 36, 6),
+        minOccurrences: clampDraftNumber(minOccurrences, 2, 50, 3),
+        limit: clampDraftNumber(limit, 1, 50, 15),
+        minIntervalDays: minInterval,
+        maxIntervalDays: clampDraftNumber(
+          maxIntervalDays,
+          minInterval,
+          3650,
+          Math.max(70, minInterval)
+        ),
+        maxCoefVariation: clampDraftNumber(maxCoefVariation, 0.05, 2, 0.6),
+      };
+
+      const res = await axios.get(
+        `${api}/analytics/item-expense-forecast`,
+        withUserTimeZone({
+          headers: { Authorization: `Bearer ${token}` },
+          params: {
+            date_from: dateFrom,
+            date_to: dateTo,
+            months: params.months,
+            min_occurrences: params.minOccurrences,
+            limit: params.limit,
+            include_noise: includeNoise,
+            min_interval_days: params.minIntervalDays,
+            max_interval_days: params.maxIntervalDays,
+            max_coef_variation: params.maxCoefVariation,
+          },
+        })
+      );
 
       setRows(res.data?.data || []);
       setMeta(res.data?.meta || null);
@@ -349,11 +375,12 @@ export default function ItemExpenseForecast({ token }) {
               Historial (meses)
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               min={1}
               max={36}
               value={months}
-              onChange={(e) => setMonths(clamp(Number(e.target.value), 1, 36))}
+              onChange={(e) => setMonths(e.target.value)}
               className="ff-input w-full"
             />
           </div>
@@ -363,13 +390,12 @@ export default function ItemExpenseForecast({ token }) {
               Min. ocurrencias
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               min={2}
               max={50}
               value={minOccurrences}
-              onChange={(e) =>
-                setMinOccurrences(clamp(Number(e.target.value), 2, 50))
-              }
+              onChange={(e) => setMinOccurrences(e.target.value)}
               className="ff-input w-full"
             />
           </div>
@@ -379,11 +405,12 @@ export default function ItemExpenseForecast({ token }) {
               Top
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               min={1}
               max={50}
               value={limit}
-              onChange={(e) => setLimit(clamp(Number(e.target.value), 1, 50))}
+              onChange={(e) => setLimit(e.target.value)}
               className="ff-input w-full"
             />
           </div>
@@ -412,12 +439,11 @@ export default function ItemExpenseForecast({ token }) {
                 Min intervalo (días)
               </label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 min={1}
                 value={minIntervalDays}
-                onChange={(e) =>
-                  setMinIntervalDays(clamp(Number(e.target.value), 1, 365))
-                }
+                onChange={(e) => setMinIntervalDays(e.target.value)}
                 className="ff-input w-full"
               />
             </div>
@@ -427,12 +453,11 @@ export default function ItemExpenseForecast({ token }) {
                 Max intervalo (días)
               </label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
                 min={1}
                 value={maxIntervalDays}
-                onChange={(e) =>
-                  setMaxIntervalDays(clamp(Number(e.target.value), 1, 3650))
-                }
+                onChange={(e) => setMaxIntervalDays(e.target.value)}
                 className="ff-input w-full"
               />
             </div>
@@ -442,12 +467,13 @@ export default function ItemExpenseForecast({ token }) {
                 Coef. variación máx
               </label>
               <input
-                type="number"
+                type="text"
+                inputMode="decimal"
                 step="0.05"
                 min={0.05}
                 max={2}
                 value={maxCoefVariation}
-                onChange={(e) => setMaxCoefVariation(Number(e.target.value))}
+                onChange={(e) => setMaxCoefVariation(e.target.value)}
                 className="ff-input w-full"
               />
             </div>

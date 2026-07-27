@@ -2,29 +2,31 @@ import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Modal from "../Modal";
 import FFSelect from "../FFSelect";
+import { addDaysToDateKey, todayDateKey } from "../../lib/dates/localDate";
 
 const STORAGE_KEY = "report:ant-expenses:params";
 
-function clamp(n, min, max) {
-  const num = Number(n);
-  if (!Number.isFinite(num)) return min;
+function parseDraftNumber(value) {
+  const normalized = String(value ?? "").trim().replace(",", ".");
+  if (!normalized) return null;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : null;
+}
+
+function clamp(n, min, max, fallback = min) {
+  const num = parseDraftNumber(n);
+  if (num == null) return fallback;
   return Math.max(min, Math.min(max, num));
 }
 
 function sanitizeParams(raw) {
   return {
-    maxAmount: Number.isFinite(Number(raw?.maxAmount))
-      ? clamp(raw.maxAmount, 1, 100000)
-      : 200,
-    minCount: Number.isFinite(Number(raw?.minCount))
-      ? clamp(raw.minCount, 1, 100)
-      : 3,
+    maxAmount: clamp(raw?.maxAmount, 1, 100000, 200),
+    minCount: clamp(raw?.minCount, 1, 100, 3),
     groupBy: raw?.groupBy === "category" ? "category" : "description",
     excludeAuto:
       typeof raw?.excludeAuto === "boolean" ? raw.excludeAuto : true,
-    limit: Number.isFinite(Number(raw?.limit))
-      ? clamp(raw.limit, 5, 50)
-      : 15,
+    limit: clamp(raw?.limit, 5, 50, 15),
   };
 }
 
@@ -44,23 +46,16 @@ function AntExpensesReport({ token, compact = false }) {
 
   const initialParams = useMemo(() => getInitialParams(), []);
 
-  const today = new Date();
-  const toDefault = today.toISOString().split("T")[0];
-  const fromDefault = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate() - 30
-  )
-    .toISOString()
-    .split("T")[0];
+  const toDefault = todayDateKey();
+  const fromDefault = addDaysToDateKey(toDefault, -30);
 
   const [dateFrom, setDateFrom] = useState(fromDefault);
   const [dateTo, setDateTo] = useState(toDefault);
-  const [maxAmount, setMaxAmount] = useState(initialParams.maxAmount);
-  const [minCount, setMinCount] = useState(initialParams.minCount);
+  const [maxAmount, setMaxAmount] = useState(String(initialParams.maxAmount));
+  const [minCount, setMinCount] = useState(String(initialParams.minCount));
   const [groupBy, setGroupBy] = useState(initialParams.groupBy);
   const [excludeAuto, setExcludeAuto] = useState(initialParams.excludeAuto);
-  const [limit, setLimit] = useState(initialParams.limit);
+  const [limit, setLimit] = useState(String(initialParams.limit));
 
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -169,16 +164,24 @@ function AntExpensesReport({ token, compact = false }) {
     if (!token) return;
     setLoading(true);
     try {
+      const params = sanitizeParams({
+        maxAmount,
+        minCount,
+        groupBy,
+        excludeAuto,
+        limit,
+      });
+
       const res = await axios.get(`${api}/analytics/ant-expenses`, {
         headers: { Authorization: `Bearer ${token}` },
         params: {
           date_from: dateFrom,
           date_to: dateTo,
-          max_amount: maxAmount,
-          min_count: minCount,
-          group_by: groupBy,
-          exclude_auto: excludeAuto ? 1 : 0,
-          limit,
+          max_amount: params.maxAmount,
+          min_count: params.minCount,
+          group_by: params.groupBy,
+          exclude_auto: params.excludeAuto ? 1 : 0,
+          limit: params.limit,
         },
       });
       setRows(res.data?.data || []);
@@ -205,15 +208,23 @@ function AntExpensesReport({ token, compact = false }) {
     setDetailError("");
 
     try {
+      const params = sanitizeParams({
+        maxAmount,
+        minCount,
+        groupBy,
+        excludeAuto,
+        limit,
+      });
+
       const res = await axios.get(`${api}/analytics/ant-expenses-detail`, {
         headers: { Authorization: `Bearer ${token}` },
         params: {
-          group_by: groupBy,
+          group_by: params.groupBy,
           key: row.key,
           date_from: dateFrom,
           date_to: dateTo,
-          max_amount: maxAmount,
-          exclude_auto: excludeAuto ? 1 : 0,
+          max_amount: params.maxAmount,
+          exclude_auto: params.excludeAuto ? 1 : 0,
           limit: 2000,
           offset: 0,
         },
@@ -327,12 +338,11 @@ function AntExpensesReport({ token, compact = false }) {
                   <div className="flex flex-col gap-1">
                     <span style={{ color: ui.muted }}>Máximo</span>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       value={maxAmount}
                       min="1"
-                      onChange={(e) =>
-                        setMaxAmount(clamp(Number(e.target.value), 1, 100000))
-                      }
+                      onChange={(e) => setMaxAmount(e.target.value)}
                       style={ui.input}
                       className="px-2 h-10"
                     />
@@ -341,12 +351,11 @@ function AntExpensesReport({ token, compact = false }) {
                   <div className="flex flex-col gap-1">
                     <span style={{ color: ui.muted }}>Mínimo veces</span>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={minCount}
                       min="1"
-                      onChange={(e) =>
-                        setMinCount(clamp(Number(e.target.value), 1, 100))
-                      }
+                      onChange={(e) => setMinCount(e.target.value)}
                       style={ui.input}
                       className="px-2 h-10"
                     />
@@ -375,13 +384,12 @@ function AntExpensesReport({ token, compact = false }) {
                   <div className="flex flex-col gap-1">
                     <span style={{ color: ui.muted }}>Top</span>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       value={limit}
                       min="5"
                       max="50"
-                      onChange={(e) =>
-                        setLimit(clamp(Number(e.target.value), 5, 50))
-                      }
+                      onChange={(e) => setLimit(e.target.value)}
                       style={ui.input}
                       className="px-2 h-10"
                     />
@@ -458,12 +466,11 @@ function AntExpensesReport({ token, compact = false }) {
               <div className="flex flex-col gap-1">
                 <span style={{ color: ui.muted }}>Máximo por compra</span>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   value={maxAmount}
                   min="1"
-                  onChange={(e) =>
-                    setMaxAmount(clamp(Number(e.target.value), 1, 100000))
-                  }
+                  onChange={(e) => setMaxAmount(e.target.value)}
                   style={ui.input}
                   className="w-full px-2 h-10"
                 />
@@ -472,12 +479,11 @@ function AntExpensesReport({ token, compact = false }) {
               <div className="flex flex-col gap-1">
                 <span style={{ color: ui.muted }}>Mínimo veces</span>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={minCount}
                   min="1"
-                  onChange={(e) =>
-                    setMinCount(clamp(Number(e.target.value), 1, 100))
-                  }
+                  onChange={(e) => setMinCount(e.target.value)}
                   style={ui.input}
                   className="w-full px-2 h-10"
                 />
@@ -506,13 +512,12 @@ function AntExpensesReport({ token, compact = false }) {
               <div className="flex flex-col gap-1">
                 <span style={{ color: ui.muted }}>Top</span>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={limit}
                   min="5"
                   max="50"
-                  onChange={(e) =>
-                    setLimit(clamp(Number(e.target.value), 5, 50))
-                  }
+                  onChange={(e) => setLimit(e.target.value)}
                   style={ui.input}
                   className="w-full px-2 h-10"
                 />

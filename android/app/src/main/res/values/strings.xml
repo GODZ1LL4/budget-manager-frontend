@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">FinanceFlow</string>
+    <string name="title_activity_main">FinanceFlow</string>
+    <string name="package_name">com.ovbusiness.financeflow</string>
+    <string name="custom_url_scheme">com.ovbusiness.financeflow</string>
+    <string name="home_widget_name">FinanceFlow</string>
+    <string name="home_widget_description">Resumen rapido con balance, gasto, ingreso y cuentas.</string>
+</resources>

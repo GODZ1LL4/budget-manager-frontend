@@ -1,10 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import axios from "axios";
+import { HiDotsVertical } from "react-icons/hi";
 import Modal from "../components/Modal";
 import FFSelect from "../components/FFSelect";
+import ShoppingPlanModal from "../components/ShoppingPlanModal";
 import { toast } from "react-toastify";
+import {
+  createItem,
+  createItemPrice,
+  createTax,
+  deleteItemPriceRecord,
+  deleteItemRecord,
+  deleteTaxRecord,
+  listItemPrices,
+  listItems,
+  listTaxes,
+  syncPendingItems,
+  updateItem,
+} from "../lib/repositories/itemsRepository";
+import { canUsePremiumBackend } from "../lib/subscription/subscriptionAccess";
+import { todayDateKey, withUserTimeZone } from "../lib/dates/localDate";
+import useClickOutside from "../hooks/useClickOutside";
+import useOverflowMenuPosition from "../hooks/useOverflowMenuPosition";
 
-function Items({ token }) {
+function Items({ token, subscriptionMode }) {
   const [items, setItems] = useState([]);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -13,23 +33,31 @@ function Items({ token }) {
   const [taxes, setTaxes] = useState([]);
   const [selectedItem, setSelectedItem] = useState(null);
   const [price, setPrice] = useState("");
-  const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(() => todayDateKey());
   const [priceHistory, setPriceHistory] = useState([]);
   const [showTaxModal, setShowTaxModal] = useState(false);
   const [showPriceModal, setShowPriceModal] = useState(false);
   const [itemToEdit, setItemToEdit] = useState(null);
   const [showEditItemModal, setShowEditItemModal] = useState(false);
-
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
-
   const [showDeletePriceModal, setShowDeletePriceModal] = useState(false);
   const [priceToDelete, setPriceToDelete] = useState(null);
+  const [showShoppingPlanModal, setShowShoppingPlanModal] = useState(false);
+  const [mobileMenuId, setMobileMenuId] = useState(null);
+  const mobileMenuRef = useRef(null);
 
   const api = import.meta.env.VITE_API_URL;
+  const isNativeMobile = Capacitor.getPlatform() !== "web";
+  const canAccessItemsOnThisDevice = canUsePremiumBackend(subscriptionMode);
+
+  useClickOutside(mobileMenuRef, () => setMobileMenuId(null), Boolean(mobileMenuId));
+  const mobileMenuPlacement = useOverflowMenuPosition(
+    mobileMenuRef,
+    Boolean(mobileMenuId)
+  );
 
   const formatCurrency = (amount) =>
     new Intl.NumberFormat("es-DO", {
@@ -45,17 +73,20 @@ function Items({ token }) {
 
   const fetchItems = async () => {
     try {
-      const res = await axios.get(`${api}/items-with-price`, authHeaders);
-      setItems(res.data.data);
+      const res = await listItems({ token });
+      setItems(res.data);
+      if (res.source === "cache") {
+        toast.info("Mostrando articulos guardados localmente");
+      }
     } catch {
-      toast.error("Error al cargar artículos");
+      toast.error("Error al cargar articulos");
     }
   };
 
   const fetchTaxes = async () => {
     try {
-      const res = await axios.get(`${api}/taxes`, authHeaders);
-      setTaxes(res.data.data);
+      const res = await listTaxes({ token });
+      setTaxes(res.data);
     } catch {
       toast.error("Error al cargar impuestos");
     }
@@ -63,8 +94,8 @@ function Items({ token }) {
 
   const fetchPrices = async (itemId) => {
     try {
-      const res = await axios.get(`${api}/item-prices/${itemId}`, authHeaders);
-      setPriceHistory(res.data.data);
+      const res = await listItemPrices({ token, itemId });
+      setPriceHistory(res.data);
     } catch {
       toast.error("Error al obtener historial de precios");
     }
@@ -74,21 +105,29 @@ function Items({ token }) {
     e.preventDefault();
 
     try {
-      await axios.post(
-        `${api}/items`,
-        { name, description, category, tax_id: selectedTaxId || null },
-        authHeaders
-      );
+      const result = await createItem({
+        token,
+        payload: {
+          name,
+          description,
+          category,
+          tax_id: selectedTaxId || null,
+        },
+      });
 
       setName("");
       setDescription("");
       setCategory("");
       setSelectedTaxId("");
 
-      toast.success("Artículo creado correctamente");
-      fetchItems();
+      toast.success(
+        result.offline
+          ? "Articulo guardado localmente. Se sincronizara luego."
+          : "Articulo creado correctamente"
+      );
+      await fetchItems();
     } catch {
-      toast.error("Error al crear artículo");
+      toast.error("Error al crear articulo");
     }
   };
 
@@ -96,25 +135,22 @@ function Items({ token }) {
     e.preventDefault();
 
     try {
-      await axios.post(
-        `${api}/items`,
-        {
-          id: itemToEdit.id,
-          name: itemToEdit.name,
-          description: itemToEdit.description,
-          category: itemToEdit.category,
-          tax_id: itemToEdit.tax_id || null,
-        },
-        authHeaders
-      );
+      const result = await updateItem({
+        token,
+        item: itemToEdit,
+      });
 
       setItemToEdit(null);
       setShowEditItemModal(false);
 
-      toast.success("Artículo actualizado correctamente");
-      fetchItems();
+      toast.success(
+        result.offline
+          ? "Articulo actualizado localmente. Se sincronizara luego."
+          : "Articulo actualizado correctamente"
+      );
+      await fetchItems();
     } catch {
-      toast.error("Error al editar artículo");
+      toast.error("Error al editar articulo");
     }
   };
 
@@ -124,29 +160,37 @@ function Items({ token }) {
 
     const numericPrice = parseFloat(price);
     if (Number.isNaN(numericPrice)) {
-      toast.error("Precio inválido");
+      toast.error("Precio invalido");
       return;
     }
 
     try {
-      await axios.post(
-        `${api}/item-prices`,
-        { item_id: selectedItem.id, price: numericPrice, date },
-        authHeaders
-      );
+      const result = await createItemPrice({
+        token,
+        payload: { item_id: selectedItem.id, price: numericPrice, date },
+      });
 
       setPrice("");
       await fetchPrices(selectedItem.id);
       await fetchItems();
 
-      setSelectedItem((prev) => (prev ? { ...prev, latest_price: numericPrice } : prev));
-      toast.success("Precio agregado correctamente");
+      setSelectedItem((prev) =>
+        prev ? { ...prev, latest_price: numericPrice } : prev
+      );
+
+      toast.success(
+        result.offline
+          ? "Precio guardado localmente. Se sincronizara luego."
+          : "Precio agregado correctamente"
+      );
     } catch (err) {
       const code = err?.response?.data?.error;
       const message = err?.response?.data?.message;
 
       if (code === "DUPLICATE_PRICE_FOR_DATE") {
-        toast.error(message || "Ya existe un precio para este artículo en esa fecha.");
+        toast.error(
+          message || "Ya existe un precio para este articulo en esa fecha."
+        );
       } else if (message) {
         toast.error(message);
       } else {
@@ -159,11 +203,15 @@ function Items({ token }) {
     if (!item) return;
 
     try {
-      await axios.delete(`${api}/items/${item.id}`, authHeaders);
-
-      toast.success("Artículo eliminado correctamente");
+      const result = await deleteItemRecord({ token, item });
+      toast.success(
+        result.offline
+          ? "Articulo eliminado localmente. Se sincronizara luego."
+          : "Articulo eliminado correctamente"
+      );
       setItemToDelete(null);
-      fetchItems();
+      setMobileMenuId(null);
+      await fetchItems();
     } catch (err) {
       const errorCode = err?.response?.data?.error;
       const message = err?.response?.data?.message;
@@ -171,10 +219,10 @@ function Items({ token }) {
       if (errorCode === "ITEM_IN_USE") {
         toast.error(
           message ||
-            "No se puede eliminar el artículo porque ya se ha usado en transacciones."
+            "No se puede eliminar el articulo porque ya se ha usado en transacciones."
         );
       } else {
-        toast.error("Error al eliminar artículo");
+        toast.error("Error al eliminar articulo");
       }
     }
   };
@@ -188,9 +236,17 @@ function Items({ token }) {
     if (!selectedItem || !priceToDelete) return;
 
     try {
-      await axios.delete(`${api}/item-prices/${priceToDelete.id}`, authHeaders);
+      const result = await deleteItemPriceRecord({
+        token,
+        itemId: selectedItem.id,
+        priceRecord: priceToDelete,
+      });
 
-      toast.success("Precio eliminado correctamente");
+      toast.success(
+        result.offline
+          ? "Precio eliminado localmente. Se sincronizara luego."
+          : "Precio eliminado correctamente"
+      );
       setShowDeletePriceModal(false);
       setPriceToDelete(null);
 
@@ -231,18 +287,20 @@ function Items({ token }) {
         filteredItems.every((item) => prev.includes(item.id));
 
       if (allSelected) {
-        return prev.filter((id) => !filteredItems.some((item) => item.id === id));
-      } else {
-        const set = new Set(prev);
-        filteredItems.forEach((item) => set.add(item.id));
-        return Array.from(set);
+        return prev.filter(
+          (id) => !filteredItems.some((item) => item.id === id)
+        );
       }
+
+      const nextSet = new Set(prev);
+      filteredItems.forEach((item) => nextSet.add(item.id));
+      return Array.from(nextSet);
     });
   };
 
   const handleExport = async () => {
     if (selectedIds.length === 0) {
-      toast.error("Debes seleccionar al menos un artículo");
+      toast.error("Debes seleccionar al menos un articulo");
       return;
     }
 
@@ -250,16 +308,18 @@ function Items({ token }) {
       const response = await axios.post(
         `${api}/items-with-price/export-prices`,
         { ids: selectedIds },
-        { ...authHeaders, responseType: "blob" }
+        withUserTimeZone({ ...authHeaders, responseType: "blob" })
       );
 
-      const blob = new Blob([response.data], { type: "text/csv;charset=utf-8;" });
+      const blob = new Blob([response.data], {
+        type: "text/csv;charset=utf-8;",
+      });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute(
         "download",
-        `precios-articulos-${new Date().toISOString().split("T")[0]}.csv`
+        `precios-articulos-${todayDateKey()}.csv`
       );
       document.body.appendChild(link);
       link.click();
@@ -279,17 +339,21 @@ function Items({ token }) {
     formData.append("file", file);
 
     try {
-      const res = await axios.post(`${api}/items-with-price/import-prices`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const res = await axios.post(
+        `${api}/items-with-price/import-prices`,
+        formData,
+        withUserTimeZone({
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        })
+      );
 
-      toast.success(`Importación completada. Filas insertadas: ${res.data.inserted}`);
-      if (res.data.errors?.length) console.warn("Errores de importación:", res.data.errors);
-
-      fetchItems();
+      toast.success(
+        `Importacion completada. Filas insertadas: ${res.data.inserted}`
+      );
+      await fetchItems();
     } catch (error) {
       console.error(error);
       toast.error("Error al importar archivo de precios");
@@ -299,11 +363,33 @@ function Items({ token }) {
   };
 
   useEffect(() => {
-    if (!token) return;
+    if (!token || !canAccessItemsOnThisDevice) return;
     fetchItems();
     fetchTaxes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, canAccessItemsOnThisDevice]);
+
+  useEffect(() => {
+    if (!token || !canAccessItemsOnThisDevice) return;
+
+    const runSync = async () => {
+      const result = await syncPendingItems({ token, subscriptionMode });
+      if (result.synced > 0) {
+        await Promise.all([fetchItems(), fetchTaxes()]);
+        toast.success(`Se sincronizaron ${result.synced} cambios de articulos`);
+      }
+    };
+
+    runSync();
+
+    const handleOnline = () => {
+      runSync();
+    };
+
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, canAccessItemsOnThisDevice, subscriptionMode]);
 
   const taxOptions = useMemo(() => {
     const base = [{ value: "", label: "Sin impuesto" }];
@@ -314,11 +400,43 @@ function Items({ token }) {
     return [...base, ...mapped];
   }, [taxes]);
 
+  const openPricesModal = (item) => {
+    setSelectedItem(item);
+    setPrice("");
+    setDate(todayDateKey());
+    fetchPrices(item.id);
+    setShowPriceModal(true);
+    setMobileMenuId(null);
+  };
+
+  const openEditModal = (item) => {
+    setItemToEdit({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      description: item.description,
+      tax_id: item.tax_id,
+    });
+    setShowEditItemModal(true);
+    setMobileMenuId(null);
+  };
+
+  const openDeleteModal = (item) => {
+    setItemToDelete(item);
+    setShowDeleteModal(true);
+    setMobileMenuId(null);
+  };
+
+  if (!canAccessItemsOnThisDevice) {
+    return null;
+  }
+
   return (
     <div className="ff-card p-4 md:p-6">
-      <h2 className="ff-h1 ff-heading-accent mb-2">Artículos</h2>
+      <h2 className="ff-h1 ff-heading-accent mb-2">Articulos</h2>
       <p className="text-sm text-[var(--muted)] mb-4">
-        Registra productos y controla cómo varían sus precios a lo largo del tiempo.
+        Registra productos y controla como varian sus precios a lo largo del
+        tiempo.
       </p>
 
       <button
@@ -330,16 +448,27 @@ function Items({ token }) {
         Administrar impuestos
       </button>
 
-      {/* Crear artículo */}
-      <form onSubmit={handleCreateItem} className="grid gap-4 mb-6 md:grid-cols-3">
+      <form
+        onSubmit={handleCreateItem}
+        className="grid gap-4 mb-6 md:grid-cols-3"
+      >
         <div className="flex flex-col space-y-1">
           <label className="ff-label uppercase font-semibold">Nombre</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} className="ff-input" required />
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="ff-input"
+            required
+          />
         </div>
 
         <div className="flex flex-col space-y-1">
-          <label className="ff-label uppercase font-semibold">Categoría</label>
-          <input value={category} onChange={(e) => setCategory(e.target.value)} className="ff-input" />
+          <label className="ff-label uppercase font-semibold">Categoria</label>
+          <input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="ff-input"
+          />
         </div>
 
         <div className="flex flex-col space-y-1">
@@ -355,23 +484,26 @@ function Items({ token }) {
         </div>
 
         <div className="flex flex-col md:col-span-3 space-y-1">
-          <label className="ff-label uppercase font-semibold">Descripción</label>
-          <input value={description} onChange={(e) => setDescription(e.target.value)} className="ff-input" />
+          <label className="ff-label uppercase font-semibold">Descripcion</label>
+          <input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            className="ff-input"
+          />
         </div>
 
         <div className="md:col-span-3">
-          <button type="submit" className="ff-btn ff-btn-primary">
-            Agregar artículo
+          <button type="submit" className="ff-btn ff-btn-primary w-full sm:w-auto">
+            Agregar articulo
           </button>
         </div>
       </form>
 
-      {/* Search + acciones */}
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <input
             type="text"
-            placeholder="Buscar artículo..."
+            placeholder="Buscar articulo..."
             className="ff-input w-full md:w-1/3"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -379,44 +511,67 @@ function Items({ token }) {
 
           <div className="flex flex-wrap items-center gap-3 justify-between md:justify-end w-full md:w-auto text-sm">
             <span className="text-xs text-[var(--muted)]">
-              Total: <span className="font-semibold text-[var(--text)]">{filteredItems.length}</span> ·
-              Seleccionados:{" "}
-              <span className="font-semibold" style={{ color: "var(--primary)" }}>
-                {selectedIds.length}
+              Total:{" "}
+              <span className="font-semibold text-[var(--text)]">
+                {filteredItems.length}
               </span>
+              {!isNativeMobile && (
+                <>
+                  {" "}· Seleccionados:{" "}
+                  <span
+                    className="font-semibold"
+                    style={{ color: "var(--primary)" }}
+                  >
+                    {selectedIds.length}
+                  </span>
+                </>
+              )}
             </span>
 
             <button
               type="button"
-              onClick={toggleSelectAllFiltered}
-              disabled={filteredItems.length === 0}
-              className="ff-btn ff-btn-outline ff-btn-sm rounded-full"
+              onClick={() => setShowShoppingPlanModal(true)}
+              disabled={items.length === 0}
+              className="ff-btn ff-btn-primary ff-btn-sm rounded-full"
             >
-              <span className="text-xs">☑️</span>
-              {allFilteredSelected ? "Desmarcar todos" : "Marcar todos"}
+              Plan de compra
             </button>
 
-            <button
-              type="button"
-              onClick={handleExport}
-              disabled={selectedIds.length === 0}
-              className="ff-btn ff-btn-outline ff-btn-sm rounded-full"
-              style={{ borderColor: "color-mix(in srgb, var(--primary) 55%, var(--border-rgba))" }}
-            >
-              <span className="text-xs">⬇️</span>
-              Exportar precios
-            </button>
+            {!isNativeMobile && (
+              <>
+                <button
+                  type="button"
+                  onClick={toggleSelectAllFiltered}
+                  disabled={filteredItems.length === 0}
+                  className="ff-btn ff-btn-outline ff-btn-sm rounded-full"
+                >
+                  {allFilteredSelected ? "Desmarcar todos" : "Marcar todos"}
+                </button>
 
-            <label className="ff-btn ff-btn-ghost ff-btn-sm rounded-full cursor-pointer">
-              <span className="text-xs">⬆️</span>
-              Importar precios
-              <input type="file" accept=".csv" className="hidden" onChange={handleImport} />
-            </label>
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  disabled={selectedIds.length === 0}
+                  className="ff-btn ff-btn-outline ff-btn-sm rounded-full"
+                >
+                  Exportar precios
+                </button>
+
+                <label className="ff-btn ff-btn-ghost ff-btn-sm rounded-full cursor-pointer">
+                  Importar precios
+                  <input
+                    type="file"
+                    accept=".csv"
+                    className="hidden"
+                    onChange={handleImport}
+                  />
+                </label>
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Lista */}
       <ul className="space-y-3">
         {filteredItems.map((item, idx) => (
           <li
@@ -432,15 +587,17 @@ function Items({ token }) {
             }}
           >
             <div className="flex justify-between items-start gap-4">
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <label className="flex items-center gap-2 mb-1">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 rounded"
-                    style={{ accentColor: "var(--primary)" }}
-                    checked={selectedIds.includes(item.id)}
-                    onChange={() => toggleItemSelection(item.id)}
-                  />
+                  {!isNativeMobile && (
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded"
+                      style={{ accentColor: "var(--primary)" }}
+                      checked={selectedIds.includes(item.id)}
+                      onChange={() => toggleItemSelection(item.id)}
+                    />
+                  )}
                   <span className="font-semibold text-[var(--text)]">
                     {item.name}{" "}
                     <span className="text-sm italic text-[var(--muted)]">
@@ -450,7 +607,9 @@ function Items({ token }) {
                 </label>
 
                 <p className="text-sm text-[var(--muted)]">
-                  {item.description || <span className="italic opacity-70">Sin descripción</span>}
+                  {item.description || (
+                    <span className="italic opacity-70">Sin descripcion</span>
+                  )}
                 </p>
 
                 <p className="text-xs text-[var(--muted)] mt-1">
@@ -463,89 +622,165 @@ function Items({ token }) {
                 </p>
 
                 <p className="text-sm text-[var(--muted)] mt-1">
-                  Último precio:{" "}
-                  {item.latest_price !== null ? formatCurrency(item.latest_price) : "No registrado"}
+                  Ultimo precio:{" "}
+                  {item.latest_price !== null
+                    ? formatCurrency(item.latest_price)
+                    : "No registrado"}
+                </p>
+
+                <p className="text-xs text-[var(--muted)] mt-1">
+                  Estado: {item.sync_status ? "Pendiente" : "Sincronizado"}
                 </p>
               </div>
 
-              <div className="space-x-3 whitespace-nowrap text-sm">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedItem(item);
-                    setPrice("");
-                    setDate(new Date().toISOString().split("T")[0]);
-                    fetchPrices(item.id);
-                    setShowPriceModal(true);
-                  }}
-                  className="underline underline-offset-2"
-                  style={{ color: "var(--primary)" }}
-                >
-                  Ver precios
-                </button>
+              {!isNativeMobile ? (
+                <div className="space-x-3 whitespace-nowrap text-sm">
+                  <button
+                    type="button"
+                    onClick={() => openPricesModal(item)}
+                    className="underline underline-offset-2"
+                    style={{ color: "var(--primary)" }}
+                  >
+                    Ver precios
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setItemToEdit({
-                      id: item.id,
-                      name: item.name,
-                      category: item.category,
-                      description: item.description,
-                      tax_id: item.tax_id,
-                    });
-                    setShowEditItemModal(true);
-                  }}
-                  className="underline underline-offset-2"
-                  style={{ color: "var(--text)" }}
-                >
-                  Editar
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => openEditModal(item)}
+                    className="underline underline-offset-2"
+                    style={{ color: "var(--text)" }}
+                  >
+                    Editar
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setItemToDelete(item);
-                    setShowDeleteModal(true);
-                  }}
-                  className="underline underline-offset-2"
-                  style={{ color: "var(--danger)" }}
+                  <button
+                    type="button"
+                    onClick={() => openDeleteModal(item)}
+                    className="underline underline-offset-2"
+                    style={{ color: "var(--danger)" }}
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              ) : (
+                <div
+                  ref={mobileMenuId === item.id ? mobileMenuRef : null}
+                  className="relative self-start"
                 >
-                  Eliminar
-                </button>
-              </div>
+                  <button
+                    type="button"
+                    data-overflow-trigger="true"
+                    aria-label="Acciones"
+                    onClick={() =>
+                      setMobileMenuId((prev) =>
+                        prev === item.id ? null : item.id
+                      )
+                    }
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border"
+                    style={{
+                      borderColor:
+                        "color-mix(in srgb, var(--border-rgba) 80%, transparent)",
+                      background:
+                        "color-mix(in srgb, var(--panel) 92%, transparent)",
+                      color: "var(--text)",
+                    }}
+                  >
+                    <HiDotsVertical size={18} />
+                  </button>
+
+                  {mobileMenuId === item.id && (
+                    <div
+                      data-overflow-menu="true"
+                      className="absolute right-0 top-12 z-10 min-w-[180px] rounded-[var(--radius-md)] border p-2 shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
+                      style={{
+                        top: mobileMenuPlacement === "up" ? "auto" : "3rem",
+                        bottom: mobileMenuPlacement === "up" ? "3rem" : "auto",
+                        borderColor:
+                          "color-mix(in srgb, var(--border-rgba) 80%, transparent)",
+                        background:
+                          "color-mix(in srgb, var(--panel) 96%, transparent)",
+                      }}
+                    >
+                      <div className="flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openPricesModal(item)}
+                          className="ff-btn ff-btn-primary w-full"
+                        >
+                          Ver precios
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(item)}
+                          className="ff-btn ff-btn-outline w-full"
+                        >
+                          Editar
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => openDeleteModal(item)}
+                          className="ff-btn ff-btn-danger w-full"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </li>
         ))}
       </ul>
 
-      {/* Modal editar item */}
-      <Modal isOpen={showEditItemModal} onClose={() => setShowEditItemModal(false)} title="Editar artículo">
+      <ShoppingPlanModal
+        isOpen={showShoppingPlanModal}
+        onClose={() => setShowShoppingPlanModal(false)}
+        items={items}
+        selectedIds={selectedIds}
+      />
+
+      <Modal
+        isOpen={showEditItemModal}
+        onClose={() => setShowEditItemModal(false)}
+        title="Editar articulo"
+      >
         {itemToEdit && (
           <form onSubmit={handleEditItem} className="space-y-4">
             <div className="space-y-1">
               <label className="ff-label">Nombre</label>
               <input
                 value={itemToEdit.name}
-                onChange={(e) => setItemToEdit({ ...itemToEdit, name: e.target.value })}
+                onChange={(e) =>
+                  setItemToEdit({ ...itemToEdit, name: e.target.value })
+                }
                 className="ff-input"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="ff-label">Categoría</label>
+              <label className="ff-label">Categoria</label>
               <input
                 value={itemToEdit.category || ""}
-                onChange={(e) => setItemToEdit({ ...itemToEdit, category: e.target.value })}
+                onChange={(e) =>
+                  setItemToEdit({ ...itemToEdit, category: e.target.value })
+                }
                 className="ff-input"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="ff-label">Descripción</label>
+              <label className="ff-label">Descripcion</label>
               <textarea
                 value={itemToEdit.description || ""}
-                onChange={(e) => setItemToEdit({ ...itemToEdit, description: e.target.value })}
+                onChange={(e) =>
+                  setItemToEdit({
+                    ...itemToEdit,
+                    description: e.target.value,
+                  })
+                }
                 className="ff-input"
                 rows={3}
                 style={{ resize: "none" }}
@@ -565,7 +800,10 @@ function Items({ token }) {
             </div>
 
             <div className="pt-2 flex justify-end">
-              <button type="submit" className="ff-btn ff-btn-primary">
+              <button
+                type="submit"
+                className="ff-btn ff-btn-primary w-full sm:w-auto"
+              >
                 Guardar cambios
               </button>
             </div>
@@ -573,7 +811,6 @@ function Items({ token }) {
         )}
       </Modal>
 
-      {/* Modal precios */}
       <Modal
         isOpen={showPriceModal}
         onClose={() => setShowPriceModal(false)}
@@ -596,7 +833,13 @@ function Items({ token }) {
 
           <div className="sm:col-span-1 space-y-1">
             <label className="ff-label">Fecha</label>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="ff-input" required />
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="ff-input"
+              required
+            />
           </div>
 
           <div className="sm:col-span-1 flex items-end">
@@ -615,23 +858,43 @@ function Items({ token }) {
                   Precio
                 </th>
                 <th className="ff-th" style={{ textAlign: "right" }}>
-                  Acción
+                  Estado
+                </th>
+                <th className="ff-th" style={{ textAlign: "right" }}>
+                  Accion
                 </th>
               </tr>
             </thead>
             <tbody>
               {priceHistory.length === 0 ? (
                 <tr>
-                  <td className="ff-td" colSpan={3} style={{ color: "var(--muted)" }}>
-                    <span className="italic">Sin precios aún.</span>
+                  <td
+                    className="ff-td"
+                    colSpan={4}
+                    style={{ color: "var(--muted)" }}
+                  >
+                    <span className="italic">Sin precios aun.</span>
                   </td>
                 </tr>
               ) : (
                 priceHistory.map((p) => (
                   <tr key={p.id} className="ff-tr">
                     <td className="ff-td">{p.date}</td>
-                    <td className="ff-td" style={{ textAlign: "right", color: "var(--primary)", fontWeight: 700 }}>
+                    <td
+                      className="ff-td"
+                      style={{
+                        textAlign: "right",
+                        color: "var(--primary)",
+                        fontWeight: 700,
+                      }}
+                    >
                       {formatCurrency(p.price)}
+                    </td>
+                    <td
+                      className="ff-td"
+                      style={{ textAlign: "right", color: "var(--muted)" }}
+                    >
+                      {p.sync_status ? "Pendiente" : "Sincronizado"}
                     </td>
                     <td className="ff-td" style={{ textAlign: "right" }}>
                       <button
@@ -650,19 +913,30 @@ function Items({ token }) {
         </div>
       </Modal>
 
-      {/* Modal impuestos */}
-      <Modal isOpen={showTaxModal} onClose={() => setShowTaxModal(false)} title="Gestión de Impuestos" size="lg">
+      <Modal
+        isOpen={showTaxModal}
+        onClose={() => setShowTaxModal(false)}
+        title="Gestion de Impuestos"
+        size="lg"
+      >
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            const name = e.target.name.value;
+            const nameValue = e.target.name.value;
             const rate = parseFloat(e.target.rate.value);
-            const is_exempt = e.target.exempt.checked;
+            const isExempt = e.target.exempt.checked;
 
             try {
-              await axios.post(`${api}/taxes`, { name, rate, is_exempt }, authHeaders);
-              toast.success("Impuesto guardado correctamente");
-              fetchTaxes();
+              const result = await createTax({
+                token,
+                payload: { name: nameValue, rate, is_exempt: isExempt },
+              });
+              toast.success(
+                result.offline
+                  ? "Impuesto guardado localmente. Se sincronizara luego."
+                  : "Impuesto guardado correctamente"
+              );
+              await fetchTaxes();
               e.target.reset();
             } catch {
               toast.error("Error al guardar impuesto");
@@ -672,21 +946,39 @@ function Items({ token }) {
         >
           <div className="space-y-1">
             <label className="ff-label">Nombre</label>
-            <input name="name" className="ff-input" placeholder="Ej. ITBIS, Selectivo, etc." />
+            <input
+              name="name"
+              className="ff-input"
+              placeholder="Ej. ITBIS, Selectivo, etc."
+            />
           </div>
 
           <div className="space-y-1">
             <label className="ff-label">Porcentaje (%)</label>
-            <input name="rate" type="number" step="0.01" className="ff-input" placeholder="Ej. 18" />
+            <input
+              name="rate"
+              type="number"
+              step="0.01"
+              className="ff-input"
+              placeholder="Ej. 18"
+            />
           </div>
 
           <label className="flex items-center gap-2 text-sm text-[var(--muted)]">
-            <input name="exempt" type="checkbox" className="h-4 w-4 rounded" style={{ accentColor: "var(--primary)" }} />
+            <input
+              name="exempt"
+              type="checkbox"
+              className="h-4 w-4 rounded"
+              style={{ accentColor: "var(--primary)" }}
+            />
             Exento de impuestos
           </label>
 
           <div className="pt-1 flex justify-end">
-            <button type="submit" className="ff-btn ff-btn-primary">
+            <button
+              type="submit"
+              className="ff-btn ff-btn-primary w-full sm:w-auto"
+            >
               Guardar
             </button>
           </div>
@@ -701,7 +993,10 @@ function Items({ token }) {
                   Tipo
                 </th>
                 <th className="ff-th" style={{ textAlign: "right" }}>
-                  Acción
+                  Estado
+                </th>
+                <th className="ff-th" style={{ textAlign: "right" }}>
+                  Accion
                 </th>
               </tr>
             </thead>
@@ -711,17 +1006,30 @@ function Items({ token }) {
                   <td className="ff-td">
                     <span className="font-semibold">{tax.name}</span>
                   </td>
-                  <td className="ff-td" style={{ textAlign: "right", color: "var(--muted)" }}>
+                  <td
+                    className="ff-td"
+                    style={{ textAlign: "right", color: "var(--muted)" }}
+                  >
                     {tax.is_exempt ? "Exento" : `${tax.rate}%`}
+                  </td>
+                  <td
+                    className="ff-td"
+                    style={{ textAlign: "right", color: "var(--muted)" }}
+                  >
+                    {tax.sync_status ? "Pendiente" : "Sincronizado"}
                   </td>
                   <td className="ff-td" style={{ textAlign: "right" }}>
                     <button
                       type="button"
                       onClick={async () => {
                         try {
-                          await axios.delete(`${api}/taxes/${tax.id}`, authHeaders);
-                          toast.success("Impuesto eliminado");
-                          fetchTaxes();
+                          const result = await deleteTaxRecord({ token, tax });
+                          toast.success(
+                            result.offline
+                              ? "Impuesto eliminado localmente. Se sincronizara luego."
+                              : "Impuesto eliminado"
+                          );
+                          await fetchTaxes();
                         } catch {
                           toast.error("Error al eliminar impuesto");
                         }
@@ -735,8 +1043,12 @@ function Items({ token }) {
               ))}
               {taxes.length === 0 && (
                 <tr>
-                  <td className="ff-td" colSpan={3} style={{ color: "var(--muted)" }}>
-                    <span className="italic">No hay impuestos todavía.</span>
+                  <td
+                    className="ff-td"
+                    colSpan={4}
+                    style={{ color: "var(--muted)" }}
+                  >
+                    <span className="italic">No hay impuestos todavia.</span>
                   </td>
                 </tr>
               )}
@@ -745,25 +1057,28 @@ function Items({ token }) {
         </div>
       </Modal>
 
-      {/* Modal eliminar artículo */}
       <Modal
         isOpen={showDeleteModal}
         onClose={() => {
           setShowDeleteModal(false);
           setItemToDelete(null);
         }}
-        title="Eliminar artículo"
+        title="Eliminar articulo"
       >
         <p className="text-sm text-[var(--muted)] mb-6 leading-relaxed">
-          {itemToDelete ? `¿Seguro que deseas eliminar el artículo "${itemToDelete.name}"?` : ""}
+          {itemToDelete
+            ? `Seguro que deseas eliminar el articulo "${itemToDelete.name}"?`
+            : ""}
           <br />
-          <span className="text-xs opacity-80">Esta acción no se puede deshacer.</span>
+          <span className="text-xs opacity-80">
+            Esta accion no se puede deshacer.
+          </span>
         </p>
 
-        <div className="flex justify-end gap-3">
+        <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
           <button
             type="button"
-            className="ff-btn ff-btn-danger"
+            className="ff-btn ff-btn-danger w-full sm:w-auto"
             onClick={async () => {
               await handleDeleteItem(itemToDelete);
               setShowDeleteModal(false);
@@ -775,7 +1090,7 @@ function Items({ token }) {
 
           <button
             type="button"
-            className="ff-btn ff-btn-outline"
+            className="ff-btn ff-btn-outline w-full sm:w-auto"
             onClick={() => {
               setShowDeleteModal(false);
               setItemToDelete(null);
@@ -786,7 +1101,6 @@ function Items({ token }) {
         </div>
       </Modal>
 
-      {/* Modal eliminar precio */}
       <Modal
         isOpen={showDeletePriceModal}
         onClose={() => {
@@ -798,8 +1112,11 @@ function Items({ token }) {
         <p className="text-sm text-[var(--muted)] mb-6 leading-relaxed">
           {priceToDelete ? (
             <>
-              ¿Seguro que deseas eliminar el precio del día{" "}
-              <span className="font-semibold text-[var(--text)]">{priceToDelete.date}</span> por{" "}
+              Seguro que deseas eliminar el precio del dia{" "}
+              <span className="font-semibold text-[var(--text)]">
+                {priceToDelete.date}
+              </span>{" "}
+              por{" "}
               <span className="font-semibold text-[var(--text)]">
                 {formatCurrency(priceToDelete.price)}
               </span>
@@ -809,17 +1126,23 @@ function Items({ token }) {
             ""
           )}
           <br />
-          <span className="text-xs opacity-80">Esta acción no se puede deshacer.</span>
+          <span className="text-xs opacity-80">
+            Esta accion no se puede deshacer.
+          </span>
         </p>
 
-        <div className="flex justify-end gap-3">
-          <button type="button" className="ff-btn ff-btn-danger" onClick={handleConfirmDeletePrice}>
+        <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
+          <button
+            type="button"
+            className="ff-btn ff-btn-danger w-full sm:w-auto"
+            onClick={handleConfirmDeletePrice}
+          >
             Eliminar
           </button>
 
           <button
             type="button"
-            className="ff-btn ff-btn-outline"
+            className="ff-btn ff-btn-outline w-full sm:w-auto"
             onClick={() => {
               setShowDeletePriceModal(false);
               setPriceToDelete(null);

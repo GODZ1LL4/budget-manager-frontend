@@ -11,7 +11,95 @@ import {
   Legend,
 } from "recharts";
 
-const money = (v) => `RD$ ${Number(v || 0).toFixed(2)}`;
+const safeNum = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
+
+const money = (value) =>
+  new Intl.NumberFormat("es-DO", {
+    style: "currency",
+    currency: "DOP",
+    minimumFractionDigits: 2,
+  }).format(safeNum(value));
+
+const signedMoney = (value) => {
+  const amount = safeNum(value);
+  const sign = amount > 0 ? "+" : amount < 0 ? "-" : "";
+  return `${sign}${money(Math.abs(amount))}`;
+};
+
+function SummaryCard({ label, value, tone = "neutral", helper }) {
+  const color =
+    tone === "success"
+      ? "var(--success)"
+      : tone === "danger"
+      ? "var(--danger)"
+      : tone === "warning"
+      ? "var(--warning)"
+      : "var(--text)";
+
+  return (
+    <div
+      className="min-w-0 rounded-lg border p-4"
+      style={{
+        borderColor: "var(--border-rgba)",
+        background: "color-mix(in srgb, var(--panel) 68%, transparent)",
+      }}
+    >
+      <p className="text-xs font-semibold uppercase text-[var(--muted)]">
+        {label}
+      </p>
+      <p
+        className="mt-2 min-w-0 text-xl font-extrabold leading-tight [overflow-wrap:anywhere]"
+        style={{ color }}
+      >
+        {value}
+      </p>
+      {helper ? (
+        <p className="mt-1 truncate text-xs text-[var(--muted)]">{helper}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function CustomTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null;
+
+  const row = payload[0]?.payload;
+  if (!row) return null;
+
+  const neto = safeNum(row.neto);
+  const netoColor = neto >= 0 ? "var(--success)" : "var(--danger)";
+
+  return (
+    <div
+      className="rounded-lg border px-3 py-2 text-sm"
+      style={{
+        backgroundColor: "var(--bg-3)",
+        borderColor: "var(--border-rgba)",
+        color: "var(--text)",
+        boxShadow: "0 18px 45px rgba(0,0,0,0.85)",
+      }}
+    >
+      <p className="mb-1 font-bold text-[var(--text)]">
+        {row.category || "Categoria"}
+      </p>
+      <p className="m-0 text-[var(--muted)]">
+        Presupuesto:{" "}
+        <span className="font-bold text-[var(--text)]">
+          {money(row.presupuesto)}
+        </span>
+      </p>
+      <p className="m-0 text-[var(--muted)]">
+        Gastado:{" "}
+        <span className="font-bold text-[var(--danger)]">
+          {money(row.gastado)}
+        </span>
+      </p>
+      <p className="m-0 mt-1 font-extrabold" style={{ color: netoColor }}>
+        Neto: {signedMoney(neto)}
+      </p>
+    </div>
+  );
+}
 
 function BudgetVsActualChart({ token }) {
   const [data, setData] = useState([]);
@@ -65,6 +153,36 @@ function BudgetVsActualChart({ token }) {
     };
   }, []);
 
+  const chartData = useMemo(
+    () =>
+      (data || []).map((row) => {
+        const presupuesto = safeNum(row.presupuesto);
+        const gastado = safeNum(row.gastado);
+
+        return {
+          ...row,
+          presupuesto,
+          gastado,
+          neto: presupuesto - gastado,
+        };
+      }),
+    [data]
+  );
+
+  const totals = useMemo(() => {
+    const presupuesto = chartData.reduce(
+      (sum, row) => sum + safeNum(row.presupuesto),
+      0
+    );
+    const gastado = chartData.reduce((sum, row) => sum + safeNum(row.gastado), 0);
+
+    return {
+      presupuesto,
+      gastado,
+      neto: presupuesto - gastado,
+    };
+  }, [chartData]);
+
   return (
     <div className="rounded-2xl p-6 space-y-4" style={ui.card}>
       <div>
@@ -76,14 +194,36 @@ function BudgetVsActualChart({ token }) {
         </p>
       </div>
 
-      {data.length === 0 ? (
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <SummaryCard
+          label="Total presupuesto"
+          value={money(totals.presupuesto)}
+        />
+        <SummaryCard
+          label="Total gastado"
+          value={money(totals.gastado)}
+          tone={
+            totals.gastado > totals.presupuesto && totals.presupuesto > 0
+              ? "danger"
+              : "neutral"
+          }
+        />
+        <SummaryCard
+          label="Neto"
+          value={signedMoney(totals.neto)}
+          tone={totals.neto >= 0 ? "success" : "danger"}
+          helper={totals.neto >= 0 ? "Disponible" : "Sobre presupuesto"}
+        />
+      </div>
+
+      {chartData.length === 0 ? (
         <p style={{ color: "var(--muted)", fontSize: 14, fontStyle: "italic" }}>
           No hay datos disponibles.
         </p>
       ) : (
         <div className="w-full h-[300px]">
           <ResponsiveContainer>
-            <BarChart data={data}>
+            <BarChart data={chartData}>
               <CartesianGrid {...ui.grid} />
 
               <XAxis
@@ -94,10 +234,7 @@ function BudgetVsActualChart({ token }) {
               <YAxis stroke={ui.axisStroke} tick={ui.tick} />
 
               <Tooltip
-                formatter={(val) => money(val)}
-                contentStyle={ui.tooltip}
-                itemStyle={{ color: "var(--text)" }}
-                labelStyle={{ color: "var(--text)", fontWeight: 800 }}
+                content={<CustomTooltip />}
                 cursor={{ fill: "color-mix(in srgb, var(--text) 6%, transparent)" }}
               />
 

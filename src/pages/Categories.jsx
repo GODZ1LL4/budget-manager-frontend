@@ -1,57 +1,90 @@
-import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { HiDotsVertical } from "react-icons/hi";
 import { toast } from "react-toastify";
 
 import FFSelect from "../components/FFSelect";
 import Modal from "../components/Modal";
+import {
+  createCategory,
+  deleteCategoryRecord,
+  listCategories,
+  syncPendingCategories,
+  updateCategory,
+} from "../lib/repositories/categoriesRepository";
+import { listUsedTransactionCategoryIds } from "../lib/repositories/transactionsRepository";
+import { useAppPreferences } from "../context/AppPreferencesContext";
+import useClickOutside from "../hooks/useClickOutside";
+import useOverflowMenuPosition from "../hooks/useOverflowMenuPosition";
 
-function Categories({ token }) {
+function Categories({ token, subscriptionMode }) {
   const [name, setName] = useState("");
   const [type, setType] = useState("expense");
   const [categories, setCategories] = useState([]);
   const [editId, setEditId] = useState(null);
   const [stabilityType, setStabilityType] = useState("variable");
-
-  // ✅ Modal eliminar categoría
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteCat, setDeleteCat] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [usedCategoryIds, setUsedCategoryIds] = useState(new Set());
+  const [mobileMenuId, setMobileMenuId] = useState(null);
+  const mobileMenuRef = useRef(null);
+  const { t } = useAppPreferences();
 
-  const api = import.meta.env.VITE_API_URL;
+  useClickOutside(mobileMenuRef, () => setMobileMenuId(null), Boolean(mobileMenuId));
+  const mobileMenuPlacement = useOverflowMenuPosition(
+    mobileMenuRef,
+    Boolean(mobileMenuId)
+  );
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get(`${api}/categories`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setCategories(res.data.data);
+      const res = await listCategories({ token, subscriptionMode });
+      setCategories(res.data);
     } catch {
-      toast.error("Error al obtener categorías");
+      toast.error(t("categories.fetchError"));
     }
+  };
+
+  const fetchCategoryUsage = async () => {
+    try {
+      const ids = await listUsedTransactionCategoryIds();
+      setUsedCategoryIds(new Set(ids));
+    } catch {
+      toast.error(t("categories.usageError"));
+    }
+  };
+
+  const resetForm = () => {
+    setName("");
+    setType("expense");
+    setStabilityType("variable");
+    setEditId(null);
+    setMobileMenuId(null);
   };
 
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!name.trim()) {
-      toast.error("El nombre es obligatorio");
+      toast.error(t("categories.nameRequired"));
       return;
     }
 
     try {
-      await axios.post(
-        `${api}/categories`,
-        { name, type, stability_type: stabilityType },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setName("");
-      setType("expense");
-      setStabilityType("variable");
-      fetchCategories();
-      toast.success("Categoría creada correctamente");
+      await createCategory({
+        token,
+        payload: {
+          name: name.trim(),
+          type,
+          stability_type: stabilityType,
+        },
+        subscriptionMode,
+      });
+
+      resetForm();
+      await fetchCategories();
+      toast.success(t("categories.created"));
     } catch {
-      toast.error("Error al crear categoría");
+      toast.error(t("categories.createError"));
     }
   };
 
@@ -60,36 +93,48 @@ function Categories({ token }) {
     setName(cat.name);
     setType(cat.type);
     setStabilityType(cat.stability_type || "variable");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const editingCategory = categories.find(
+    (category) => String(category.id) === String(editId)
+  );
 
   const handleUpdate = async (id) => {
     if (!name.trim()) {
-      toast.error("El nombre es obligatorio");
+      toast.error(t("categories.nameRequired"));
       return;
     }
 
     try {
-      await axios.put(
-        `${api}/categories/${id}`,
-        { name, type, stability_type: stabilityType },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-      setEditId(null);
-      setName("");
-      setType("expense");
-      setStabilityType("variable");
-      fetchCategories();
-      toast.success("Categoría actualizada");
+      await updateCategory({
+        token,
+        id,
+        payload: {
+          name: name.trim(),
+          type,
+          stability_type: stabilityType,
+        },
+        subscriptionMode,
+      });
+
+      resetForm();
+      await fetchCategories();
+      toast.success(t("categories.updated"));
     } catch {
-      toast.error("Error al actualizar categoría");
+      toast.error(t("categories.updateError"));
     }
   };
 
   const openDeleteModal = (cat) => {
+    if (usedCategoryIds.has(String(cat.id))) {
+      toast.error(t("categories.deleteBlocked"));
+      return;
+    }
+
     setDeleteCat(cat);
     setDeleteOpen(true);
+    setMobileMenuId(null);
   };
 
   const closeDeleteModal = () => {
@@ -103,70 +148,136 @@ function Categories({ token }) {
 
     setDeleteLoading(true);
     try {
-      await axios.delete(`${api}/categories/${deleteCat.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      await deleteCategoryRecord({
+        token,
+        category: deleteCat,
+        subscriptionMode,
       });
       await fetchCategories();
-      toast.success("Categoría eliminada");
+      toast.success(t("categories.deleted"));
       closeDeleteModal();
     } catch {
-      toast.error("Error al eliminar categoría");
+      toast.error(t("categories.deleteError"));
     } finally {
       setDeleteLoading(false);
     }
   };
 
   useEffect(() => {
-    if (token) fetchCategories();
-  }, [token]);
+    if (token) {
+      fetchCategories();
+      fetchCategoryUsage();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, subscriptionMode]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const runSync = async () => {
+      const result = await syncPendingCategories({
+        token,
+        subscriptionMode,
+      });
+      if (result.synced > 0) {
+        await fetchCategories();
+        await fetchCategoryUsage();
+        toast.success(t("categories.synced", { count: result.synced }));
+      }
+    };
+
+    runSync();
+
+    const handleOnline = () => {
+      runSync();
+    };
+
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, subscriptionMode, t]);
 
   const typeOptions = useMemo(
     () => [
-      { value: "expense", label: "Gasto" },
-      { value: "income", label: "Ingreso" },
+      { value: "expense", label: t("categoryType.expense") },
+      { value: "income", label: t("categoryType.income") },
     ],
-    []
+    [t]
   );
 
   const stabilityOptions = useMemo(
     () => [
-      { value: "fixed", label: "Fijo" },
-      { value: "variable", label: "Variable" },
-      { value: "occasional", label: "Ocasional" },
+      { value: "fixed", label: t("stabilityType.fixed") },
+      { value: "variable", label: t("stabilityType.variable") },
+      { value: "occasional", label: t("stabilityType.occasional") },
     ],
-    []
+    [t]
   );
+
+  const resolveCategoryTypeLabel = (value) =>
+    value === "income" ? t("categoryType.income") : t("categoryType.expense");
+
+  const resolveStabilityLabel = (value) =>
+    t(`stabilityType.${value || "variable"}`);
 
   return (
     <div className="ff-card p-4 md:p-6">
       <h2 className="text-xl md:text-2xl font-bold mb-2 text-[var(--heading-accent)]">
-        Categorías
+        {t("categories.title")}
       </h2>
       <p className="text-sm text-[var(--muted)] mb-4">
-        Define cómo se clasifican tus ingresos y gastos, y marca su tipo de
-        estabilidad para mejores análisis.
+        {t("categories.subtitle")}
       </p>
 
-      {/* FORMULARIO */}
+      {editId && (
+        <div
+          className="mb-4 rounded-2xl border px-4 py-4"
+          style={{
+            borderColor:
+              "color-mix(in srgb, var(--primary) 42%, var(--border-rgba))",
+            background:
+              "linear-gradient(135deg, color-mix(in srgb, var(--primary) 14%, var(--panel)) 0%, color-mix(in srgb, var(--panel) 88%, transparent) 100%)",
+            boxShadow: "var(--glow-shadow)",
+          }}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+            {t("categories.editing")}
+          </p>
+          <p className="mt-1 text-base font-semibold text-[var(--text)]">
+            {editingCategory?.name || t("categories.selectedCategory")}
+          </p>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            {t("categories.editingHelp")}
+          </p>
+        </div>
+      )}
+
       <form
-        onSubmit={handleCreate}
-        className="flex flex-col sm:flex-row flex-wrap gap-3 mb-6"
+        onSubmit={
+          editId
+            ? (e) => {
+                e.preventDefault();
+                handleUpdate(editId);
+              }
+            : handleCreate
+        }
+        className="mb-6 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.25fr)_minmax(170px,0.7fr)_minmax(190px,0.8fr)_auto]"
       >
-        <div className="flex-1 min-w-[140px] flex flex-col space-y-1">
+        <div className="flex flex-col space-y-1">
           <label className="text-xs font-semibold tracking-wide uppercase text-[var(--muted)]">
-            Nombre
+            {t("categories.name")}
           </label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ej: Supermercado, Alquiler..."
+            placeholder={t("categories.namePlaceholder")}
             className="ff-input"
           />
         </div>
 
-        <div className="min-w-[140px] flex flex-col space-y-1">
+        <div className="flex flex-col space-y-1">
           <label className="text-xs font-semibold tracking-wide uppercase text-[var(--muted)]">
-            Tipo
+            {t("categories.type")}
           </label>
           <FFSelect
             value={type}
@@ -177,9 +288,9 @@ function Categories({ token }) {
           />
         </div>
 
-        <div className="min-w-[160px] flex flex-col space-y-1">
+        <div className="flex flex-col space-y-1">
           <label className="text-xs font-semibold tracking-wide uppercase text-[var(--muted)]">
-            Estabilidad
+            {t("categories.stability")}
           </label>
           <FFSelect
             value={stabilityType}
@@ -190,19 +301,201 @@ function Categories({ token }) {
           />
         </div>
 
-        <div className="flex items-end">
+        <div className="flex items-end gap-2">
           <button
             type="submit"
-            className="ff-btn ff-btn-primary min-w-[120px] w-full sm:w-auto"
+            className="ff-btn ff-btn-primary min-w-[120px] w-full md:w-auto"
           >
-            Agregar
+            {editId ? t("categories.saveChanges") : t("categories.add")}
           </button>
+
+          {editId && (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="ff-btn ff-btn-outline min-w-[110px] w-full md:w-auto"
+            >
+              {t("common.cancel")}
+            </button>
+          )}
         </div>
       </form>
 
-      {/* TABLA */}
+      <div className="space-y-3 md:hidden">
+        {categories.map((cat) => (
+          <article
+            key={cat.id}
+            className="rounded-2xl p-4"
+            style={{
+              border: "var(--border-w) solid var(--border-rgba)",
+              background: "color-mix(in srgb, var(--panel) 62%, transparent)",
+              boxShadow: editId === cat.id ? "var(--glow-shadow)" : "none",
+            }}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-base font-semibold text-[var(--text)] break-words">
+                  {cat.name}
+                </p>
+              </div>
+
+              <div
+                ref={mobileMenuId === cat.id ? mobileMenuRef : null}
+                className="relative shrink-0"
+              >
+                <button
+                  type="button"
+                  data-overflow-trigger="true"
+                  aria-label="Actions"
+                  onClick={() =>
+                    setMobileMenuId((prev) => (prev === cat.id ? null : cat.id))
+                  }
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border"
+                  style={{
+                    borderColor:
+                      "color-mix(in srgb, var(--border-rgba) 80%, transparent)",
+                    background:
+                      "color-mix(in srgb, var(--panel) 92%, transparent)",
+                    color: "var(--text)",
+                  }}
+                >
+                  <HiDotsVertical size={18} />
+                </button>
+
+                {mobileMenuId === cat.id && (
+                  <div
+                    data-overflow-menu="true"
+                    className="absolute right-0 top-12 z-10 min-w-[180px] rounded-[var(--radius-md)] border p-2 shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
+                    style={{
+                      top: mobileMenuPlacement === "up" ? "auto" : "3rem",
+                      bottom: mobileMenuPlacement === "up" ? "3rem" : "auto",
+                      borderColor:
+                        "color-mix(in srgb, var(--border-rgba) 80%, transparent)",
+                      background: "color-mix(in srgb, var(--panel) 96%, transparent)",
+                    }}
+                  >
+                    <div className="grid grid-cols-1 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          startEdit(cat);
+                          setMobileMenuId(null);
+                        }}
+                        className="ff-btn ff-btn-outline w-full"
+                      >
+                        {editId === cat.id
+                          ? t("categories.keepEditing")
+                          : t("common.edit")}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => openDeleteModal(cat)}
+                        className="ff-btn ff-btn-danger w-full"
+                        disabled={usedCategoryIds.has(String(cat.id))}
+                        title={
+                          usedCategoryIds.has(String(cat.id))
+                            ? t("categories.deleteBlocked")
+                            : t("common.delete")
+                        }
+                        style={
+                          usedCategoryIds.has(String(cat.id))
+                            ? { opacity: 0.55, cursor: "not-allowed" }
+                            : undefined
+                        }
+                      >
+                        {t("common.delete")}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <div
+                className="rounded-xl px-3 py-2"
+                style={{
+                  background:
+                    "color-mix(in srgb, var(--panel) 72%, transparent)",
+                  border: "1px solid var(--border-rgba)",
+                }}
+              >
+                <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">
+                  {t("categories.type")}
+                </p>
+                <p className="mt-1 break-words text-sm text-[var(--text)]">
+                  {resolveCategoryTypeLabel(cat.type)}
+                </p>
+              </div>
+
+              <div
+                className="rounded-xl px-3 py-2"
+                style={{
+                  background:
+                    "color-mix(in srgb, var(--panel) 72%, transparent)",
+                  border: "1px solid var(--border-rgba)",
+                }}
+              >
+                <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">
+                  {t("categories.stability")}
+                </p>
+                <p className="mt-1 break-words text-sm text-[var(--text)]">
+                  {resolveStabilityLabel(cat.stability_type)}
+                </p>
+              </div>
+
+              <div
+                className="col-span-2 rounded-xl px-3 py-2"
+                style={{
+                  background:
+                    "color-mix(in srgb, var(--panel) 72%, transparent)",
+                  border: "1px solid var(--border-rgba)",
+                }}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">
+                      {t("categories.state")}
+                    </p>
+                    <p className="mt-1 break-words text-sm text-[var(--text)]">
+                      {usedCategoryIds.has(String(cat.id))
+                        ? t("categories.inUse")
+                        : cat.sync_status
+                        ? t("categories.pending")
+                        : t("categories.syncedState")}
+                    </p>
+                  </div>
+
+                  {editId === cat.id && (
+                    <span
+                      className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em]"
+                      style={{
+                        color: "var(--text)",
+                        border: "1px solid var(--border-rgba)",
+                        background:
+                          "color-mix(in srgb, var(--primary) 18%, var(--panel))",
+                      }}
+                    >
+                      {t("categories.editing")}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+          </article>
+        ))}
+
+        {categories.length === 0 && (
+          <div className="p-4 text-sm text-[var(--muted)]">
+            {t("categories.noCategories")}
+          </div>
+        )}
+      </div>
+
       <div
-        className="overflow-x-auto rounded-xl"
+        className="hidden overflow-x-auto rounded-xl md:block"
         style={{
           border: "var(--border-w) solid var(--border-rgba)",
           background: "color-mix(in srgb, var(--panel) 55%, transparent)",
@@ -212,104 +505,85 @@ function Categories({ token }) {
         <table className="ff-table min-w-full text-sm">
           <thead>
             <tr>
-              <th className="ff-th">Nombre</th>
-              <th className="ff-th">Tipo</th>
-              <th className="ff-th">Estabilidad</th>
+              <th className="ff-th">{t("categories.name")}</th>
+              <th className="ff-th">{t("categories.type")}</th>
+              <th className="ff-th">{t("categories.stability")}</th>
+              <th className="ff-th">{t("categories.state")}</th>
               <th className="ff-th" style={{ textAlign: "center" }}>
-                Acciones
+                {t("common.actions")}
               </th>
             </tr>
           </thead>
 
           <tbody>
-            {categories.map((cat, idx) => (
+            {categories.map((cat) => (
               <tr key={cat.id} className="ff-tr">
-                {editId === cat.id ? (
-                  <>
-                    <td className="ff-td">
-                      <input
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className="ff-input"
-                      />
-                    </td>
+                <td className="ff-td">
+                  <div className="flex items-center gap-2">
+                    <span>{cat.name}</span>
+                    {editId === cat.id && (
+                      <span
+                        className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
+                        style={{
+                          color: "var(--text)",
+                          border: "1px solid var(--border-rgba)",
+                          background:
+                            "color-mix(in srgb, var(--primary) 18%, var(--panel))",
+                        }}
+                      >
+                        {t("categories.editing")}
+                      </span>
+                    )}
+                  </div>
+                </td>
 
-                    <td className="ff-td">
-                      <FFSelect
-                        value={type}
-                        onChange={(v) => setType(v)}
-                        options={typeOptions}
-                        searchable={false}
-                        clearable={false}
-                      />
-                    </td>
+                <td className="ff-td text-xs italic text-[var(--muted)]">
+                  {resolveCategoryTypeLabel(cat.type)}
+                </td>
 
-                    <td className="ff-td">
-                      <FFSelect
-                        value={stabilityType}
-                        onChange={(v) => setStabilityType(v)}
-                        options={stabilityOptions}
-                        searchable={false}
-                        clearable={false}
-                      />
-                    </td>
+                <td className="ff-td text-xs italic text-[var(--muted)]">
+                  {resolveStabilityLabel(cat.stability_type)}
+                </td>
 
-                    <td className="ff-td">
-                      <div className="flex justify-center gap-2 flex-wrap">
-                        <button
-                          type="button"
-                          onClick={() => handleUpdate(cat.id)}
-                          className="ff-btn ff-btn-success ff-btn-sm"
-                        >
-                          Guardar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditId(null);
-                            setName("");
-                            setType("expense");
-                            setStabilityType("variable");
-                          }}
-                          className="ff-btn ff-btn-ghost ff-btn-sm"
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td className="ff-td">{cat.name}</td>
+                <td className="ff-td text-xs text-[var(--muted)]">
+                  {usedCategoryIds.has(String(cat.id))
+                    ? t("categories.inUse")
+                    : cat.sync_status
+                    ? t("categories.pending")
+                    : t("categories.syncedState")}
+                </td>
 
-                    <td className="ff-td text-xs italic text-[var(--muted)]">
-                      {cat.type === "income" ? "Ingreso" : "Gasto"}
-                    </td>
-
-                    <td className="ff-td text-xs italic text-[var(--muted)]">
-                      {cat.stability_type || "variable"}
-                    </td>
-
-                    <td className="ff-td">
-                      <div className="flex justify-center gap-2 flex-wrap">
-                        <button
-                          type="button"
-                          onClick={() => startEdit(cat)}
-                          className="ff-btn ff-btn-outline ff-btn-sm"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openDeleteModal(cat)}
-                          className="ff-btn ff-btn-danger ff-btn-sm"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </>
-                )}
+                <td className="ff-td">
+                  <div className="flex justify-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => startEdit(cat)}
+                      className="ff-btn ff-btn-outline ff-btn-sm"
+                    >
+                      {editId === cat.id
+                        ? t("categories.keepEditing")
+                        : t("common.edit")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openDeleteModal(cat)}
+                      className="ff-btn ff-btn-danger ff-btn-sm"
+                      disabled={usedCategoryIds.has(String(cat.id))}
+                      title={
+                        usedCategoryIds.has(String(cat.id))
+                          ? t("categories.deleteBlocked")
+                          : t("common.delete")
+                      }
+                      style={
+                        usedCategoryIds.has(String(cat.id))
+                          ? { opacity: 0.55, cursor: "not-allowed" }
+                          : undefined
+                      }
+                    >
+                      {t("common.delete")}
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -317,24 +591,23 @@ function Categories({ token }) {
 
         {categories.length === 0 && (
           <div className="p-4 text-sm text-[var(--muted)]">
-            No hay categorías todavía.
+            {t("categories.noCategories")}
           </div>
         )}
       </div>
 
-      {/* ✅ Modal confirmar eliminación */}
       <Modal
         isOpen={deleteOpen}
         onClose={closeDeleteModal}
-        title="Eliminar categoría"
+        title={t("categories.deleteTitle")}
         size="sm"
       >
         <p className="text-sm" style={{ color: "var(--muted)" }}>
-          ¿Seguro que deseas eliminar la categoría{" "}
+          {t("categories.deleteConfirm")}{" "}
           <span style={{ color: "var(--text)", fontWeight: 700 }}>
             {deleteCat?.name || ""}
           </span>
-          ? Esta acción no se puede deshacer.
+          ? {t("categories.deleteIrreversible")}
         </p>
 
         <div className="mt-5 flex justify-end gap-2">
@@ -344,7 +617,9 @@ function Categories({ token }) {
             disabled={deleteLoading}
             className="ff-btn ff-btn-danger"
           >
-            {deleteLoading ? "Eliminando..." : "Sí, eliminar"}
+            {deleteLoading
+              ? t("common.loadingDelete")
+              : t("categories.yesDelete")}
           </button>
           <button
             type="button"
@@ -352,7 +627,7 @@ function Categories({ token }) {
             disabled={deleteLoading}
             className="ff-btn ff-btn-outline"
           >
-            Cancelar
+            {t("common.cancel")}
           </button>
         </div>
       </Modal>

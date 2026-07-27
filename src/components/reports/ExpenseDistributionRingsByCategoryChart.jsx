@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import axios from "axios";
 import ReactECharts from "echarts-for-react";
 import Modal from "../Modal";
+import { withUserTimeZone } from "../../lib/dates/localDate";
 
 const COLORS = [
   "#22D3EE", "#FFD37A", "#FB7185", "#D6A43A",
@@ -197,7 +198,7 @@ export default function ExpenseDistributionRingsByCategoryChart({
 
           const res = await axios.get(
             `${api}/dashboard/transactions-by-category?category_id=${catId}`,
-            { headers: { Authorization: `Bearer ${token}` } }
+            withUserTimeZone({ headers: { Authorization: `Bearer ${token}` } })
           );
 
           setCategoryTransactions(res?.data?.data || []);

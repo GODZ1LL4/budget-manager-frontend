@@ -1,24 +1,25 @@
 //frontend\src\theme\themeSchema.js
 export const THEME_PRESETS = [
-  { id: "default", name: "FinanceFlow (Default)" },
-  { id: "ironman", name: "Iron Man (Dev)" },
-  { id: "ferrari-corsa", name: "Ferrari Corsa" },
-  { id: "scuderia-carbon-red", name: "Scuderia Carbon Red 🏎️" },
-  { id: "scuderia-carbon-red-pro", name: "Scuderia Carbon Red PRO 🟥" },
-  { id: "white", name: "White Quartz (Light) PRO" },
-  { id: "black-gold", name: "BlackGold × Rolex PRO v2" },
-  { id: "gulf", name: "Gulf Racing 🏁" },
-  { id: "gulf-blue", name: "Gulf Heritage Blue 🏁" },
-  { id: "midnight-aurora", name: "Midnight Aurora PRO 🌌" },
-{ id: "paper-studio", name: "Paper Studio PRO 🤍" },
-  
+  { id: "black-gold", name: "Black X Gold" },
+  { id: "scuderia-carbon-red", name: "Crimson Carbon" },
+  { id: "rest-gray", name: "Eye Comfort" },
+  { id: "default", name: "Green Slate" },
+  { id: "midnight-aurora", name: "Midnight Teal" },
+  { id: "gulf-blue", name: "Ocean Blue" },
+  { id: "gulf", name: "Orange Blue" },
+  { id: "paper-studio", name: "Paper Beige" },
+  { id: "ferrari-hamilton", name: "Racing Yellow" },
+  { id: "ironman", name: "Red Gold" },
+  { id: "scuderia-carbon-red-pro", name: "Ruby Graphite" },
+  { id: "ferrari-corsa", name: "Scarlet Black" },
+  { id: "white", name: "Soft White" },
 ];
 
 export const THEME_SECTIONS = [
   {
     id: "global",
     title: "Global",
-    description: "Colores base de la aplicación.",
+    description: "Colores base de la aplicacion.",
     fields: [
       { key: "--bg-1", label: "Fondo 1", type: "color" },
       { key: "--bg-2", label: "Fondo 2", type: "color" },
@@ -41,7 +42,7 @@ export const THEME_SECTIONS = [
 
   {
     id: "headings",
-    title: "Títulos",
+    title: "Titulos",
     description: "Colores para encabezados (h1/h2/h3) sin afectar el body text.",
     fields: [
       { key: "--heading", label: "Heading", type: "color" },
@@ -53,7 +54,7 @@ export const THEME_SECTIONS = [
   {
     id: "derived",
     title: "Derivados (solo lectura)",
-    description: "Se calculan automáticamente (no se guardan como overrides).",
+    description: "Se calculan automaticamente (no se guardan como overrides).",
     fields: [
       { key: "--border-rgba", label: "Border RGBA", type: "derived" },
       { key: "--glow-shadow", label: "Glow shadow", type: "derived" },
@@ -64,7 +65,7 @@ export const THEME_SECTIONS = [
   {
     id: "controls",
     title: "Controles (Inputs / Selects)",
-    description: "Fondo y borde de controles interactivos (más opacos que paneles).",
+    description: "Fondo y borde de controles interactivos (mas opacos que paneles).",
     fields: [
       { key: "--control-bg", label: "BG control", type: "color" },
       { key: "--control-bg-2", label: "BG control secundario", type: "color" },
@@ -174,7 +175,7 @@ export const THEME_SECTIONS = [
     fields: [
       {
         key: "--btn-radius",
-        label: "Radio botón (px)",
+        label: "Radio boton (px)",
         type: "range",
         min: 0,
         max: 32,
@@ -183,7 +184,7 @@ export const THEME_SECTIONS = [
       },
       {
         key: "--btn-border-w",
-        label: "Borde botón (px)",
+        label: "Borde boton (px)",
         type: "range",
         min: 0,
         max: 3,
@@ -211,7 +212,7 @@ export const THEME_SECTIONS = [
       },
       {
         key: "--btn-font-size",
-        label: "Tamaño texto (px)",
+        label: "Tamano texto (px)",
         type: "range",
         min: 11,
         max: 18,
@@ -296,7 +297,7 @@ export const THEME_SECTIONS = [
 
       {
         key: "--btn-glow-alpha",
-        label: "Glow botón",
+        label: "Glow boton",
         type: "range",
         min: 0,
         max: 1,
@@ -305,7 +306,7 @@ export const THEME_SECTIONS = [
       },
       {
         key: "--btn-glow-blur",
-        label: "Blur glow botón (px)",
+        label: "Blur glow boton (px)",
         type: "range",
         min: 0,
         max: 50,

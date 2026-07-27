@@ -1,58 +1,112 @@
-import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
-
-// 🔔 react-toastify
-import { ToastContainer, toast } from "react-toastify";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { HiDotsVertical } from "react-icons/hi";
+import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Modal from "../components/Modal";
-
 import FFSelect from "../components/FFSelect";
+import {
+  listAccountBalances,
+  listAccounts,
+} from "../lib/repositories/accountsRepository";
+import {
+  completeGoalRecord,
+  createGoal,
+  deleteGoalRecord,
+  depositToGoal,
+  listGoals,
+  syncPendingGoals,
+  updateGoalRecord,
+  withdrawFromGoal,
+} from "../lib/repositories/goalsRepository";
+import { useAppPreferences } from "../context/AppPreferencesContext";
+import useClickOutside from "../hooks/useClickOutside";
+import useOverflowMenuPosition from "../hooks/useOverflowMenuPosition";
 
-function Goals({ token }) {
-  const api = import.meta.env.VITE_API_URL;
-
+function Goals({ token, subscriptionMode }) {
   const [goals, setGoals] = useState([]);
   const [accounts, setAccounts] = useState([]);
-
-  // form crear
   const [name, setName] = useState("");
   const [target, setTarget] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [accountId, setAccountId] = useState("");
   const [isPriority, setIsPriority] = useState(false);
-
-  // ✅ MODALS
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteGoal, setDeleteGoal] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-
   const [completeOpen, setCompleteOpen] = useState(false);
   const [completeGoal, setCompleteGoal] = useState(null);
   const [completeLoading, setCompleteLoading] = useState(false);
-
-  // aportes por meta (estado local)
   const [amountByGoal, setAmountByGoal] = useState({});
+  const [mobileMenuId, setMobileMenuId] = useState(null);
+  const mobileMenuRef = useRef(null);
+  const { t, preferences, formatCurrency } = useAppPreferences();
 
-  const authHeaders = useMemo(
-    () => ({ headers: { Authorization: `Bearer ${token}` } }),
-    [token]
+  useClickOutside(mobileMenuRef, () => setMobileMenuId(null), Boolean(mobileMenuId));
+  const mobileMenuPlacement = useOverflowMenuPosition(
+    mobileMenuRef,
+    Boolean(mobileMenuId)
   );
 
   const fetchGoals = async () => {
     try {
-      const res = await axios.get(`${api}/goals`, authHeaders);
-      setGoals(res.data.data || []);
+      const res = await listGoals({ token, subscriptionMode });
+      setGoals(Array.isArray(res.data) ? res.data : []);
     } catch {
-      toast.error("Error al cargar metas");
+      toast.error(t("goals.goalsError"));
     }
   };
 
   const fetchAccounts = async () => {
     try {
-      const res = await axios.get(`${api}/accounts/balances`, authHeaders);
-      setAccounts(res.data.data || []);
+      const [accountsRes, balancesRes] = await Promise.all([
+        listAccounts({ token, subscriptionMode }),
+        listAccountBalances({ token, subscriptionMode }),
+      ]);
+
+      const accountList = Array.isArray(accountsRes.data) ? accountsRes.data : [];
+      const balancesData = balancesRes.data;
+
+      const normalizedAccounts = accountList.map((account) => {
+        const balanceEntry = Array.isArray(balancesData)
+          ? balancesData.find((item) => String(item.id) === String(account.id))
+          : balancesData?.[account.id];
+
+        const currentBalance = Number(
+          balanceEntry?.current_balance ??
+            balanceEntry?.current ??
+            account.current_balance ??
+            account.current ??
+            0
+        );
+
+        const reservedBalance = Number(
+          balanceEntry?.reserved_balance ??
+            balanceEntry?.reserved ??
+            account.reserved_balance ??
+            account.reserved ??
+            0
+        );
+
+        const availableBalance = Number(
+          balanceEntry?.available_balance ??
+            balanceEntry?.available ??
+            account.available_balance ??
+            account.available ??
+            currentBalance - reservedBalance
+        );
+
+        return {
+          ...account,
+          current_balance: currentBalance,
+          reserved_balance: reservedBalance,
+          available_balance: availableBalance,
+        };
+      });
+
+      setAccounts(normalizedAccounts);
     } catch {
-      toast.error("Error al cargar cuentas");
+      setAccounts([]);
+      toast.error(t("goals.accountsError"));
     }
   };
 
@@ -61,34 +115,60 @@ function Goals({ token }) {
     fetchGoals();
     fetchAccounts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, subscriptionMode]);
+
+  useEffect(() => {
+    if (!token) return;
+
+    const runSync = async () => {
+      const result = await syncPendingGoals({ token, subscriptionMode });
+      if (result.synced > 0) {
+        await fetchGoals();
+        await fetchAccounts();
+        toast.success(t("goals.synced", { count: result.synced }));
+      }
+    };
+
+    runSync();
+
+    const handleOnline = () => {
+      runSync();
+    };
+
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, subscriptionMode, t]);
 
   const accountMap = useMemo(() => {
     const map = new Map();
-    for (const a of accounts) map.set(a.id, a);
+    for (const a of Array.isArray(accounts) ? accounts : []) {
+      map.set(a.id, a);
+    }
     return map;
   }, [accounts]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
 
-    const t = Number(target);
-    if (!name.trim()) return toast.error("El nombre es obligatorio");
-    if (!Number.isFinite(t) || t <= 0)
-      return toast.error("Monto objetivo inválido");
+    const numericTarget = Number(target);
+    if (!name.trim()) return toast.error(t("goals.nameRequired"));
+    if (!Number.isFinite(numericTarget) || numericTarget <= 0) {
+      return toast.error(t("goals.invalidTarget"));
+    }
 
     try {
-      await axios.post(
-        `${api}/goals`,
-        {
+      await createGoal({
+        token,
+        payload: {
           name,
-          target_amount: t,
+          target_amount: numericTarget,
           due_date: dueDate || null,
-          account_id: accountId || null, // ✅ null = tracking
+          account_id: accountId || null,
           is_priority: isPriority,
         },
-        authHeaders
-      );
+        subscriptionMode,
+      });
 
       setName("");
       setTarget("");
@@ -98,17 +178,10 @@ function Goals({ token }) {
 
       await fetchGoals();
       await fetchAccounts();
-      toast.success("Meta creada correctamente");
+      toast.success(t("goals.created"));
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Error al crear meta");
+      toast.error(err?.response?.data?.error || t("goals.createError"));
     }
-  };
-
-  const setQuickAmount = (goalId, delta) => {
-    setAmountByGoal((prev) => {
-      const current = Number(prev[goalId] || 0);
-      return { ...prev, [goalId]: String((current + delta).toFixed(2)) };
-    });
   };
 
   const parseAmountForGoal = (goalId) => {
@@ -120,82 +193,120 @@ function Goals({ token }) {
 
   const handleDeposit = async (goal) => {
     const amount = parseAmountForGoal(goal.id);
-    if (amount == null) return toast.error("Monto inválido");
+    if (amount == null) return toast.error(t("goals.invalidAmount"));
+
+    if (goal.status === "completed") {
+      return toast.error(t("goals.completedGoalDeposit"));
+    }
+
+    const targetAmount = Number(goal.target_amount ?? 0);
+    if (targetAmount > 0) {
+      const reservedAmount = Number(goal.reserved_amount ?? 0);
+      const remainingToTarget = Math.max(0, targetAmount - reservedAmount);
+
+      if (remainingToTarget <= 0) {
+        return toast.error(t("goals.targetReached"));
+      }
+
+      if (amount > remainingToTarget) {
+        return toast.error(
+          t("goals.depositMax", {
+            amount: formatCurrency(remainingToTarget),
+          })
+        );
+      }
+    }
 
     try {
-      await axios.post(
-        `${api}/goals/${goal.id}/deposit`,
-        { amount },
-        authHeaders
-      );
+      await depositToGoal({
+        token,
+        goal,
+        amount,
+        subscriptionMode,
+      });
 
-      setAmountByGoal((p) => ({ ...p, [goal.id]: "" }));
+      setAmountByGoal((prev) => ({ ...prev, [goal.id]: "" }));
       await fetchGoals();
       await fetchAccounts();
 
       toast.success(
-        goal.account_id ? "Aporte reservado" : "Aporte registrado (tracking)"
+        goal.account_id
+          ? t("goals.reservedContribution")
+          : t("goals.trackingContribution")
       );
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Error al aportar");
+      toast.error(err?.response?.data?.error || t("goals.depositError"));
     }
   };
 
   const handleWithdraw = async (goal, reservedForUi) => {
     const amount = parseAmountForGoal(goal.id);
-    if (amount == null) return toast.error("Monto inválido");
+    if (amount == null) return toast.error(t("goals.invalidAmount"));
+
+    if (goal.status === "completed") {
+      return toast.error(t("goals.completedGoalWithdraw"));
+    }
 
     if ((reservedForUi ?? 0) <= 0) {
-      return toast.error("No hay monto disponible para retirar en esta meta");
+      return toast.error(t("goals.noReservedFunds"));
+    }
+
+    if (amount > Number(reservedForUi || 0)) {
+      return toast.error(
+        t("goals.withdrawMax", {
+          amount: formatCurrency(reservedForUi || 0),
+        })
+      );
     }
 
     try {
-      await axios.post(
-        `${api}/goals/${goal.id}/withdraw`,
-        { amount },
-        authHeaders
-      );
+      await withdrawFromGoal({
+        token,
+        goal,
+        amount,
+        subscriptionMode,
+      });
 
-      setAmountByGoal((p) => ({ ...p, [goal.id]: "" }));
+      setAmountByGoal((prev) => ({ ...prev, [goal.id]: "" }));
       await fetchGoals();
       await fetchAccounts();
 
       toast.success(
-        goal.account_id ? "Reserva liberada" : "Retiro registrado (tracking)"
+        goal.account_id
+          ? t("goals.releasedReserve")
+          : t("goals.trackingWithdraw")
       );
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Error al retirar");
+      toast.error(err?.response?.data?.error || t("goals.withdrawError"));
     }
   };
 
   const handleTogglePriority = async (goal) => {
     try {
-      await axios.put(
-        `${api}/goals/${goal.id}`,
-        { is_priority: !goal.is_priority },
-        authHeaders
-      );
+      await updateGoalRecord({
+        token,
+        goalId: goal.id,
+        payload: { is_priority: !goal.is_priority },
+        subscriptionMode,
+      });
       await fetchGoals();
       toast.success(
         goal.is_priority
-          ? "Prioridad removida"
-          : "Meta marcada como prioritaria"
+          ? t("goals.priorityRemoved")
+          : t("goals.priorityMarked")
       );
     } catch (err) {
-      toast.error(
-        err?.response?.data?.error || "Error al actualizar prioridad"
-      );
+      toast.error(err?.response?.data?.error || t("goals.priorityError"));
     }
   };
 
   const openDeleteModal = (goal) => {
     if ((goal.reserved_amount || 0) > 0) {
-      return toast.error(
-        "Primero retira/libera el monto antes de eliminar la meta."
-      );
+      return toast.error(t("goals.deleteBlocked"));
     }
     setDeleteGoal(goal);
     setDeleteOpen(true);
+    setMobileMenuId(null);
   };
 
   const closeDeleteModal = () => {
@@ -209,13 +320,17 @@ function Goals({ token }) {
 
     setDeleteLoading(true);
     try {
-      await axios.delete(`${api}/goals/${deleteGoal.id}`, authHeaders);
+      await deleteGoalRecord({
+        token,
+        goal: deleteGoal,
+        subscriptionMode,
+      });
       await fetchGoals();
       await fetchAccounts();
-      toast.success("Meta eliminada");
+      toast.success(t("goals.deleted"));
       closeDeleteModal();
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Error al eliminar meta");
+      toast.error(err?.response?.data?.error || t("goals.deleteError"));
     } finally {
       setDeleteLoading(false);
     }
@@ -224,6 +339,7 @@ function Goals({ token }) {
   const openCompleteModal = (goal) => {
     setCompleteGoal(goal);
     setCompleteOpen(true);
+    setMobileMenuId(null);
   };
 
   const closeCompleteModal = () => {
@@ -237,69 +353,67 @@ function Goals({ token }) {
 
     setCompleteLoading(true);
     try {
-      const res = await axios.post(
-        `${api}/goals/${completeGoal.id}/complete`,
-        {},
-        authHeaders
-      );
+      const result = await completeGoalRecord({
+        token,
+        goal: completeGoal,
+        subscriptionMode,
+      });
       await fetchGoals();
       await fetchAccounts();
 
-      const released = Number(res?.data?.data?.released_amount || 0);
+      const released = Number(result?.data?.released_amount || 0);
       toast.success(
         released > 0
-          ? `Meta completada. Liberado: ${released.toFixed(2)} DOP`
-          : "Meta completada"
+          ? t("goals.completedWithRelease", {
+              amount: formatCurrency(released),
+            })
+          : t("goals.completed")
       );
 
       closeCompleteModal();
     } catch (err) {
-      toast.error(err?.response?.data?.error || "Error al completar meta");
+      toast.error(err?.response?.data?.error || t("goals.completeError"));
     } finally {
       setCompleteLoading(false);
     }
   };
 
   const accountOptions = useMemo(() => {
-    const base = [{ value: "", label: "Sin cuenta (tracking)" }];
-    const mapped = accounts.map((a) => ({
-      value: a.id,
-      label: `${a.name} — Disponible: ${Number(a.available_balance).toFixed(
-        2
-      )} DOP`,
+    const base = [{ value: "", label: t("goals.noAccountTracking") }];
+    const mapped = (Array.isArray(accounts) ? accounts : []).map((account) => ({
+      value: account.id,
+      label: `${account.name} — ${t("common.available")}: ${formatCurrency(
+        account.available_balance
+      )}`,
     }));
     return [...base, ...mapped];
-  }, [accounts]);
+  }, [accounts, t, formatCurrency]);
 
   return (
     <div className="ff-card p-6 space-y-5">
-      <ToastContainer position="top-right" autoClose={2500} />
-
       <div>
         <h2 className="text-2xl font-bold text-[var(--heading-accent)] mb-1">
-          Metas de Ahorro
+          {t("goals.title")}
         </h2>
-        <p className="text-sm text-[var(--muted)]">
-          Aporta y retira montos. Si asignas una cuenta, afecta el disponible.
-          Si no, funciona como tracking.
-        </p>
+        <p className="text-sm text-[var(--muted)]">{t("goals.subtitle")}</p>
       </div>
 
-      {/* Formulario Crear */}
       <form onSubmit={handleCreate} className="grid gap-4 mb-4 md:grid-cols-3">
         <div className="flex flex-col space-y-1">
-          <label className="ff-label">Nombre</label>
+          <label className="ff-label">{t("goals.name")}</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ej: Viaje, computadora..."
+            placeholder={t("goals.namePlaceholder")}
             className="ff-input"
             required
           />
         </div>
 
         <div className="flex flex-col space-y-1">
-          <label className="ff-label">Monto objetivo (DOP)</label>
+          <label className="ff-label">
+            {`${t("goals.targetAmount")} (${preferences.currency})`}
+          </label>
           <input
             type="number"
             value={target}
@@ -312,7 +426,7 @@ function Goals({ token }) {
         </div>
 
         <div className="flex flex-col space-y-1">
-          <label className="ff-label">Fecha límite</label>
+          <label className="ff-label">{t("goals.dueDate")}</label>
           <input
             type="date"
             value={dueDate}
@@ -322,19 +436,16 @@ function Goals({ token }) {
         </div>
 
         <div className="flex flex-col space-y-1 md:col-span-2">
-          <label className="ff-label">Cuenta (para reservar fondos)</label>
+          <label className="ff-label">{t("goals.accountReserve")}</label>
           <FFSelect
             value={accountId}
             onChange={(v) => setAccountId(v)}
             options={accountOptions}
-            placeholder="Sin cuenta (tracking)"
+            placeholder={t("goals.noAccountTracking")}
             searchable
             clearable={false}
           />
-          <p className="text-xs text-[var(--muted)]">
-            Con cuenta: valida contra disponible. Sin cuenta: no afecta balances
-            (solo tracking).
-          </p>
+          <p className="text-xs text-[var(--muted)]">{t("goals.accountHelp")}</p>
         </div>
 
         <div className="flex items-center gap-2 md:col-span-1 mt-6">
@@ -350,7 +461,7 @@ function Goals({ token }) {
             htmlFor="priority-create"
             className="text-sm text-[var(--muted)]"
           >
-            Meta prioritaria
+            {t("goals.priorityGoal")}
           </label>
         </div>
 
@@ -359,7 +470,7 @@ function Goals({ token }) {
             type="submit"
             className="ff-btn ff-btn-primary w-full md:w-auto"
           >
-            Crear meta
+            {t("goals.createGoal")}
           </button>
         </div>
       </form>
@@ -368,20 +479,38 @@ function Goals({ token }) {
         {goals.map((goal) => {
           const reservedRaw = Number(goal.reserved_amount ?? 0);
           const targetRaw = Number(goal.target_amount ?? 0);
-
           const reserved = Math.abs(reservedRaw) < 0.000001 ? 0 : reservedRaw;
           const targetN = Math.abs(targetRaw) < 0.000001 ? 0 : targetRaw;
-
           const progress =
             targetN > 0 ? Math.max(0, Math.min(1, reserved / targetN)) : 0;
-
-          const reservedText = reserved.toFixed(2);
-          const targetText = targetN.toFixed(2);
-
+          const reservedText = formatCurrency(reserved);
+          const targetText = formatCurrency(targetN);
           const acc = goal.account_id ? accountMap.get(goal.account_id) : null;
           const isTracking = !goal.account_id;
           const canWithdraw = reserved > 0;
           const isCompleted = goal.status === "completed";
+          const requestedAmount = Number(amountByGoal[goal.id] ?? 0);
+          const hasValidRequestedAmount =
+            Number.isFinite(requestedAmount) && requestedAmount > 0;
+          const remainingToTarget = Math.max(0, targetN - reserved);
+          const availableForGoal = Number(acc?.available_balance ?? 0);
+          const exceedsReserved = hasValidRequestedAmount && requestedAmount > reserved;
+          const exceedsTarget =
+            hasValidRequestedAmount && requestedAmount > remainingToTarget;
+          const exceedsAvailable =
+            hasValidRequestedAmount &&
+            !isTracking &&
+            requestedAmount > availableForGoal;
+          const canDepositAction =
+            !isCompleted &&
+            hasValidRequestedAmount &&
+            !exceedsAvailable &&
+            (targetN <= 0 || requestedAmount <= remainingToTarget);
+          const canWithdrawAction =
+            !isCompleted &&
+            hasValidRequestedAmount &&
+            canWithdraw &&
+            !exceedsReserved;
 
           return (
             <li
@@ -412,7 +541,7 @@ function Goals({ token }) {
                             "color-mix(in srgb, var(--warning) 35%, var(--border-rgba))",
                         }}
                       >
-                        Prioridad
+                        {t("common.priority")}
                       </span>
                     )}
 
@@ -428,7 +557,7 @@ function Goals({ token }) {
                             "color-mix(in srgb, var(--muted) 22%, var(--border-rgba))",
                         }}
                       >
-                        Tracking
+                        {t("common.tracking")}
                       </span>
                     )}
                   </div>
@@ -445,7 +574,7 @@ function Goals({ token }) {
                           "color-mix(in srgb, var(--primary) 35%, var(--border-rgba))",
                       }}
                     >
-                      Completada
+                      {t("goals.completedState")}
                     </span>
                   )}
 
@@ -453,40 +582,43 @@ function Goals({ token }) {
                     <span className="font-semibold text-[var(--text)]">
                       {reservedText}
                     </span>{" "}
-                    / {targetText} DOP
+                    / {targetText}
                     {goal.due_date ? (
                       <span className="ml-2 text-[var(--muted)]">
-                        — Vence: {goal.due_date}
+                        {" "}
+                        - {t("goals.dueLabel")}: {goal.due_date}
                       </span>
                     ) : null}
                   </p>
 
                   {acc ? (
                     <p className="text-sm text-[var(--muted)] mt-1">
-                      Cuenta:{" "}
+                      {t("goals.account")}:{" "}
                       <span className="text-[var(--text)] font-medium">
                         {acc.name}
                       </span>{" "}
-                      • Disponible:{" "}
+                      • {t("common.available")}:{" "}
                       <span className="text-[var(--text)] font-medium">
-                        {Number(acc.available_balance).toFixed(2)} DOP
+                        {formatCurrency(acc.available_balance)}
                       </span>
                     </p>
                   ) : (
                     <p className="text-sm text-[var(--muted)] mt-1">
-                      Esta meta no afecta cuentas (solo tracking).
+                      {t("goals.affectsNoAccounts")}
                     </p>
                   )}
                 </div>
 
-                <div className="flex flex-col items-end gap-2">
+                <div className="hidden md:flex flex-col items-end gap-2">
                   <button
                     type="button"
                     onClick={() => handleTogglePriority(goal)}
                     className="text-sm font-semibold underline underline-offset-2"
                     style={{ color: "var(--warning)" }}
                   >
-                    {goal.is_priority ? "Quitar prioridad" : "Marcar prioridad"}
+                    {goal.is_priority
+                      ? t("goals.removePriority")
+                      : t("goals.markPriority")}
                   </button>
                   {!isCompleted && (
                     <button
@@ -494,9 +626,9 @@ function Goals({ token }) {
                       onClick={() => openCompleteModal(goal)}
                       className="text-sm font-semibold underline underline-offset-2"
                       style={{ color: "var(--primary)" }}
-                      title="Marca la meta como completada y libera todo el monto reservado"
+                      title={t("goals.completeTitleHint")}
                     >
-                      Completar y liberar
+                      {t("goals.completeAndRelease")}
                     </button>
                   )}
 
@@ -506,8 +638,80 @@ function Goals({ token }) {
                     className="text-sm font-semibold underline underline-offset-2"
                     style={{ color: "var(--danger)" }}
                   >
-                    Eliminar
+                    {t("common.delete")}
                   </button>
+                </div>
+
+                <div
+                  ref={mobileMenuId === goal.id ? mobileMenuRef : null}
+                  className="relative md:hidden"
+                >
+                  <button
+                    type="button"
+                    data-overflow-trigger="true"
+                    aria-label="Actions"
+                    onClick={() =>
+                      setMobileMenuId((prev) => (prev === goal.id ? null : goal.id))
+                    }
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border"
+                    style={{
+                      borderColor:
+                        "color-mix(in srgb, var(--border-rgba) 80%, transparent)",
+                      background:
+                        "color-mix(in srgb, var(--panel) 92%, transparent)",
+                      color: "var(--text)",
+                    }}
+                  >
+                    <HiDotsVertical size={18} />
+                  </button>
+
+                  {mobileMenuId === goal.id && (
+                    <div
+                      data-overflow-menu="true"
+                      className="absolute right-0 top-12 z-10 min-w-[190px] rounded-[var(--radius-md)] border p-2 shadow-[0_18px_40px_rgba(0,0,0,0.45)]"
+                      style={{
+                        top: mobileMenuPlacement === "up" ? "auto" : "3rem",
+                        bottom: mobileMenuPlacement === "up" ? "3rem" : "auto",
+                        borderColor:
+                          "color-mix(in srgb, var(--border-rgba) 80%, transparent)",
+                        background: "color-mix(in srgb, var(--panel) 96%, transparent)",
+                      }}
+                    >
+                      <div className="grid grid-cols-1 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleTogglePriority(goal);
+                            setMobileMenuId(null);
+                          }}
+                          className="ff-btn ff-btn-warning w-full"
+                        >
+                          {goal.is_priority
+                            ? t("goals.removePriority")
+                            : t("goals.markPriority")}
+                        </button>
+
+                        {!isCompleted && (
+                          <button
+                            type="button"
+                            onClick={() => openCompleteModal(goal)}
+                            className="ff-btn ff-btn-primary w-full"
+                            title={t("goals.completeTitleHint")}
+                          >
+                            {t("goals.completeAndRelease")}
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => openDeleteModal(goal)}
+                          className="ff-btn ff-btn-danger w-full"
+                        >
+                          {t("common.delete")}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -540,66 +744,81 @@ function Goals({ token }) {
                       step="0.01"
                       value={amountByGoal[goal.id] ?? ""}
                       onChange={(e) =>
-                        setAmountByGoal((p) => ({
-                          ...p,
+                        setAmountByGoal((prev) => ({
+                          ...prev,
                           [goal.id]: e.target.value,
                         }))
                       }
-                      placeholder="Monto"
+                      placeholder={t("goals.amountPlaceholder")}
                       className="ff-input"
                     />
 
-                    <div className="flex gap-2 mt-2">
-                      <button
-                        type="button"
-                        onClick={() => setQuickAmount(goal.id, 100)}
-                        className="ff-btn ff-btn-ghost ff-btn-sm"
-                      >
-                        +100
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setQuickAmount(goal.id, 500)}
-                        className="ff-btn ff-btn-ghost ff-btn-sm"
-                      >
-                        +500
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setQuickAmount(goal.id, 1000)}
-                        className="ff-btn ff-btn-ghost ff-btn-sm"
-                      >
-                        +1000
-                      </button>
-                    </div>
+                    {hasValidRequestedAmount && exceedsTarget && (
+                      <p className="text-xs mt-2" style={{ color: "var(--warning)" }}>
+                        {t("goals.depositHint", {
+                          amount: formatCurrency(remainingToTarget),
+                        })}
+                      </p>
+                    )}
+
+                    {hasValidRequestedAmount && exceedsAvailable && (
+                      <p className="text-xs mt-2" style={{ color: "var(--warning)" }}>
+                        {t("goals.availableHint", {
+                          amount: formatCurrency(availableForGoal),
+                        })}
+                      </p>
+                    )}
                   </div>
 
                   <div className="md:col-span-2 flex gap-3 items-start">
                     <button
                       type="button"
                       onClick={() => handleDeposit(goal)}
-                      className="ff-btn ff-btn-primary flex-1"
-                      title={isTracking ? "Tracking: no afecta cuentas" : ""}
+                      disabled={!canDepositAction}
+                      className={`ff-btn flex-1 ${
+                        canDepositAction
+                          ? "ff-btn-primary"
+                          : "opacity-60 cursor-not-allowed"
+                      }`}
+                      title={
+                        isCompleted
+                          ? t("goals.completeGoalTooltip")
+                          : !hasValidRequestedAmount
+                          ? t("goals.validAmountTooltip")
+                          : exceedsAvailable
+                          ? t("goals.availableTooltip")
+                          : exceedsTarget
+                          ? t("goals.targetTooltip")
+                          : isTracking
+                          ? t("goals.trackingTooltip")
+                          : ""
+                      }
                     >
-                      Aportar
+                      {t("goals.deposit")}
                     </button>
 
                     <button
                       type="button"
                       onClick={() => handleWithdraw(goal, reserved)}
-                      disabled={!canWithdraw}
+                      disabled={!canWithdrawAction}
                       className={`ff-btn flex-1 ${
-                        canWithdraw
+                        canWithdrawAction
                           ? "ff-btn-outline"
                           : "opacity-60 cursor-not-allowed"
                       }`}
                       title={
-                        !canWithdraw
-                          ? "No hay monto disponible para retirar"
+                        isCompleted
+                          ? t("goals.completeGoalTooltip")
+                          : !hasValidRequestedAmount
+                          ? t("goals.validAmountTooltip")
+                          : !canWithdraw
+                          ? t("goals.noWithdrawTooltip")
+                          : exceedsReserved
+                          ? t("goals.reservedTooltip")
                           : ""
                       }
                     >
-                      Retirar
+                      {t("goals.withdraw")}
                     </button>
                   </div>
                 </div>
@@ -613,8 +832,7 @@ function Goals({ token }) {
                     color: "var(--muted)",
                   }}
                 >
-                  Esta meta está completada. El monto reservado fue liberado.
-                  Registra el gasto desde <b>Transacciones</b>.
+                  {t("goals.completedInfo")}
                 </div>
               )}
             </li>
@@ -623,25 +841,23 @@ function Goals({ token }) {
 
         {goals.length === 0 && (
           <li className="text-base italic text-[var(--muted)]">
-            Aún no tienes metas creadas. Crea la primera desde el formulario
-            superior.
+            {t("goals.noGoals")}
           </li>
         )}
       </ul>
 
-      {/* ✅ MODAL ELIMINAR */}
       <Modal
         isOpen={deleteOpen}
         onClose={closeDeleteModal}
-        title="Eliminar meta"
+        title={t("goals.deleteTitle")}
         size="sm"
       >
         <p className="text-sm" style={{ color: "var(--muted)" }}>
-          ¿Seguro que deseas eliminar la meta{" "}
+          {t("goals.deleteConfirm")}{" "}
           <span style={{ color: "var(--text)", fontWeight: 700 }}>
             {deleteGoal?.name || ""}
           </span>
-          ? Esta acción no se puede deshacer.
+          ? {t("goals.irreversible")}
         </p>
 
         <div className="mt-5 flex justify-end gap-2">
@@ -651,7 +867,7 @@ function Goals({ token }) {
             disabled={deleteLoading}
             className="ff-btn ff-btn-danger"
           >
-            {deleteLoading ? "Eliminando..." : "Sí, eliminar"}
+            {deleteLoading ? t("common.loadingDelete") : t("goals.yesDelete")}
           </button>
           <button
             type="button"
@@ -659,16 +875,15 @@ function Goals({ token }) {
             disabled={deleteLoading}
             className="ff-btn ff-btn-outline"
           >
-            Cancelar
+            {t("common.cancel")}
           </button>
         </div>
       </Modal>
 
-      {/* ✅ MODAL COMPLETAR */}
       <Modal
         isOpen={completeOpen}
         onClose={closeCompleteModal}
-        title="Completar meta"
+        title={t("goals.completeTitle")}
         size="sm"
       >
         {(() => {
@@ -678,7 +893,7 @@ function Goals({ token }) {
           return (
             <>
               <p className="text-sm" style={{ color: "var(--muted)" }}>
-                Vas a marcar como completada la meta{" "}
+                {t("goals.completeIntro")}{" "}
                 <span style={{ color: "var(--text)", fontWeight: 700 }}>
                   {completeGoal?.name || ""}
                 </span>
@@ -694,17 +909,11 @@ function Goals({ token }) {
                   color: "var(--muted)",
                 }}
               >
-                {reservedSafe > 0 ? (
-                  <>
-                    Se liberará{" "}
-                    <span style={{ color: "var(--text)", fontWeight: 700 }}>
-                      {reservedSafe.toFixed(2)} DOP
-                    </span>{" "}
-                    de fondos reservados.
-                  </>
-                ) : (
-                  <>No hay fondos reservados para liberar.</>
-                )}
+                {reservedSafe > 0
+                  ? t("goals.reservedRelease", {
+                      amount: formatCurrency(reservedSafe),
+                    })
+                  : t("goals.noReservedRelease")}
               </div>
 
               <div className="mt-5 flex justify-end gap-2">
@@ -714,7 +923,9 @@ function Goals({ token }) {
                   disabled={completeLoading}
                   className="ff-btn ff-btn-danger"
                 >
-                  {completeLoading ? "Completando..." : "Sí, completar"}
+                  {completeLoading
+                    ? t("goals.completing")
+                    : t("goals.yesComplete")}
                 </button>
                 <button
                   type="button"
@@ -722,7 +933,7 @@ function Goals({ token }) {
                   disabled={completeLoading}
                   className="ff-btn ff-btn-outline"
                 >
-                  Cancelar
+                  {t("common.cancel")}
                 </button>
               </div>
             </>

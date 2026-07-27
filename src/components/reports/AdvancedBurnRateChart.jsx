@@ -11,6 +11,7 @@ import {
   Legend,
 } from "recharts";
 import Modal from "../Modal";
+import { withUserTimeZone } from "../../lib/dates/localDate";
 
 const STORAGE_KEY = "report:advanced-burn-rate:params";
 
@@ -24,14 +25,35 @@ const DEFAULT_PARAMS = {
   maxCoefVariation: 0.6,
 };
 
+function parseDraftNumber(value) {
+  const normalized = String(value ?? "").trim().replace(",", ".");
+  if (!normalized) return null;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : null;
+}
+
+function clampDraftNumber(value, min, max, fallback) {
+  const number = parseDraftNumber(value);
+  if (number == null) return fallback;
+  return Math.max(min, Math.min(max, number));
+}
+
 function sanitizeParams(raw) {
+  const minIntervalDays = clampDraftNumber(
+    raw?.minIntervalDays,
+    1,
+    365,
+    DEFAULT_PARAMS.minIntervalDays
+  );
+
   return {
-    months: Number.isFinite(Number(raw?.months))
-      ? Number(raw.months)
-      : DEFAULT_PARAMS.months,
-    minOccurrences: Number.isFinite(Number(raw?.minOccurrences))
-      ? Number(raw.minOccurrences)
-      : DEFAULT_PARAMS.minOccurrences,
+    months: clampDraftNumber(raw?.months, 1, 36, DEFAULT_PARAMS.months),
+    minOccurrences: clampDraftNumber(
+      raw?.minOccurrences,
+      2,
+      50,
+      DEFAULT_PARAMS.minOccurrences
+    ),
     includeOccasional:
       typeof raw?.includeOccasional === "boolean"
         ? raw.includeOccasional
@@ -40,15 +62,19 @@ function sanitizeParams(raw) {
       typeof raw?.includeNoise === "boolean"
         ? raw.includeNoise
         : DEFAULT_PARAMS.includeNoise,
-    minIntervalDays: Number.isFinite(Number(raw?.minIntervalDays))
-      ? Number(raw.minIntervalDays)
-      : DEFAULT_PARAMS.minIntervalDays,
-    maxIntervalDays: Number.isFinite(Number(raw?.maxIntervalDays))
-      ? Number(raw.maxIntervalDays)
-      : DEFAULT_PARAMS.maxIntervalDays,
-    maxCoefVariation: Number.isFinite(Number(raw?.maxCoefVariation))
-      ? Number(raw.maxCoefVariation)
-      : DEFAULT_PARAMS.maxCoefVariation,
+    minIntervalDays,
+    maxIntervalDays: clampDraftNumber(
+      raw?.maxIntervalDays,
+      minIntervalDays,
+      3650,
+      Math.max(DEFAULT_PARAMS.maxIntervalDays, minIntervalDays)
+    ),
+    maxCoefVariation: clampDraftNumber(
+      raw?.maxCoefVariation,
+      0.05,
+      2,
+      DEFAULT_PARAMS.maxCoefVariation
+    ),
   };
 }
 
@@ -128,22 +154,22 @@ export default function AdvancedBurnRateChart({ token }) {
   const api = import.meta.env.VITE_API_URL;
   const initialParams = getInitialParams();
 
-  const [months, setMonths] = useState(initialParams.months);
+  const [months, setMonths] = useState(String(initialParams.months));
   const [minOccurrences, setMinOccurrences] = useState(
-    initialParams.minOccurrences
+    String(initialParams.minOccurrences)
   );
   const [includeOccasional, setIncludeOccasional] = useState(
     initialParams.includeOccasional
   );
   const [includeNoise, setIncludeNoise] = useState(initialParams.includeNoise);
   const [minIntervalDays, setMinIntervalDays] = useState(
-    initialParams.minIntervalDays
+    String(initialParams.minIntervalDays)
   );
   const [maxIntervalDays, setMaxIntervalDays] = useState(
-    initialParams.maxIntervalDays
+    String(initialParams.maxIntervalDays)
   );
   const [maxCoefVariation, setMaxCoefVariation] = useState(
-    initialParams.maxCoefVariation
+    String(initialParams.maxCoefVariation)
   );
 
   const [data, setData] = useState(null);
@@ -195,9 +221,9 @@ export default function AdvancedBurnRateChart({ token }) {
       },
       legend: { fontSize: "0.95rem", color: "var(--text)" },
       btn: {
-        backgroundColor: "var(--btn-warning-bg)",
-        color: "var(--btn-warning-text)",
-        border: "1px solid color-mix(in srgb, var(--btn-warning-bg) 60%, var(--border-rgba))",
+        backgroundColor: "var(--btn-primary-bg)",
+        color: "var(--btn-primary-text)",
+        border: "1px solid color-mix(in srgb, var(--btn-primary-bg) 60%, var(--border-rgba))",
         borderRadius: "var(--btn-radius)",
         padding: "10px 14px",
         fontWeight: 800,
@@ -225,20 +251,30 @@ export default function AdvancedBurnRateChart({ token }) {
     setErrMsg("");
 
     try {
+      const params = sanitizeParams({
+        months,
+        minOccurrences,
+        includeOccasional,
+        includeNoise,
+        minIntervalDays,
+        maxIntervalDays,
+        maxCoefVariation,
+      });
+
       const res = await axios.get(
         `${api}/analytics/advanced-burn-rate-current-month`,
-        {
+        withUserTimeZone({
           headers: { Authorization: `Bearer ${token}` },
           params: {
-            months,
-            min_occurrences: minOccurrences,
-            include_occasional: includeOccasional,
-            include_noise: includeNoise,
-            min_interval_days: minIntervalDays,
-            max_interval_days: maxIntervalDays,
-            max_coef_variation: maxCoefVariation,
+            months: params.months,
+            min_occurrences: params.minOccurrences,
+            include_occasional: params.includeOccasional,
+            include_noise: params.includeNoise,
+            min_interval_days: params.minIntervalDays,
+            max_interval_days: params.maxIntervalDays,
+            max_coef_variation: params.maxCoefVariation,
           },
-        }
+        })
       );
 
       setData(res.data?.data || null);
@@ -403,11 +439,12 @@ export default function AdvancedBurnRateChart({ token }) {
         <div>
           <label style={ui.label}>Historial (meses)</label>
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
             min={1}
             max={36}
             value={months}
-            onChange={(e) => setMonths(Number(e.target.value))}
+            onChange={(e) => setMonths(e.target.value)}
             style={ui.control}
             className="w-24 mt-1"
           />
@@ -416,10 +453,11 @@ export default function AdvancedBurnRateChart({ token }) {
         <div>
           <label style={ui.label}>Min. ocurrencias</label>
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
             min={2}
             value={minOccurrences}
-            onChange={(e) => setMinOccurrences(Number(e.target.value))}
+            onChange={(e) => setMinOccurrences(e.target.value)}
             style={ui.control}
             className="w-24 mt-1"
           />
@@ -497,10 +535,11 @@ export default function AdvancedBurnRateChart({ token }) {
           <div>
             <label style={ui.label}>Min intervalo (días)</label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               min={1}
               value={minIntervalDays}
-              onChange={(e) => setMinIntervalDays(Number(e.target.value))}
+              onChange={(e) => setMinIntervalDays(e.target.value)}
               style={ui.control}
               className="w-28 mt-1"
             />
@@ -509,10 +548,11 @@ export default function AdvancedBurnRateChart({ token }) {
           <div>
             <label style={ui.label}>Max intervalo (días)</label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               min={1}
               value={maxIntervalDays}
-              onChange={(e) => setMaxIntervalDays(Number(e.target.value))}
+              onChange={(e) => setMaxIntervalDays(e.target.value)}
               style={ui.control}
               className="w-28 mt-1"
             />
@@ -521,12 +561,13 @@ export default function AdvancedBurnRateChart({ token }) {
           <div>
             <label style={ui.label}>Coef. variación máx</label>
             <input
-              type="number"
+              type="text"
+              inputMode="decimal"
               step="0.05"
               min={0.05}
               max={2}
               value={maxCoefVariation}
-              onChange={(e) => setMaxCoefVariation(Number(e.target.value))}
+              onChange={(e) => setMaxCoefVariation(e.target.value)}
               style={ui.control}
               className="w-28 mt-1"
             />

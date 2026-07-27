@@ -1,5 +1,5 @@
 // src/components/reports/TopItemsByCategoryChart.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
   BarChart,
@@ -13,13 +13,27 @@ import {
 } from "recharts";
 import FFSelect from "../FFSelect"; // ✅ ajusta la ruta si tu estructura difiere
 
+function parseDraftNumber(value) {
+  const normalized = String(value ?? "").trim().replace(",", ".");
+  if (!normalized) return null;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : null;
+}
+
+function clampDraftNumber(value, min, max, fallback) {
+  const number = parseDraftNumber(value);
+  if (number == null) return fallback;
+  return Math.max(min, Math.min(max, Math.trunc(number)));
+}
+
 function TopItemsByCategoryChart({ token, categories = [] }) {
   const api = import.meta.env.VITE_API_URL;
 
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [year, setYear] = useState(String(new Date().getFullYear()));
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState("10");
   const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   // --- Helpers para leer tokens CSS (sin hardcode de colores) ---
   const cssVar = (name, fallback = "") => {
@@ -56,20 +70,39 @@ function TopItemsByCategoryChart({ token, categories = [] }) {
     }
   }, [expenseCategories, selectedCategoryId]);
 
+  const appliedYear = clampDraftNumber(
+    year,
+    2000,
+    9999,
+    new Date().getFullYear()
+  );
+  const appliedLimit = clampDraftNumber(limit, 1, 50, 10);
+
   // Cargar datos cuando cambie categoría, año o límite
-  useEffect(() => {
+  const loadData = useCallback(() => {
     if (!token || !selectedCategoryId) return;
 
+    setLoading(true);
     axios
       .get(`${api}/analytics/top-items-by-category`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { category_id: selectedCategoryId, year, limit },
+        params: {
+          category_id: selectedCategoryId,
+          year: clampDraftNumber(year, 2000, 9999, new Date().getFullYear()),
+          limit: clampDraftNumber(limit, 1, 50, 10),
+        },
       })
       .then((res) => setData(res.data.data || []))
       .catch((err) => {
         console.error("Error al cargar top ítems por categoría:", err);
-      });
-  }, [token, selectedCategoryId, year, limit, api]);
+        setData([]);
+      })
+      .finally(() => setLoading(false));
+  }, [api, limit, selectedCategoryId, token, year]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const selectedCategoryName =
     expenseCategories.find((c) => String(c.id) === String(selectedCategoryId))
@@ -126,12 +159,6 @@ function TopItemsByCategoryChart({ token, categories = [] }) {
     );
   };
 
-  const handleLimitChange = (e) => {
-    const value = Number(e.target.value);
-    if (!value || value < 1) setLimit(10);
-    else setLimit(Math.min(value, 50));
-  };
-
   return (
     <div
       className="
@@ -145,11 +172,11 @@ function TopItemsByCategoryChart({ token, categories = [] }) {
       "
     >
       <h3 className="font-semibold mb-1 text-[var(--text)] text-sm sm:text-base">
-        Top {limit} ítems por gasto en la categoría:{" "}
+        Top {appliedLimit} ítems por gasto en la categoría:{" "}
         <span className="font-bold text-[color-mix(in srgb,var(--primary)_65%,var(--text))]">
           {selectedCategoryName}
         </span>{" "}
-        <span className="text-[var(--muted)]">({year})</span>
+        <span className="text-[var(--muted)]">({appliedYear})</span>
       </h3>
 
       <p className="text-xs sm:text-sm text-[var(--muted)] mb-2">
@@ -184,11 +211,10 @@ function TopItemsByCategoryChart({ token, categories = [] }) {
             Año:
           </span>
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
             value={year}
-            onChange={(e) =>
-              setYear(Number(e.target.value) || new Date().getFullYear())
-            }
+            onChange={(e) => setYear(e.target.value)}
             className="
               border border-[var(--border-rgba)] rounded-lg px-2 py-1 w-24
               bg-[var(--panel-2)] text-[var(--text)]
@@ -204,11 +230,12 @@ function TopItemsByCategoryChart({ token, categories = [] }) {
             Top:
           </span>
           <input
-            type="number"
+            type="text"
+            inputMode="numeric"
             min={1}
             max={50}
             value={limit}
-            onChange={handleLimitChange}
+            onChange={(e) => setLimit(e.target.value)}
             className="
               border border-[var(--border-rgba)] rounded-lg px-2 py-1 w-20
               bg-[var(--panel-2)] text-[var(--text)]
@@ -216,6 +243,21 @@ function TopItemsByCategoryChart({ token, categories = [] }) {
             "
           />
         </div>
+
+        <button
+          type="button"
+          onClick={loadData}
+          disabled={loading || !token || !selectedCategoryId}
+          className="
+            border border-[var(--border-rgba)] rounded-lg px-3 py-1
+            bg-[color-mix(in srgb,var(--panel-2)_80%,transparent)]
+            text-[var(--text)] font-semibold
+            focus:outline-none focus:ring-2 focus:ring-[var(--ring)]
+            disabled:opacity-60 disabled:cursor-not-allowed
+          "
+        >
+          {loading ? "Cargando..." : "Refrescar"}
+        </button>
       </div>
 
       {data.length === 0 ? (

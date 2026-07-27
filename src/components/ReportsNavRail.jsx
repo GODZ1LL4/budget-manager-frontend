@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 function normalize(str = "") {
   return str
@@ -64,11 +64,11 @@ function GroupCollapse({ title, count, open, onToggle, children }) {
   );
 }
 
-export default function ReportsNavRail({
+function ReportsNavRail({
   sections,
   storageKey = "reports_active_section",
   defaultSectionId,
-  preloadNext = true,
+  preloadNext = false,
   railStorageKey = "reports_rail_collapsed",
   groupStorageKey = "reports_group_open_map",
   searchInputRef,
@@ -365,8 +365,6 @@ export default function ReportsNavRail({
             </div>
 
             <div className="min-w-0">{active.render()}</div>
-
-            {next ? <div className="hidden">{next.render()}</div> : null}
           </>
         ) : (
           <p style={{ color: "var(--muted)" }}>No hay secciones para mostrar.</p>
@@ -375,3 +373,5 @@ export default function ReportsNavRail({
     </div>
   );
 }
+
+export default memo(ReportsNavRail);

@@ -14,6 +14,9 @@ import {
   saveTheme,
   makeEmptyTheme,
 } from "../theme/themeStore";
+import { getCachedMobileDashboardSnapshot } from "../lib/mobileDashboard/mobileDashboardCache";
+import { syncHomeWidgetSnapshot } from "../lib/widgets/homeWidget";
+import * as preferencesApi from "../lib/preferences/appPreferences";
 
 function readComputedVar(key) {
   const root = document.documentElement;
@@ -60,6 +63,23 @@ export default function Theme() {
   const [jsonText, setJsonText] = useState("");
   const [toast, setToast] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    const syncWidgetTheme = async () => {
+      const snapshot = await getCachedMobileDashboardSnapshot().catch(() => null);
+
+      await syncHomeWidgetSnapshot({
+        dashboardData: snapshot,
+        formatCurrency: (amount) =>
+          preferencesApi.formatCurrencyByPreference(
+            amount,
+            preferencesApi.getAppPreferences()
+          ),
+      });
+    };
+
+    syncWidgetTheme().catch(() => null);
+  }, [theme]);
 
   // ===== Color-mix helper modal =====
   const [mixOpen, setMixOpen] = useState(false);

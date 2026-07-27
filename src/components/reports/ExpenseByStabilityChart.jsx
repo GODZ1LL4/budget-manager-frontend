@@ -109,6 +109,7 @@ function ExpenseByStabilityChart({ token }) {
                 dataKey="total"
                 nameKey="name"
                 outerRadius="75%"
+                isAnimationActive={false}
                 label={({ name, percent }) =>
                   `${name} (${(percent * 100).toFixed(1)}%)`
                 }

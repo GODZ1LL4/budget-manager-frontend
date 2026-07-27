@@ -1,5 +1,5 @@
 // src/components/CategoryMonthlyComparisonTable.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 
 const MONTH_LABELS = {
@@ -29,6 +29,16 @@ function monthLabelShort(yyyyMm) {
   return `${m}/${y}`;
 }
 
+function clampDraftInteger(value, min, max, fallback) {
+  const normalized = String(value ?? "").trim().replace(",", ".");
+  if (!normalized) return fallback;
+
+  const number = Number(normalized);
+  if (!Number.isFinite(number)) return fallback;
+
+  return Math.max(min, Math.min(max, Math.trunc(number)));
+}
+
 function CategoryMonthlyComparisonTable({ token }) {
   const api = import.meta.env.VITE_API_URL;
   const today = new Date();
@@ -49,10 +59,10 @@ function CategoryMonthlyComparisonTable({ token }) {
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const [year1, setYear1] = useState(defaultYear1);
-  const [month1, setMonth1] = useState(defaultMonth1);
-  const [year2, setYear2] = useState(defaultYear2);
-  const [month2, setMonth2] = useState(defaultMonth2);
+  const [year1, setYear1] = useState(String(defaultYear1));
+  const [month1, setMonth1] = useState(String(defaultMonth1));
+  const [year2, setYear2] = useState(String(defaultYear2));
+  const [month2, setMonth2] = useState(String(defaultMonth2));
 
   // ===== Tokenized UI =====
   const ui = useMemo(() => {
@@ -97,33 +107,59 @@ function CategoryMonthlyComparisonTable({ token }) {
         "color-mix(in srgb, var(--primary) 45%, var(--border-rgba))",
       // pills/meta
       pillBg: surface2,
+      button: {
+        background: "color-mix(in srgb, var(--primary) 14%, transparent)",
+        border: `1px solid color-mix(in srgb, var(--primary) 35%, ${border})`,
+        color: "var(--text)",
+        borderRadius: "var(--radius-sm)",
+      },
     };
   }, []);
 
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
     if (!token) return;
 
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const res = await axios.get(
-          `${api}/analytics/category-monthly-comparison`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-            params: { year1, month1, year2, month2 },
-          }
-        );
-        setRows(res.data?.data || []);
-        setMeta(res.data?.meta || null);
-      } catch (err) {
-        console.error("Error al cargar comparativo por categoría:", err);
-      } finally {
-        setLoading(false);
-      }
+    const params = {
+      year1: clampDraftInteger(year1, 2000, 9999, defaultYear1),
+      month1: clampDraftInteger(month1, 1, 12, defaultMonth1),
+      year2: clampDraftInteger(year2, 2000, 9999, defaultYear2),
+      month2: clampDraftInteger(month2, 1, 12, defaultMonth2),
     };
 
+    setLoading(true);
+    try {
+      const res = await axios.get(
+        `${api}/analytics/category-monthly-comparison`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          params,
+        }
+      );
+      setRows(res.data?.data || []);
+      setMeta(res.data?.meta || null);
+    } catch (err) {
+      console.error("Error al cargar comparativo por categoría:", err);
+      setRows([]);
+      setMeta(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    api,
+    defaultMonth1,
+    defaultMonth2,
+    defaultYear1,
+    defaultYear2,
+    month1,
+    month2,
+    token,
+    year1,
+    year2,
+  ]);
+
+  useEffect(() => {
     fetchData();
-  }, [token, api, year1, month1, year2, month2]);
+  }, [fetchData]);
 
   const formatCurrency = (value) =>
     new Intl.NumberFormat("es-DO", {
@@ -131,26 +167,6 @@ function CategoryMonthlyComparisonTable({ token }) {
       currency: "DOP",
       minimumFractionDigits: 2,
     }).format(Number.isFinite(Number(value)) ? Number(value) : 0);
-
-  const handleYear1Change = (e) => {
-    const val = parseInt(e.target.value, 10);
-    if (!Number.isNaN(val)) setYear1(val);
-  };
-
-  const handleMonth1Change = (e) => {
-    const val = parseInt(e.target.value, 10);
-    if (!Number.isNaN(val) && val >= 1 && val <= 12) setMonth1(val);
-  };
-
-  const handleYear2Change = (e) => {
-    const val = parseInt(e.target.value, 10);
-    if (!Number.isNaN(val)) setYear2(val);
-  };
-
-  const handleMonth2Change = (e) => {
-    const val = parseInt(e.target.value, 10);
-    if (!Number.isNaN(val) && val >= 1 && val <= 12) setMonth2(val);
-  };
 
   const month1Meta = meta?.month1 || null;
   const month2Meta = meta?.month2 || null;
@@ -191,9 +207,10 @@ function CategoryMonthlyComparisonTable({ token }) {
             <span style={{ color: ui.muted }}>Mes 1:</span>
 
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={year1}
-              onChange={handleYear1Change}
+              onChange={(e) => setYear1(e.target.value)}
               min="2000"
               className="w-20 px-2 py-1"
               style={ui.input}
@@ -208,9 +225,10 @@ function CategoryMonthlyComparisonTable({ token }) {
             />
 
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={month1}
-              onChange={handleMonth1Change}
+              onChange={(e) => setMonth1(e.target.value)}
               min="1"
               max="12"
               className="w-16 px-2 py-1"
@@ -231,9 +249,10 @@ function CategoryMonthlyComparisonTable({ token }) {
             <span style={{ color: ui.muted }}>Mes 2:</span>
 
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={year2}
-              onChange={handleYear2Change}
+              onChange={(e) => setYear2(e.target.value)}
               min="2000"
               className="w-20 px-2 py-1"
               style={ui.input}
@@ -248,9 +267,10 @@ function CategoryMonthlyComparisonTable({ token }) {
             />
 
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={month2}
-              onChange={handleMonth2Change}
+              onChange={(e) => setMonth2(e.target.value)}
               min="1"
               max="12"
               className="w-16 px-2 py-1"
@@ -265,6 +285,19 @@ function CategoryMonthlyComparisonTable({ token }) {
               }}
             />
           </div>
+
+          <button
+            type="button"
+            onClick={fetchData}
+            disabled={loading || !token}
+            className="px-3 py-1 text-sm font-semibold disabled:opacity-60"
+            style={{
+              ...ui.button,
+              cursor: loading || !token ? "not-allowed" : "pointer",
+            }}
+          >
+            {loading ? "Cargando..." : "Refrescar"}
+          </button>
         </div>
       </div>
 

@@ -711,6 +711,398 @@ html[data-theme="scuderia-carbon-red"] {
     --scrollbar-border: rgba(255,215,128,0.32);
   }
   
+  /* =========================
+     Preset: Racing Yellow
+     ========================= */
+  html[data-theme="ferrari-hamilton"] {
+    --bg-1: #fff45c;
+    --bg-2: #ffd51f;
+    --bg-3: #f2a900;
+
+    --panel: rgba(255, 239, 118, 0.62);
+    --panel-2: rgba(255, 207, 42, 0.42);
+
+    --text: #1b1000;
+    --muted: #6a4600;
+
+    --heading: #160900;
+    --heading-muted: #5f3d00;
+    --heading-accent: #d41224;
+
+    --border: #8a4a00;
+    --border-alpha: 0.36;
+    --border-w: 1px;
+
+    --primary: #d41224;
+    --primary-contrast: #fffdf0;
+    --ring: #d41224;
+
+    --danger: #a4001a;
+    --success: #0b6b3a;
+    --warning: #8f5600;
+    --on-danger: #fffdf0;
+    --danger-shadow: 0 0 18px rgba(164, 0, 26, 0.34);
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+
+    --glow-color: #d41224;
+    --glow-alpha: 0.22;
+    --glow-blur: 16px;
+    --glow-spread: 0px;
+
+    --control-bg: rgba(255, 228, 49, 0.82);
+    --control-bg-2: rgba(255, 213, 31, 0.86);
+    --control-text: #1b1000;
+    --control-muted: #6a4600;
+
+    --control-border: rgba(212, 18, 36, 0.42);
+    --control-border-hover: rgba(212, 18, 36, 0.66);
+    --control-border-focus: rgba(212, 18, 36, 0.90);
+    --control-focus-shadow:
+      0 0 0 1px rgba(212, 18, 36, 0.56),
+      0 0 18px rgba(212, 18, 36, 0.24),
+      0 8px 20px rgba(88, 48, 0, 0.12);
+
+    --btn-radius: 12px;
+    --btn-border-w: 1px;
+
+    --btn-pad-y: 10px;
+    --btn-pad-x: 16px;
+    --btn-font-size: 14px;
+    --btn-font-weight: 700;
+
+    --btn-bg: linear-gradient(
+      180deg,
+      #fff7a7 0%,
+      #ffe431 48%,
+      #d99b00 100%
+    );
+    --btn-text: #1b1000;
+    --btn-border: rgba(212, 18, 36, 0.46);
+
+    --btn-hover-bg: linear-gradient(
+      180deg,
+      #fffde2 0%,
+      #ffe83f 46%,
+      #d99b00 100%
+    );
+    --btn-hover-border: rgba(212, 18, 36, 0.74);
+    --btn-hover-text: #160900;
+
+    --btn-primary-bg: #d41224;
+    --btn-primary-text: #fffdf0;
+
+    --btn-success-bg: #0b6b3a;
+    --btn-success-text: #fffdf0;
+
+    --btn-warning-bg: #ffe431;
+    --btn-warning-text: #211000;
+
+    --btn-danger-bg: #a4001a;
+    --btn-danger-text: #fffdf0;
+
+    --btn-primary-hover-bg: linear-gradient(
+      180deg,
+      #f45a65 0%,
+      #d41224 46%,
+      #8f0014 100%
+    );
+    --btn-success-hover-bg: linear-gradient(
+      180deg,
+      #22a765 0%,
+      #0b6b3a 48%,
+      #064927 100%
+    );
+    --btn-warning-hover-bg: linear-gradient(
+      180deg,
+      #fff7a8 0%,
+      #ffd91a 46%,
+      #d99b00 100%
+    );
+    --btn-danger-hover-bg: linear-gradient(
+      180deg,
+      #e9414e 0%,
+      #b4001f 44%,
+      #63000f 100%
+    );
+
+    --btn-primary-hover-text: #fffdf0;
+    --btn-success-hover-text: #fffdf0;
+    --btn-warning-hover-text: #211000;
+    --btn-danger-hover-text: #fffdf0;
+
+    --btn-outline-bg: linear-gradient(
+      180deg,
+      rgba(255, 239, 118, 0.72) 0%,
+      rgba(255, 207, 42, 0.42) 100%
+    );
+    --btn-outline-border: rgba(212, 18, 36, 0.50);
+    --btn-outline-text: #1e1200;
+    --btn-outline-hover-text: #120700;
+
+    --btn-ghost-bg: linear-gradient(
+      180deg,
+      rgba(255, 239, 118, 0.36) 0%,
+      rgba(255, 213, 31, 0.18) 100%
+    );
+    --btn-ghost-text: #1e1200;
+    --btn-ghost-hover-bg: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.44) 0%,
+      rgba(212, 18, 36, 0.12) 100%
+    );
+    --btn-ghost-hover-text: #120700;
+
+    --btn-glow-alpha: 0.16;
+    --btn-glow-blur: 18px;
+
+    --link: #b4001f;
+    --link-hover: #5f0010;
+
+    --select-bg: rgba(255, 228, 49, 0.82);
+    --select-text: #1b1000;
+    --select-muted: #6a4600;
+    --select-border: rgba(212, 18, 36, 0.42);
+    --select-hover-bg: rgba(255, 239, 118, 0.86);
+    --select-active-bg: rgba(255, 213, 31, 0.92);
+    --select-shadow:
+      0 0 0 1px rgba(212, 18, 36, 0.24),
+      0 18px 42px rgba(45, 25, 0, 0.20),
+      0 0 22px rgba(212, 18, 36, 0.16);
+    --select-radius: 12px;
+    --select-border-w: 1px;
+    --select-max-h: 280px;
+
+    --modal-panel: rgba(255, 239, 118, 0.96);
+    --modal-border: rgba(212, 18, 36, 0.34);
+
+    --tx-item-shadow:
+      inset 3px 0 0 rgba(212, 18, 36, 0.62),
+      0 12px 26px rgba(91, 52, 0, 0.13);
+
+    --scrollbar-size: 10px;
+    --scrollbar-track: #e3b42c;
+    --scrollbar-thumb: #d41224;
+    --scrollbar-thumb-hover: #211307;
+    --scrollbar-border: rgba(255, 239, 118, 0.78);
+  }
+
+  html[data-theme="ferrari-hamilton"] .app-shell {
+    background-color: #ffe431;
+    background-image:
+      linear-gradient(90deg, rgba(69, 38, 0, 0.22) 0%, transparent 14%, transparent 78%, rgba(138, 74, 0, 0.28) 100%),
+      linear-gradient(180deg, rgba(255, 255, 239, 0.24) 0%, transparent 34%, rgba(135, 73, 0, 0.18) 100%),
+      linear-gradient(112deg, transparent 0 10%, rgba(255, 255, 239, 0.72) 10.2% 15%, transparent 15.3%),
+      linear-gradient(128deg, transparent 0 55%, rgba(11, 107, 58, 0.16) 55.2% 61%, transparent 61.2%),
+      repeating-linear-gradient(154deg, transparent 0 94px, rgba(212, 18, 36, 0.20) 95px 99px, transparent 100px 172px),
+      linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 52%, var(--bg-3) 100%) !important;
+    background-attachment: fixed;
+  }
+
+  html[data-theme="ferrari-hamilton"] nav.sticky {
+    background:
+      linear-gradient(180deg, rgba(255, 253, 122, 0.98) 0%, rgba(255, 232, 48, 0.96) 100%) !important;
+    border-bottom-color: rgba(33, 19, 7, 0.42) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 239, 0.72),
+      0 10px 26px rgba(59, 35, 0, 0.28) !important;
+  }
+
+  html[data-theme="ferrari-hamilton"] nav.sticky ul.absolute {
+    background:
+      linear-gradient(180deg, rgba(255, 239, 118, 0.98), rgba(255, 222, 74, 0.94)) !important;
+    border-color: rgba(128, 58, 0, 0.36) !important;
+    box-shadow: 0 18px 42px rgba(59, 35, 0, 0.30) !important;
+  }
+
+  html[data-theme="ferrari-hamilton"] .ff-btn {
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.42), transparent 34%),
+      linear-gradient(135deg, transparent 0 68%, rgba(212, 18, 36, 0.20) 68.5% 72%, transparent 72.5%),
+      var(--btn-bg);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.36);
+  }
+
+  html[data-theme="ferrari-hamilton"] .ff-btn:hover {
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.50), transparent 34%),
+      linear-gradient(135deg, transparent 0 62%, rgba(212, 18, 36, 0.24) 62.5% 67%, transparent 67.5%),
+      var(--btn-hover-bg);
+  }
+
+  html[data-theme="ferrari-hamilton"] .ff-btn-primary {
+    --btn-bg: linear-gradient(
+      180deg,
+      #f45a65 0%,
+      #d41224 46%,
+      #8f0014 100%
+    );
+    --btn-border: rgba(255, 255, 239, 0.54);
+    --btn-hover-border: rgba(255, 255, 239, 0.82);
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.30);
+  }
+
+  html[data-theme="ferrari-hamilton"] .ff-btn-warning {
+    --btn-bg: linear-gradient(
+      180deg,
+      #fff7a8 0%,
+      #ffd91a 46%,
+      #d99b00 100%
+    );
+    --btn-border: rgba(212, 18, 36, 0.44);
+    --btn-hover-border: rgba(212, 18, 36, 0.70);
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.38);
+  }
+
+  html[data-theme="ferrari-hamilton"] .ff-btn-success {
+    --btn-bg: linear-gradient(
+      180deg,
+      #22a765 0%,
+      #0b6b3a 48%,
+      #064927 100%
+    );
+    --btn-hover-border: rgba(255, 244, 82, 0.58);
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.24);
+  }
+
+  html[data-theme="ferrari-hamilton"] .ff-btn-danger {
+    --btn-bg: linear-gradient(
+      180deg,
+      #e9414e 0%,
+      #b4001f 44%,
+      #63000f 100%
+    );
+    --btn-hover-border: rgba(255, 244, 82, 0.64);
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.30);
+  }
+
+  html[data-theme="ferrari-hamilton"] .ff-input,
+  html[data-theme="ferrari-hamilton"] .input {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 239, 0.26), transparent 44%),
+      linear-gradient(90deg, rgba(212, 18, 36, 0.38) 0 5px, transparent 5px),
+      var(--control-bg);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 239, 0.52),
+      0 0 0 1px rgba(212, 18, 36, 0.13),
+      0 0 15px rgba(212, 18, 36, 0.13),
+      0 7px 16px rgba(88, 48, 0, 0.10);
+  }
+
+  html[data-theme="ferrari-hamilton"] .ff-input:hover,
+  html[data-theme="ferrari-hamilton"] .input:hover {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 239, 0.54),
+      0 0 0 1px rgba(212, 18, 36, 0.26),
+      0 0 20px rgba(212, 18, 36, 0.18),
+      0 8px 18px rgba(88, 48, 0, 0.12);
+  }
+
+  html[data-theme="ferrari-hamilton"] .ff-input:focus,
+  html[data-theme="ferrari-hamilton"] .input:focus {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 239, 0.58),
+      0 0 0 1px rgba(212, 18, 36, 0.64),
+      0 0 26px rgba(212, 18, 36, 0.30),
+      0 10px 24px rgba(88, 48, 0, 0.14);
+  }
+
+  html[data-theme="ferrari-hamilton"] input[type="color"] {
+    background: rgba(255, 228, 49, 0.82);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 239, 0.48),
+      0 0 0 1px rgba(212, 18, 36, 0.24),
+      0 0 14px rgba(212, 18, 36, 0.12);
+  }
+
+  html[data-theme="ferrari-hamilton"] input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(86%) sepia(42%) saturate(715%) hue-rotate(358deg);
+    opacity: 0.9;
+  }
+
+  html[data-theme="ferrari-hamilton"] .ff-surface {
+    background:
+      linear-gradient(145deg, rgba(255, 239, 118, 0.72) 0%, rgba(255, 213, 31, 0.42) 64%, rgba(133, 77, 0, 0.18) 100%) !important;
+    border-color: rgba(138, 74, 0, 0.34);
+    box-shadow:
+      inset 3px 0 0 rgba(212, 18, 36, 0.42),
+      inset 0 1px 0 rgba(255, 255, 239, 0.45),
+      0 12px 28px rgba(88, 48, 0, 0.12);
+  }
+
+  html[data-theme="ferrari-hamilton"] .ff-card {
+    background:
+      linear-gradient(140deg, rgba(255, 239, 118, 0.74) 0%, rgba(255, 213, 31, 0.42) 58%, rgba(133, 77, 0, 0.18) 100%),
+      repeating-linear-gradient(150deg, transparent 0 92px, rgba(212, 18, 36, 0.10) 93px 96px, transparent 97px 166px),
+      rgba(255, 222, 74, 0.40);
+    border-color: rgba(138, 74, 0, 0.34);
+    box-shadow:
+      inset 3px 0 0 rgba(212, 18, 36, 0.44),
+      inset 0 1px 0 rgba(255, 255, 239, 0.52),
+      0 18px 42px rgba(88, 48, 0, 0.13),
+      0 0 18px rgba(212, 18, 36, 0.07);
+  }
+
+  html[data-theme="ferrari-hamilton"] .ff-table {
+    background:
+      linear-gradient(180deg, rgba(255, 239, 118, 0.72), rgba(255, 213, 31, 0.46)) !important;
+    border-color: rgba(138, 74, 0, 0.34);
+    box-shadow: 0 14px 30px rgba(88, 48, 0, 0.12);
+  }
+
+  html[data-theme="ferrari-hamilton"] .ff-th {
+    background: rgba(255, 207, 42, 0.54);
+    color: #442a00;
+  }
+
+  html[data-theme="ferrari-hamilton"] .ff-td {
+    border-bottom-color: rgba(91, 52, 0, 0.24);
+  }
+
+  html[data-theme="ferrari-hamilton"] .ff-tr:hover .ff-td {
+    background: rgba(255, 255, 239, 0.42);
+  }
+
+  @media (hover: none), (pointer: coarse), (max-width: 768px) {
+    html[data-theme="ferrari-hamilton"] {
+      --glow-alpha: 0.12;
+      --glow-blur: 10px;
+      --glow-shadow: 0 0 10px 0 rgba(212, 18, 36, 0.12);
+      --btn-glow-alpha: 0.08;
+      --btn-glow-blur: 10px;
+      --btn-glow-shadow: 0 0 10px 0 rgba(212, 18, 36, 0.08);
+      --tx-item-shadow:
+        inset 3px 0 0 rgba(212, 18, 36, 0.54),
+        0 7px 16px rgba(91, 52, 0, 0.10);
+    }
+
+    html[data-theme="ferrari-hamilton"] .app-shell {
+      background-color: #ffe431;
+      background-image:
+        linear-gradient(180deg, rgba(255, 255, 239, 0.22) 0%, transparent 42%, rgba(135, 73, 0, 0.14) 100%),
+        linear-gradient(135deg, var(--bg-1) 0%, var(--bg-2) 60%, var(--bg-3) 100%) !important;
+      background-attachment: scroll;
+    }
+
+    html[data-theme="ferrari-hamilton"] .ff-card {
+      background: rgb(255, 224, 58);
+      box-shadow:
+        inset 3px 0 0 rgba(212, 18, 36, 0.34),
+        inset 0 1px 0 rgba(255, 255, 239, 0.50),
+        0 10px 24px rgba(88, 48, 0, 0.10);
+    }
+
+    html[data-theme="ferrari-hamilton"] .ff-surface {
+      background: rgb(255, 231, 76) !important;
+      box-shadow:
+        inset 3px 0 0 rgba(212, 18, 36, 0.34),
+        inset 0 1px 0 rgba(255, 255, 239, 0.42),
+        0 7px 16px rgba(88, 48, 0, 0.08);
+    }
+  }
+
 
   
   /* =========================
@@ -1515,6 +1907,164 @@ html[data-theme="paper-studio"] {
   --scrollbar-thumb: color-mix(in srgb, #94a3b8 55%, #ffffff);
   --scrollbar-thumb-hover: color-mix(in srgb, #3b5bfd 38%, #94a3b8);
   --scrollbar-border: rgba(59, 91, 253, 0.14);
+}
+
+/* =========================
+   Preset: Descanso Gris
+   ========================= */
+html[data-theme="rest-gray"] {
+  /* Backgrounds */
+  --bg-1: #121416;
+  --bg-2: #171a1d;
+  --bg-3: #0f1113;
+
+  /* Surfaces */
+  --panel: rgba(31, 35, 39, 0.78);
+  --panel-2: rgba(38, 42, 47, 0.82);
+
+  /* Text */
+  --text: #e4e7eb;
+  --muted: #9ca3ad;
+
+  /* Headings */
+  --heading: #f1f3f5;
+  --heading-muted: color-mix(in srgb, var(--heading) 58%, transparent);
+  --heading-accent: #c7ccd1;
+
+  /* Border system */
+  --border: #8f98a3;
+  --border-alpha: 0.24;
+  --border-w: 1px;
+
+  /* Semantics */
+  --primary: #aeb4bb;
+  --ring: #c9d0d8;
+
+  --danger: #d88993;
+  --success: #83b39a;
+  --warning: #d6b879;
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* Glow (quiet, eye-resting) */
+  --glow-color: #c9d0d8;
+  --glow-alpha: 0.12;
+  --glow-blur: 14px;
+  --glow-spread: 0px;
+
+  /* Controls */
+  --control-bg: #1d2024;
+  --control-bg-2: #24282d;
+  --control-text: var(--text);
+  --control-muted: var(--muted);
+
+  --control-border: rgba(143, 152, 163, 0.38);
+  --control-border-hover: rgba(201, 208, 216, 0.42);
+  --control-border-focus: rgba(201, 208, 216, 0.62);
+  --control-focus-shadow: var(--glow-shadow);
+
+  /* Buttons */
+  --btn-radius: 12px;
+  --btn-border-w: 1px;
+
+  --btn-pad-y: 10px;
+  --btn-pad-x: 15px;
+  --btn-font-size: 14px;
+  --btn-font-weight: 620;
+
+  --btn-bg: #22262a;
+  --btn-text: #eef0f2;
+  --btn-border: rgba(143, 152, 163, 0.36);
+
+  --btn-hover-bg: #2a2f34;
+  --btn-hover-border: rgba(201, 208, 216, 0.44);
+  --btn-hover-text: #ffffff;
+
+  /* Variants */
+  --btn-primary-bg: #aeb4bb;
+  --btn-primary-text: #111315;
+
+  --btn-success-bg: #83b39a;
+  --btn-success-text: #0c1410;
+
+  --btn-warning-bg: #d6b879;
+  --btn-warning-text: #1b1609;
+
+  --btn-danger-bg: #d88993;
+  --btn-danger-text: #1b0d10;
+
+  --btn-primary-hover-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, #aeb4bb 92%, #ffffff) 0%,
+    color-mix(in srgb, #aeb4bb 78%, #ffffff) 100%
+  );
+  --btn-success-hover-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, #83b39a 90%, #ffffff) 0%,
+    color-mix(in srgb, #83b39a 76%, #ffffff) 100%
+  );
+  --btn-warning-hover-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, #d6b879 90%, #ffffff) 0%,
+    color-mix(in srgb, #d6b879 78%, #ffffff) 100%
+  );
+  --btn-danger-hover-bg: linear-gradient(
+    90deg,
+    color-mix(in srgb, #d88993 88%, #ffffff) 0%,
+    color-mix(in srgb, #d88993 74%, #ffffff) 100%
+  );
+
+  --btn-primary-hover-text: #111315;
+  --btn-success-hover-text: #0c1410;
+  --btn-warning-hover-text: #1b1609;
+  --btn-danger-hover-text: #1b0d10;
+
+  /* Outline / Ghost */
+  --btn-outline-bg: transparent;
+  --btn-outline-text: #eef0f2;
+  --btn-outline-border: rgba(174, 180, 187, 0.45);
+  --btn-outline-hover-text: #ffffff;
+
+  --btn-ghost-bg: transparent;
+  --btn-ghost-text: #d7dbe0;
+  --btn-ghost-hover-bg: rgba(174, 180, 187, 0.10);
+  --btn-ghost-hover-text: #ffffff;
+
+  /* Button glow */
+  --btn-glow-alpha: 0.05;
+  --btn-glow-blur: 10px;
+
+  /* Links */
+  --link: #c7ccd1;
+  --link-hover: #f1f3f5;
+
+  /* Select */
+  --select-radius: 12px;
+  --select-border-w: 1px;
+
+  --select-bg: #1d2024;
+  --select-text: #e4e7eb;
+  --select-border: rgba(143, 152, 163, 0.38);
+
+  --select-hover-bg: rgba(174, 180, 187, 0.10);
+  --select-active-bg: rgba(201, 208, 216, 0.14);
+
+  --select-shadow: 0 18px 48px rgba(0, 0, 0, 0.26);
+  --select-max-h: 300px;
+
+  /* Modal */
+  --modal-panel: rgba(29, 32, 36, 0.98);
+  --modal-border: rgba(143, 152, 163, 0.44);
+
+  /* Scrollbar */
+  --scrollbar-size: 10px;
+  --scrollbar-track: #171a1d;
+  --scrollbar-thumb: rgba(143, 152, 163, 0.42);
+  --scrollbar-thumb-hover: rgba(201, 208, 216, 0.50);
+  --scrollbar-border: rgba(31, 35, 39, 0.75);
 }
 
   /* =========================

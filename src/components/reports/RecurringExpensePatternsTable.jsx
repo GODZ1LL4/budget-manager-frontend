@@ -53,8 +53,38 @@ function toneForFrequency(freq) {
   }
 }
 
-function RecurringExpensePatternsTable({ token }) {
+function RecurringExpensePatternsTable({ token, transactionType = "expense" }) {
   const api = import.meta.env.VITE_API_URL;
+  const isIncomeReport = transactionType === "income";
+  const reportCopy = useMemo(
+    () =>
+      isIncomeReport
+        ? {
+            endpoint: "recurring-income-patterns",
+            title: "Patrones de ingreso recurrente (no marcados)",
+            description:
+              "Detecta ingresos que se repiten con frecuencia similar aunque no esten configurados como transacciones recurrentes.",
+            emptyMessage:
+              "No se encontraron patrones de ingreso recurrente en el periodo seleccionado.",
+            errorMessage:
+              "No se pudieron cargar los patrones de ingreso recurrente.",
+            tip:
+              "Tip: si una fuente tiene muchas ocurrencias y baja desviacion, suele ser un ingreso habitual.",
+          }
+        : {
+            endpoint: "recurring-expense-patterns",
+            title: "Patrones de gasto recurrente (no marcados)",
+            description:
+              "Detecta gastos que se repiten con frecuencia similar (semanal, quincenal, mensual, etc.) aunque no esten configurados como transacciones recurrentes.",
+            emptyMessage:
+              "No se encontraron patrones de gasto recurrente en el periodo seleccionado.",
+            errorMessage:
+              "No se pudieron cargar los patrones de gasto recurrente.",
+            tip:
+              "Tip: si un patron tiene muchas ocurrencias y baja desviacion, suele ser un gasto habito (suscripcion, transporte, comida, etc.).",
+          },
+    [isIncomeReport]
+  );
 
   const [data, setData] = useState([]);
   const [months, setMonths] = useState(6);
@@ -115,7 +145,7 @@ function RecurringExpensePatternsTable({ token }) {
     setError("");
 
     axios
-      .get(`${api}/analytics/recurring-expense-patterns`, {
+      .get(`${api}/analytics/${reportCopy.endpoint}`, {
         headers: { Authorization: `Bearer ${token}` },
         params: { months },
       })
@@ -124,12 +154,12 @@ function RecurringExpensePatternsTable({ token }) {
         console.error("Error cargando patrones recurrentes:", err);
         setError(
           err.response?.data?.error ||
-            "No se pudieron cargar los patrones de gasto recurrente."
+            reportCopy.errorMessage
         );
         setData([]);
       })
       .finally(() => setLoading(false));
-  }, [token, months, api]);
+  }, [token, months, api, reportCopy]);
 
   // ✅ Buscador (categoría / descripción / frecuencia)
   const filteredData = useMemo(() => {
@@ -155,12 +185,10 @@ function RecurringExpensePatternsTable({ token }) {
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
         <div className="min-w-0">
           <h3 className="text-xl font-semibold" style={{ color: ui.text }}>
-            Patrones de gasto recurrente (no marcados)
+            {reportCopy.title}
           </h3>
           <p className="text-sm mt-1" style={{ color: ui.muted }}>
-            Detecta gastos que se repiten con frecuencia similar (semanal,
-            quincenal, mensual, etc.) aunque no estén configurados como
-            transacciones recurrentes.
+            {reportCopy.description}
           </p>
         </div>
 
@@ -263,7 +291,7 @@ function RecurringExpensePatternsTable({ token }) {
         <p className="text-sm italic" style={{ color: ui.muted }}>
           {search.trim()
             ? `No hay resultados para “${search.trim()}”.`
-            : "No se encontraron patrones de gasto recurrente en el período seleccionado."}
+            : reportCopy.emptyMessage}
         </p>
       ) : (
         <div className="overflow-x-auto" style={ui.tableWrap}>
@@ -432,8 +460,7 @@ function RecurringExpensePatternsTable({ token }) {
               background: "color-mix(in srgb, var(--panel) 72%, transparent)",
             }}
           >
-            Tip: si un patrón tiene muchas ocurrencias y baja desviación, suele ser un gasto “hábito”
-            (suscripción, transporte, comida, etc.).
+            {reportCopy.tip}
           </div>
         </div>
       )}

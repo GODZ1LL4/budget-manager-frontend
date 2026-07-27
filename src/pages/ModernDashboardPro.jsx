@@ -1,7 +1,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
+// eslint-disable-next-line no-unused-vars
 import { AnimatePresence, motion } from "framer-motion";
+import { withUserTimeZone } from "../lib/dates/localDate";
 
 import MonthlyIncomeVsExpenseLineChart from "../components/reports/MonthlyIncomeVsExpenseLineChart";
 import ExpenseDistributionByCategoryChart from "../components/reports/ExpenseDistributionByCategoryChart";
@@ -550,20 +552,23 @@ export default function ModernDashboardPro({ token, setView }) {
       overbudgetData,
       accountsData,
     ] = await Promise.all([
-      safe(axios.get(`${api}/dashboard/summary`, { headers })),
+      safe(axios.get(`${api}/dashboard/summary`, withUserTimeZone({ headers }))),
       safe(
-        axios.get(`${api}/analytics/advanced-burn-rate-current-month`, {
-          headers,
-          params: {
-            months: burnParams.months,
-            min_occurrences: burnParams.minOccurrences,
-            include_occasional: burnParams.includeOccasional,
-            include_noise: burnParams.includeNoise,
-            min_interval_days: burnParams.minIntervalDays,
-            max_interval_days: burnParams.maxIntervalDays,
-            max_coef_variation: burnParams.maxCoefVariation,
-          },
-        })
+        axios.get(
+          `${api}/analytics/advanced-burn-rate-current-month`,
+          withUserTimeZone({
+            headers,
+            params: {
+              months: burnParams.months,
+              min_occurrences: burnParams.minOccurrences,
+              include_occasional: burnParams.includeOccasional,
+              include_noise: burnParams.includeNoise,
+              min_interval_days: burnParams.minIntervalDays,
+              max_interval_days: burnParams.maxIntervalDays,
+              max_coef_variation: burnParams.maxCoefVariation,
+            },
+          })
+        )
       ),
       safe(axios.get(`${api}/analytics/budget-coverage-robust`, { headers })),
       safe(axios.get(`${api}/analytics/unusual-expenses`, { headers })),

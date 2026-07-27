@@ -38,10 +38,17 @@ function formatShortCurrency(value) {
   return `${num.toFixed(0)}`;
 }
 
-// Mapea intensidad [0,1] a un color entre success -> danger (tokens)
-function mixSuccessDanger(intensity) {
+// Mapea intensidad [0,1] a un color segun el tipo de reporte.
+function mixHeatIntensity(intensity, type) {
   const t = Math.max(0, Math.min(1, Number(intensity) || 0));
-  // 0 => success; 1 => danger
+
+  if (type === "income") {
+    return `color-mix(in srgb, var(--success) ${Math.round(
+      35 + t * 65
+    )}%, var(--warning))`;
+  }
+
+  // expense: 0 => success; 1 => danger
   return `color-mix(in srgb, var(--success) ${Math.round(
     (1 - t) * 100
   )}%, var(--danger))`;
@@ -57,10 +64,22 @@ function p90ScaleMax(values) {
   return p90 || max || 0;
 }
 
-function CategoryMonthlyHeatmap({ token }) {
+function CategoryMonthlyHeatmap({ token, type = "expense" }) {
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState(null);
   const api = import.meta.env.VITE_API_URL;
+  const reportType = type === "income" ? "income" : "expense";
+
+  const copy = useMemo(() => {
+    const noun = reportType === "income" ? "ingreso" : "gasto";
+    return {
+      empty: `No hay datos suficientes para mostrar el heatmap de ${noun}.`,
+      noValue: `Sin ${noun}`,
+      low: `Menos ${noun}`,
+      high: `Mas ${noun}`,
+      error: `Error cargando heatmap de ${noun} por categoria y mes:`,
+    };
+  }, [reportType]);
 
   // ===== Tokenized UI =====
   const ui = useMemo(() => {
@@ -88,14 +107,18 @@ function CategoryMonthlyHeatmap({ token }) {
       muted: "var(--muted)",
       cellText: "var(--text)",
       // celdas heatmap
-      heatFill: (t) => mixSuccessDanger(t),
+      heatFill: (t) => mixHeatIntensity(t, reportType),
       // borde/outline del heatmap
       cellBorder: `1px solid color-mix(in srgb, var(--border-rgba) 75%, transparent)`,
       // (opcional) aclarar el color conforme aumenta para legibilidad
       heatOverlay: (t) =>
         `color-mix(in srgb, #ffffff ${Math.round(t * 10)}%, transparent)`,
+      legendGradient:
+        reportType === "income"
+          ? "linear-gradient(90deg, var(--warning), var(--success))"
+          : "linear-gradient(90deg, var(--success), var(--warning), var(--danger))",
     };
-  }, []);
+  }, [reportType]);
 
   useEffect(() => {
     if (!token) return;
@@ -103,15 +126,16 @@ function CategoryMonthlyHeatmap({ token }) {
     axios
       .get(`${api}/analytics/category-month-heatmap`, {
         headers: { Authorization: `Bearer ${token}` },
+        params: { type: reportType },
       })
       .then((res) => {
         setRows(res.data?.data || []);
         setMeta(res.data?.meta || null);
       })
       .catch((err) =>
-        console.error("Error cargando heatmap categoría-mes:", err)
+        console.error(copy.error, err)
       );
-  }, [token, api]);
+  }, [token, api, reportType, copy.error]);
 
   const { categories, months, matrix, scaleMax, monthTotals } = useMemo(() => {
     const catMap = new Map();
@@ -181,7 +205,7 @@ function CategoryMonthlyHeatmap({ token }) {
 
       {categories.length === 0 || months.length === 0 ? (
         <p className="text-sm italic" style={{ color: ui.muted }}>
-          No hay datos suficientes para mostrar el heatmap.
+          {copy.empty}
         </p>
       ) : (
         <>
@@ -257,7 +281,7 @@ function CategoryMonthlyHeatmap({ token }) {
                               ? `${cat.name} · ${monthLabel(m)}\n${formatCurrency(
                                   amount
                                 )}`
-                              : `${cat.name} · ${monthLabel(m)}\nSin gasto`
+                              : `${cat.name} · ${monthLabel(m)}\n${copy.noValue}`
                           }
                         >
                           {/* capa color heatmap */}
@@ -332,7 +356,7 @@ function CategoryMonthlyHeatmap({ token }) {
                     title={
                       amount > 0
                         ? `TOTAL · ${monthLabel(m)}\n${formatCurrency(amount)}`
-                        : `TOTAL · ${monthLabel(m)}\nSin gasto`
+                        : `TOTAL · ${monthLabel(m)}\n${copy.noValue}`
                     }
                   >
                     <span
@@ -352,16 +376,15 @@ function CategoryMonthlyHeatmap({ token }) {
             className="flex items-center gap-3 text-[11px]"
             style={{ color: ui.muted }}
           >
-            <span>Menos gasto</span>
+            <span>{copy.low}</span>
             <div
               className="flex-1 h-2 rounded-full"
               style={{
-                background:
-                  "linear-gradient(90deg, var(--success), var(--warning), var(--danger))",
+                background: ui.legendGradient,
                 border: `1px solid color-mix(in srgb, var(--border-rgba) 65%, transparent)`,
               }}
             />
-            <span>Más gasto</span>
+            <span>{copy.high}</span>
           </div>
 
           {/* meta opcional */}

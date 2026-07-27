@@ -10,7 +10,9 @@ function currency(n) {
 }
 
 function toNum(x, fallback = 0) {
-  const n = Number(x);
+  const normalized = String(x ?? "").trim().replace(",", ".");
+  if (!normalized) return fallback;
+  const n = Number(normalized);
   return Number.isFinite(n) ? n : fallback;
 }
 
@@ -45,7 +47,7 @@ export default function ShoppingListQuickModal({
   onCreated, // callback(data)
 }) {
   const [rows, setRows] = useState([
-    { item_id: "", quantity: 1, gross_total: "", gross_touched: false },
+    { item_id: "", quantity: "1", gross_total: "", gross_touched: false },
   ]);
   const [preview, setPreview] = useState(null);
   const [error, setError] = useState("");
@@ -56,7 +58,7 @@ export default function ShoppingListQuickModal({
   useEffect(() => {
     if (!isOpen) return;
     setRows([
-      { item_id: "", quantity: 1, gross_total: "", gross_touched: false },
+      { item_id: "", quantity: "1", gross_total: "", gross_touched: false },
     ]);
     setPreview(null);
     setError("");
@@ -75,7 +77,7 @@ export default function ShoppingListQuickModal({
   const addRow = () =>
     setRows((prev) => [
       ...prev,
-      { item_id: "", quantity: 1, gross_total: "", gross_touched: false },
+      { item_id: "", quantity: "1", gross_total: "", gross_touched: false },
     ]);
 
   const removeRow = (idx) => {
@@ -104,46 +106,43 @@ export default function ShoppingListQuickModal({
       }));
 
       const handleQtyChange = (idx, newQty) => {
-        const safeQty = Math.max(0, toNum(newQty, 0)); 
-      
+        const nextQty = String(newQty ?? "");
+        if (toNum(nextQty, 0) < 0) return;
+
         setRows((prev) => {
           const copy = [...prev];
           const row = copy[idx];
           if (!row) return prev;
-      
-          const nextRow = { ...row, quantity: safeQty };
-      
+
+          const nextRow = { ...row, quantity: nextQty };
+
           if (!row.gross_touched && row.item_id) {
-            const it = items?.find((x) => x.id === row.item_id);
-            if (it) nextRow.gross_total = computeGrossFromLatest(it, safeQty);
+            const it = items?.find((x) => String(x.id) === String(row.item_id));
+            nextRow.gross_total = it
+              ? computeGrossFromLatest(it, nextQty)
+              : "";
           }
-      
+
           copy[idx] = nextRow;
           return copy;
         });
       };
-      
 
       const handleGrossChange = (idx, v) => {
-        const safe = Math.max(0, toNum(v, 0)); 
-      
+        const nextGross = String(v ?? "");
+        if (toNum(nextGross, 0) < 0) return;
+
         setRows((prev) => {
           const copy = [...prev];
           const row = copy[idx];
           if (!row) return prev;
-      
-          const nextRow = {
+
+          copy[idx] = {
             ...row,
-            gross_total: safe,
-            gross_touched: safe > 0,
+            gross_total: nextGross,
+            gross_touched: nextGross.trim() !== "" && toNum(nextGross, 0) > 0,
           };
-      
-          if (safe === 0 && row.item_id) {
-            const it = items?.find((x) => x.id === row.item_id);
-            if (it) nextRow.gross_total = computeGrossFromLatest(it, row.quantity);
-          }
-      
-          copy[idx] = nextRow;
+
           return copy;
         });
       };
@@ -380,7 +379,7 @@ export default function ShoppingListQuickModal({
                     maxVisible={50}
                     getOptionValue={(it) => it.id}
                     getOptionLabel={(it) => it.name}
-                    renderOption={(it, { isActive, isDisabled }) => (
+                    renderOption={(it) => (
                       <div className="flex items-center justify-between gap-3">
                         <span className="truncate">{it.name}</span>
                         <span
@@ -395,13 +394,14 @@ export default function ShoppingListQuickModal({
                 </div>
 
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   step="0.0001"
                   min="0"
                   value={r.quantity}
                   onChange={(e) => {
                     const v = e.target.value;
-                    if (Number(v) < 0) return; 
+                    if (toNum(v, 0) < 0) return;
                     handleQtyChange(idx, v);
                   }}
                   placeholder="Cantidad"
@@ -409,13 +409,14 @@ export default function ShoppingListQuickModal({
                 />
 
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   step="0.01"
                   min="0"
                   value={r.gross_total}
                   onChange={(e) => {
                     const v = e.target.value;
-                    if (Number(v) < 0) return; 
+                    if (toNum(v, 0) < 0) return;
                     handleGrossChange(idx, v);
                   }}
                   placeholder="Total pagado"
