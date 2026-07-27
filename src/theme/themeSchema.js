@@ -1,5 +1,6 @@
 //frontend\src\theme\themeSchema.js
 export const THEME_PRESETS = [
+  { id: "sixers-carbon", name: "Black Carbon" },
   { id: "black-gold", name: "Black X Gold" },
   { id: "scuderia-carbon-red", name: "Crimson Carbon" },
   { id: "rest-gray", name: "Eye Comfort" },

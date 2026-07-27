@@ -1335,6 +1335,155 @@ html[data-theme="scuderia-carbon-red"] {
     --scrollbar-thumb-hover: color-mix(in srgb, var(--border) 78%, transparent);
     --scrollbar-border: color-mix(in srgb, var(--panel) 60%, transparent);
   }
+
+/* =========================
+   Preset: Sixers Carbon
+   ========================= */
+html[data-theme="sixers-carbon"] {
+  --bg-1: #07090b;
+  --bg-2: #101316;
+  --bg-3: #050607;
+
+  --panel: rgba(18, 21, 24, 0.90);
+  --panel-2: rgba(27, 31, 35, 0.92);
+
+  --text: #f5f7fb;
+  --muted: #a8b0bd;
+
+  --heading: #ffffff;
+  --heading-muted: color-mix(in srgb, var(--heading) 70%, transparent);
+  --heading-accent: #e51b3e;
+
+  --border: #d8dee8;
+  --border-alpha: 0.18;
+  --border-w: 1px;
+
+  --primary: #c7a36a;
+  --ring: #c7a36a;
+
+  --danger: #e51b3e;
+  --success: #42b883;
+  --warning: #d8b77c;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --glow-color: #c7a36a;
+  --glow-alpha: 0.24;
+  --glow-blur: 12px;
+  --glow-spread: 0px;
+
+  --control-bg: #111519;
+  --control-bg-2: #181d22;
+  --control-text: var(--text);
+  --control-muted: color-mix(in srgb, var(--muted) 92%, transparent);
+
+  --control-border: rgba(216, 222, 232, 0.28);
+  --control-border-hover: rgba(199, 163, 106, 0.58);
+  --control-border-focus: rgba(216, 183, 124, 0.78);
+  --control-focus-shadow: var(--glow-shadow);
+
+  --btn-radius: 12px;
+  --btn-border-w: 1px;
+
+  --btn-pad-y: 10px;
+  --btn-pad-x: 16px;
+  --btn-font-size: 14px;
+  --btn-font-weight: 660;
+
+  --btn-bg: linear-gradient(
+    180deg,
+    rgba(34, 38, 43, 0.94) 0%,
+    rgba(15, 18, 21, 0.94) 100%
+  );
+  --btn-text: #f5f7fb;
+  --btn-border: rgba(216, 222, 232, 0.26);
+
+  --btn-hover-bg: linear-gradient(
+    180deg,
+    rgba(45, 51, 57, 0.96) 0%,
+    rgba(21, 25, 29, 0.96) 100%
+  );
+  --btn-hover-border: rgba(199, 163, 106, 0.68);
+  --btn-hover-text: #ffffff;
+
+  --btn-primary-bg: #c7a36a;
+  --btn-primary-text: #16100a;
+
+  --btn-success-bg: #42b883;
+  --btn-success-text: #07140e;
+
+  --btn-warning-bg: #d8b77c;
+  --btn-warning-text: #16100a;
+
+  --btn-danger-bg: #e51b3e;
+  --btn-danger-text: #ffffff;
+
+  --btn-primary-hover-bg: linear-gradient(
+    90deg,
+    #d8b77c 0%,
+    #b48b4f 100%
+  );
+  --btn-success-hover-bg: linear-gradient(
+    90deg,
+    #55c993 0%,
+    #2f9d70 100%
+  );
+  --btn-warning-hover-bg: linear-gradient(
+    90deg,
+    #d8b77c 0%,
+    #b48b4f 100%
+  );
+  --btn-danger-hover-bg: linear-gradient(
+    90deg,
+    #f02a4c 0%,
+    #c8102e 100%
+  );
+
+  --btn-primary-hover-text: #16100a;
+  --btn-success-hover-text: #07140e;
+  --btn-warning-hover-text: #16100a;
+  --btn-danger-hover-text: #ffffff;
+
+  --btn-outline-bg: transparent;
+  --btn-outline-text: #f5f7fb;
+  --btn-outline-border: rgba(216, 222, 232, 0.42);
+  --btn-outline-hover-text: #ffffff;
+
+  --btn-ghost-bg: transparent;
+  --btn-ghost-text: #e8edf5;
+  --btn-ghost-hover-bg: color-mix(in srgb, #d7193f 14%, transparent);
+  --btn-ghost-hover-text: #ffffff;
+
+  --btn-glow-alpha: 0.22;
+  --btn-glow-blur: 24px;
+
+  --link: color-mix(in srgb, #d8b77c 76%, var(--text));
+  --link-hover: color-mix(in srgb, #e51b3e 72%, #ffffff);
+
+  --select-radius: 12px;
+  --select-border-w: 1px;
+
+  --select-bg: #111519;
+  --select-text: #f5f7fb;
+  --select-border: rgba(216, 222, 232, 0.30);
+  --select-hover-bg: color-mix(in srgb, #d7193f 12%, #111519);
+  --select-active-bg: color-mix(in srgb, #c7a36a 18%, #111519);
+  --select-muted: var(--control-muted);
+  --select-item-radius: 8px;
+  --select-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
+  --select-max-h: 300px;
+
+  --modal-panel: rgba(18, 21, 24, 0.98);
+  --modal-border: rgba(216, 222, 232, 0.30);
+
+  --scrollbar-size: 10px;
+  --scrollbar-track: #101316;
+  --scrollbar-thumb: color-mix(in srgb, #d7193f 62%, #d8dee8);
+  --scrollbar-thumb-hover: color-mix(in srgb, #d8b77c 62%, #d8dee8);
+  --scrollbar-border: rgba(216, 222, 232, 0.18);
+}
   
   /* =========================
    Preset: Gulf Racing (Light)
