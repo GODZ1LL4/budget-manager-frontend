@@ -122,6 +122,34 @@ body {
   font-weight: 800;
 }
 
+.ff-transactions-calendar--mobile .fc .ff-calendar-day-has-transactions {
+  cursor: pointer;
+}
+
+.ff-transactions-calendar--mobile .fc .ff-calendar-day-has-transactions .fc-daygrid-day-top {
+  position: relative;
+}
+
+.ff-transactions-calendar--mobile .fc .ff-calendar-day-has-transactions .fc-daygrid-day-number {
+  font-weight: 800;
+}
+
+.ff-transactions-calendar--mobile .fc .ff-calendar-day-has-transactions .fc-daygrid-day-top::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+.ff-transactions-calendar--mobile .fc .ff-calendar-day-has-transactions:hover {
+  background: color-mix(in srgb, var(--primary) 10%, var(--panel)) !important;
+}
+
 /* Eventos */
 .fc .fc-event {
   border: var(--border-w) solid var(--border-rgba) !important;
@@ -137,6 +165,82 @@ body {
 .fc .fc-daygrid-body,
 .fc .fc-daygrid-day-frame {
   background: transparent !important;
+}
+
+.ff-transactions-calendar--mobile .fc .fc-toolbar {
+  align-items: stretch;
+  gap: 8px;
+}
+
+.ff-transactions-calendar--mobile .fc .fc-toolbar-title {
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.ff-transactions-calendar--mobile .fc .fc-button {
+  padding: 0.35rem 0.5rem !important;
+  font-size: 0.75rem !important;
+}
+
+.ff-transactions-calendar--mobile .fc .fc-col-header-cell-cushion {
+  font-size: 0.64rem;
+  letter-spacing: 0.04em;
+}
+
+.ff-transactions-calendar--mobile .fc .fc-daygrid-day-frame {
+  min-height: 38px;
+}
+
+.ff-transactions-calendar--mobile .fc .fc-daygrid-day-top {
+  min-height: 32px;
+}
+
+.ff-transactions-calendar--mobile .fc .fc-daygrid-day-number {
+  padding: 4px 5px !important;
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.ff-transactions-calendar--mobile .fc .fc-daygrid-day-events,
+.ff-transactions-calendar--mobile .fc .fc-daygrid-day-bottom {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .ff-transactions-calendar--mobile .fc .fc-toolbar {
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .ff-transactions-calendar--mobile .fc .fc-toolbar-title {
+    font-size: 1rem;
+    line-height: 1.2;
+  }
+
+  .ff-transactions-calendar--mobile .fc .fc-button {
+    padding: 0.35rem 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  .ff-transactions-calendar--mobile .fc .fc-col-header-cell-cushion {
+    font-size: 0.64rem;
+    letter-spacing: 0.04em;
+  }
+
+  .ff-transactions-calendar--mobile .fc .fc-daygrid-day-frame {
+    min-height: 38px;
+  }
+
+  .ff-transactions-calendar--mobile .fc .fc-daygrid-day-number {
+    padding: 4px 5px !important;
+    font-size: 0.72rem;
+  }
+
+  .ff-transactions-calendar--mobile .fc .fc-event {
+    font-size: 0.64rem;
+    line-height: 1.15;
+    padding: 1px 3px !important;
+  }
 }
 
 

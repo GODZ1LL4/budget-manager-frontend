@@ -17,9 +17,11 @@ import {
   withUserTimeZone,
 } from "../lib/dates/localDate";
 import { SUBSCRIPTION_MODES } from "../lib/subscription/subscriptionAccess";
+import TransactionsCalendar from "../components/reports/TransactionsCalendar";
 
 const tabOptions = [
   { id: "overview", label: "Mes" },
+  { id: "calendar", label: "Dias" },
   { id: "year", label: "Año" },
   { id: "budget", label: "Presupuesto" },
   { id: "alerts", label: "Alertas" },
@@ -1240,7 +1242,7 @@ function MobileReports({ token, subscriptionMode, setView }) {
       ) : null}
 
       <div
-        className="grid grid-cols-4 gap-1 rounded-lg border p-1"
+        className="flex gap-1 overflow-x-auto rounded-lg border p-1"
         style={{
           borderColor: "var(--border-rgba)",
           background: "color-mix(in srgb, var(--panel) 86%, transparent)",
@@ -1253,7 +1255,7 @@ function MobileReports({ token, subscriptionMode, setView }) {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className="rounded-md px-3 py-2 text-xs font-semibold"
+              className="min-w-[76px] flex-1 rounded-md px-3 py-2 text-xs font-semibold"
               style={{
                 background: active
                   ? "color-mix(in srgb, var(--primary) 18%, var(--panel))"
@@ -1370,6 +1372,21 @@ function MobileReports({ token, subscriptionMode, setView }) {
             />
           </Surface>
         </>
+      ) : null}
+
+      {activeTab === "calendar" ? (
+        <Surface className="space-y-4 overflow-hidden">
+          <h2 className="text-lg font-semibold text-[var(--text)]">
+            Calendario
+          </h2>
+          <div className="-mx-2 sm:mx-0">
+            <TransactionsCalendar
+              token={token}
+              isOpen={activeTab === "calendar"}
+              mobileCompact
+            />
+          </div>
+        </Surface>
       ) : null}
 
       {activeTab === "year" ? (

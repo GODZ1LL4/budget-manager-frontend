@@ -15,6 +15,7 @@ import com.android.billingclient.api.PendingPurchasesParams;
 import com.android.billingclient.api.ProductDetails;
 import com.android.billingclient.api.Purchase;
 import com.android.billingclient.api.PurchasesUpdatedListener;
+import com.android.billingclient.api.QueryProductDetailsResult;
 import com.android.billingclient.api.QueryProductDetailsParams;
 import com.android.billingclient.api.QueryPurchasesParams;
 import com.getcapacitor.JSArray;
@@ -106,7 +107,7 @@ public class GooglePlayBillingPlugin extends Plugin implements PurchasesUpdatedL
                         .setProductList(products)
                         .build();
 
-                billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
+                billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsResult) -> {
                     if (!isOk(billingResult)) {
                         call.reject(getBillingMessage(billingResult));
                         return;
@@ -114,7 +115,7 @@ public class GooglePlayBillingPlugin extends Plugin implements PurchasesUpdatedL
 
                     JSArray items = new JSArray();
 
-                    for (ProductDetails details : productDetailsList) {
+                    for (ProductDetails details : getProductDetailsList(productDetailsResult)) {
                         items.put(serializeProductDetails(details, productType));
                     }
 
@@ -276,6 +277,7 @@ public class GooglePlayBillingPlugin extends Plugin implements PurchasesUpdatedL
                     .enableOneTimeProducts()
                     .build()
             )
+            .enableAutoServiceReconnection()
             .build();
     }
 
@@ -355,11 +357,13 @@ public class GooglePlayBillingPlugin extends Plugin implements PurchasesUpdatedL
             .setProductList(products)
             .build();
 
-        billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsList) -> {
+        billingClient.queryProductDetailsAsync(params, (billingResult, productDetailsResult) -> {
             if (!isOk(billingResult)) {
                 call.reject(getBillingMessage(billingResult));
                 return;
             }
+
+            List<ProductDetails> productDetailsList = getProductDetailsList(productDetailsResult);
 
             if (productDetailsList == null || productDetailsList.isEmpty()) {
                 call.reject("No se encontro el producto en Google Play");
@@ -379,6 +383,11 @@ public class GooglePlayBillingPlugin extends Plugin implements PurchasesUpdatedL
                 }
 
                 productDetailsParams.setOfferToken(offerToken);
+            } else {
+                String offerToken = resolveOneTimeOfferToken(details, preferredOfferToken);
+                if (!TextUtils.isEmpty(offerToken)) {
+                    productDetailsParams.setOfferToken(offerToken);
+                }
             }
 
             List<BillingFlowParams.ProductDetailsParams> productDetailsParamsList = new ArrayList<>();
@@ -429,15 +438,26 @@ public class GooglePlayBillingPlugin extends Plugin implements PurchasesUpdatedL
             }
         } else {
             ProductDetails.OneTimePurchaseOfferDetails oneTimePurchase =
-                details.getOneTimePurchaseOfferDetails();
+                getFirstOneTimePurchaseOffer(details);
 
             if (oneTimePurchase != null) {
+                item.put("offerToken", oneTimePurchase.getOfferToken());
+                item.put("offerId", oneTimePurchase.getOfferId());
+                item.put("purchaseOptionId", oneTimePurchase.getPurchaseOptionId());
                 item.put("formattedPrice", oneTimePurchase.getFormattedPrice());
                 item.put("priceCurrencyCode", oneTimePurchase.getPriceCurrencyCode());
             }
         }
 
         return item;
+    }
+
+    private List<ProductDetails> getProductDetailsList(QueryProductDetailsResult productDetailsResult) {
+        if (productDetailsResult == null || productDetailsResult.getProductDetailsList() == null) {
+            return new ArrayList<>();
+        }
+
+        return productDetailsResult.getProductDetailsList();
     }
 
     private JSObject serializePurchase(Purchase purchase) {
@@ -479,6 +499,38 @@ public class GooglePlayBillingPlugin extends Plugin implements PurchasesUpdatedL
         }
 
         return offers.get(0).getOfferToken();
+    }
+
+    private String resolveOneTimeOfferToken(ProductDetails details, String preferredOfferToken) {
+        List<ProductDetails.OneTimePurchaseOfferDetails> offers =
+            details.getOneTimePurchaseOfferDetailsList();
+
+        if (offers == null || offers.isEmpty()) {
+            return null;
+        }
+
+        if (!TextUtils.isEmpty(preferredOfferToken)) {
+            for (ProductDetails.OneTimePurchaseOfferDetails offer : offers) {
+                if (preferredOfferToken.equals(offer.getOfferToken())) {
+                    return offer.getOfferToken();
+                }
+            }
+        }
+
+        return offers.get(0).getOfferToken();
+    }
+
+    private ProductDetails.OneTimePurchaseOfferDetails getFirstOneTimePurchaseOffer(
+        ProductDetails details
+    ) {
+        List<ProductDetails.OneTimePurchaseOfferDetails> offers =
+            details.getOneTimePurchaseOfferDetailsList();
+
+        if (offers != null && !offers.isEmpty()) {
+            return offers.get(0);
+        }
+
+        return null;
     }
 
     private boolean isOk(BillingResult billingResult) {
