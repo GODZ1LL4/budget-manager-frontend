@@ -16,6 +16,7 @@ import {
   HiExclamationCircle,
   HiRefresh,
   HiShieldCheck,
+  HiShoppingCart,
   HiTrendingDown,
   HiTrendingUp,
   HiX,
@@ -261,6 +262,7 @@ export default function ItemPriceCommandCenter({ token }) {
   });
 
   const [rows, setRows] = useState([]);
+  const [shoppingLists, setShoppingLists] = useState([]);
   const [summary, setSummary] = useState(null);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -275,6 +277,7 @@ export default function ItemPriceCommandCenter({ token }) {
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
   const [activeItemId, setActiveItemId] = useState("");
+  const [selectedShoppingListId, setSelectedShoppingListId] = useState("");
 
   useEffect(() => {
     requestParamsRef.current = { months, minIncreasePct };
@@ -312,11 +315,15 @@ export default function ItemPriceCommandCenter({ token }) {
       );
 
       setRows(Array.isArray(res.data?.data) ? res.data.data : []);
+      setShoppingLists(
+        Array.isArray(res.data?.shopping_lists) ? res.data.shopping_lists : []
+      );
       setSummary(res.data?.summary || null);
       setMeta(res.data?.meta || null);
     } catch (err) {
       console.error("Error cargando centro de comando de articulos:", err);
       setRows([]);
+      setShoppingLists([]);
       setSummary(null);
       setMeta(null);
       setError("No se pudo cargar el centro de comando de precios.");
@@ -338,6 +345,7 @@ export default function ItemPriceCommandCenter({ token }) {
     if (!rows.length) {
       setSelectedIds([]);
       setActiveItemId("");
+      setSelectedShoppingListId("");
       return;
     }
 
@@ -355,6 +363,14 @@ export default function ItemPriceCommandCenter({ token }) {
     });
   }, [rows]);
 
+  useEffect(() => {
+    if (!selectedShoppingListId) return;
+    const exists = shoppingLists.some(
+      (shoppingList) => String(shoppingList.id) === String(selectedShoppingListId)
+    );
+    if (!exists) setSelectedShoppingListId("");
+  }, [selectedShoppingListId, shoppingLists]);
+
   const rowsById = useMemo(() => {
     const map = new Map();
     rows.forEach((row) => map.set(String(row.item_id), row));
@@ -367,6 +383,37 @@ export default function ItemPriceCommandCenter({ token }) {
     () => selectedIds.map((id) => rowsById.get(String(id))).filter(Boolean),
     [rowsById, selectedIds]
   );
+
+  const shoppingListOptions = useMemo(
+    () =>
+      shoppingLists.map((shoppingList) => ({
+        ...shoppingList,
+        label: `${formatDate(shoppingList.date)} - ${
+          shoppingList.description || "Lista de compra"
+        }`,
+        subLabel: `${shoppingList.item_count || 0} articulo(s) - ${formatMoney(
+          shoppingList.amount
+        )}`,
+      })),
+    [shoppingLists]
+  );
+
+  const selectedShoppingList = useMemo(
+    () =>
+      shoppingLists.find(
+        (shoppingList) =>
+          String(shoppingList.id) === String(selectedShoppingListId)
+      ) || null,
+    [selectedShoppingListId, shoppingLists]
+  );
+
+  const selectedShoppingListLinesById = useMemo(() => {
+    const map = new Map();
+    (selectedShoppingList?.lines || []).forEach((line) => {
+      if (line?.item_id) map.set(String(line.item_id), line);
+    });
+    return map;
+  }, [selectedShoppingList]);
 
   useEffect(() => {
     if (activeItemId && rowsById.has(String(activeItemId))) return;
@@ -419,49 +466,121 @@ export default function ItemPriceCommandCenter({ token }) {
   }, [filter, rows, search, selectedSet, sortMode]);
 
   const basket = useMemo(() => {
-    const comparable = selectedRows.filter(
-      (row) => row.previous_cost_for_latest_qty != null
-    );
-    const totalPaidLatest = selectedRows.reduce(
-      (sum, row) => sum + safeNumber(row.latest_cost),
+    const hasShoppingListContext = !!selectedShoppingList;
+    const lines = selectedRows.map((row) => {
+      const shoppingLine = hasShoppingListContext
+        ? selectedShoppingListLinesById.get(String(row.item_id))
+        : null;
+      const quantity = shoppingLine
+        ? safeNumber(shoppingLine.quantity)
+        : safeNumber(row.latest_quantity);
+      const selectedBaseCost = shoppingLine
+        ? safeNumber(shoppingLine.base_amount)
+        : safeNumber(row.latest_base_cost, row.latest_cost);
+      const selectedPaidCost = shoppingLine
+        ? safeNumber(shoppingLine.paid_amount)
+        : safeNumber(row.latest_cost);
+      const selectedDiscount = shoppingLine
+        ? safeNumber(shoppingLine.discount_amount)
+        : safeNumber(row.latest_discount_amount);
+      const latestBaseCost = safeNumber(row.latest_unit_price) * quantity;
+      const latestPaidCost =
+        safeNumber(row.latest_paid_unit_price ?? row.latest_unit_price) *
+        quantity;
+      const previousBaseCost =
+        row.previous_unit_price == null
+          ? null
+          : safeNumber(row.previous_unit_price) * quantity;
+
+      return {
+        row,
+        quantity,
+        selectedBaseCost,
+        selectedPaidCost,
+        selectedDiscount,
+        latestBaseCost,
+        latestPaidCost,
+        previousBaseCost,
+      };
+    });
+
+    const comparable = lines.filter((line) => line.previousBaseCost != null);
+    const totalPaidLatest = lines.reduce(
+      (sum, line) => sum + line.latestPaidCost,
       0
     );
-    const totalBaseLatest = selectedRows.reduce(
-      (sum, row) => sum + safeNumber(row.latest_base_cost, row.latest_cost),
+    const totalBaseLatest = lines.reduce(
+      (sum, line) => sum + line.latestBaseCost,
       0
     );
-    const totalDiscount = selectedRows.reduce(
-      (sum, row) => sum + safeNumber(row.latest_discount_amount),
+    const totalDiscount = lines.reduce(
+      (sum, line) => sum + line.selectedDiscount,
+      0
+    );
+    const selectedPaidTotal = lines.reduce(
+      (sum, line) => sum + line.selectedPaidCost,
+      0
+    );
+    const selectedBaseTotal = lines.reduce(
+      (sum, line) => sum + line.selectedBaseCost,
       0
     );
     const paidComparable = comparable.reduce(
-      (sum, row) => sum + safeNumber(row.latest_cost),
+      (sum, line) => sum + line.latestPaidCost,
       0
     );
     const baseComparable = comparable.reduce(
-      (sum, row) => sum + safeNumber(row.latest_base_cost, row.latest_cost),
+      (sum, line) => sum + line.latestBaseCost,
       0
     );
     const previousComparable = comparable.reduce(
-      (sum, row) => sum + safeNumber(row.previous_cost_for_latest_qty),
+      (sum, line) => sum + safeNumber(line.previousBaseCost),
       0
     );
-    const delta = baseComparable - previousComparable;
-    const paidDelta = paidComparable - previousComparable;
-    const deltaPct =
-      previousComparable > 0 ? (delta / previousComparable) * 100 : null;
+    const selectedPaidComparable = comparable.reduce(
+      (sum, line) => sum + line.selectedPaidCost,
+      0
+    );
+    const selectedBaseComparable = comparable.reduce(
+      (sum, line) => sum + line.selectedBaseCost,
+      0
+    );
+    const delta = hasShoppingListContext
+      ? totalBaseLatest - selectedBaseTotal
+      : baseComparable - previousComparable;
+    const paidDelta = hasShoppingListContext
+      ? totalPaidLatest - selectedPaidTotal
+      : paidComparable - previousComparable;
+    const previousDelta = selectedBaseComparable - previousComparable;
+    const previousPaidDelta = selectedPaidComparable - previousComparable;
+    const deltaBase = hasShoppingListContext
+      ? selectedBaseTotal
+      : previousComparable;
+    const paidDeltaBase = hasShoppingListContext
+      ? selectedPaidTotal
+      : previousComparable;
+    const previousDeltaPct =
+      previousComparable > 0 ? (previousDelta / previousComparable) * 100 : null;
+    const previousPaidDeltaPct =
+      previousComparable > 0
+        ? (previousPaidDelta / previousComparable) * 100
+        : null;
+    const deltaPct = deltaBase > 0 ? (delta / deltaBase) * 100 : null;
     const paidDeltaPct =
-      previousComparable > 0 ? (paidDelta / previousComparable) * 100 : null;
+      paidDeltaBase > 0 ? (paidDelta / paidDeltaBase) * 100 : null;
     const discountPct =
-      totalBaseLatest > 0 ? (totalDiscount / totalBaseLatest) * 100 : null;
+      selectedBaseTotal > 0 ? (totalDiscount / selectedBaseTotal) * 100 : null;
 
     return {
+      hasShoppingListContext,
       count: selectedRows.length,
       comparableCount: comparable.length,
       missingCount: selectedRows.length - comparable.length,
       totalPaidLatest,
       totalBaseLatest,
       totalDiscount,
+      selectedPaidTotal,
+      selectedBaseTotal,
       paidComparable,
       baseComparable,
       previousComparable,
@@ -469,9 +588,13 @@ export default function ItemPriceCommandCenter({ token }) {
       deltaPct,
       paidDelta,
       paidDeltaPct,
+      previousDelta,
+      previousDeltaPct,
+      previousPaidDelta,
+      previousPaidDeltaPct,
       discountPct,
     };
-  }, [selectedRows]);
+  }, [selectedRows, selectedShoppingList, selectedShoppingListLinesById]);
 
   const hottestRows = useMemo(
     () =>
@@ -512,10 +635,45 @@ export default function ItemPriceCommandCenter({ token }) {
       return;
     }
 
+    setSelectedShoppingListId("");
     setSelectedIds((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
       return [...prev, id];
     });
+  };
+
+  const selectShoppingList = (value, option) => {
+    const shoppingList =
+      option ||
+      shoppingLists.find((list) => String(list.id) === String(value || ""));
+
+    setSelectedShoppingListId(value ? String(value) : "");
+
+    if (!shoppingList) return;
+
+    const itemIds = Array.from(
+      new Set((shoppingList.item_ids || []).map((itemId) => String(itemId)))
+    );
+    const availableIds = itemIds.filter((itemId) => rowsById.has(itemId));
+
+    if (availableIds.length === 0) {
+      toast.info("Los articulos de esa lista no estan en la tabla actual.");
+      return;
+    }
+
+    const nextIds = availableIds.slice(0, MAX_SELECTED);
+    setSelectedIds(nextIds);
+    setActiveItemId(nextIds[0] || "");
+    setSearch("");
+    setFilter("selected");
+
+    if (availableIds.length > MAX_SELECTED) {
+      toast.info(`Se seleccionaron los primeros ${MAX_SELECTED} articulos.`);
+    } else if (availableIds.length < itemIds.length) {
+      toast.info(
+        `${itemIds.length - availableIds.length} articulo(s) no estan en la tabla actual.`
+      );
+    }
   };
 
   const selectVisible = () => {
@@ -523,10 +681,14 @@ export default function ItemPriceCommandCenter({ token }) {
     if (filteredRows.length > MAX_SELECTED) {
       toast.info(`Se seleccionaron los primeros ${MAX_SELECTED} resultados.`);
     }
+    setSelectedShoppingListId("");
     setSelectedIds(next);
   };
 
-  const clearSelection = () => setSelectedIds([]);
+  const clearSelection = () => {
+    setSelectedShoppingListId("");
+    setSelectedIds([]);
+  };
 
   const panelStyle = {
     background:
@@ -684,31 +846,73 @@ export default function ItemPriceCommandCenter({ token }) {
 
       <div className="grid grid-cols-1 gap-5 2xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="min-w-0 space-y-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-            <div className="min-w-0 flex-1">
-              <label className="ff-label mb-1 block">Buscar</label>
-              <div className="relative">
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  className="ff-input pr-10"
-                  placeholder="Articulo o categoria..."
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(280px,430px)]">
+              <div className="min-w-0">
+                <label className="ff-label mb-1 block">Buscar</label>
+                <div className="relative">
+                  <input
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    className="ff-input pr-10"
+                    placeholder="Articulo o categoria..."
+                  />
+                  {search.trim() ? (
+                    <button
+                      type="button"
+                      onClick={() => setSearch("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1"
+                      style={{ color: "var(--muted)" }}
+                      title="Limpiar"
+                    >
+                      <HiX className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="min-w-0">
+                <label className="ff-label mb-1 flex items-center gap-1">
+                  <HiShoppingCart className="h-4 w-4" aria-hidden="true" />
+                  Lista de compra
+                </label>
+                <FFSelect
+                  value={selectedShoppingListId}
+                  onChange={selectShoppingList}
+                  options={shoppingListOptions}
+                  placeholder={
+                    shoppingListOptions.length
+                      ? "Elige una lista..."
+                      : "Sin listas en el rango"
+                  }
+                  disabled={loading || shoppingListOptions.length === 0}
+                  clearable
+                  maxVisible={60}
+                  getOptionLabel={(option) => option.label}
+                  getOptionValue={(option) => option.id}
+                  renderOption={(option) => (
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate font-bold">{option.label}</span>
+                      <span
+                        className="mt-0.5 truncate text-[11px]"
+                        style={{ color: "var(--select-muted)" }}
+                      >
+                        {option.subLabel}
+                      </span>
+                    </div>
+                  )}
                 />
-                {search.trim() ? (
-                  <button
-                    type="button"
-                    onClick={() => setSearch("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1"
-                    style={{ color: "var(--muted)" }}
-                    title="Limpiar"
-                  >
-                    <HiX className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                ) : null}
+                <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
+                  {selectedShoppingList
+                    ? `${selectedShoppingList.item_count || 0} articulo(s), ${
+                        selectedShoppingList.line_count || 0
+                      } linea(s)`
+                    : `${shoppingListOptions.length} lista(s) en el rango`}
+                </p>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 lg:justify-end">
               {FILTERS.map((item) => (
                 <SegmentButton
                   key={item.id}
@@ -750,7 +954,11 @@ export default function ItemPriceCommandCenter({ token }) {
           </div>
 
           <div className="max-h-[620px] overflow-auto" style={tableShellStyle}>
-            <table className="min-w-[1420px] w-full border-separate border-spacing-0 text-sm">
+            <table
+              className={`${
+                basket.hasShoppingListContext ? "min-w-[1560px]" : "min-w-[1420px]"
+              } w-full border-separate border-spacing-0 text-sm`}
+            >
               <thead>
                 <tr>
                   <th className="sticky top-0 z-20 w-12 px-3 py-3 text-left" style={thStyle}>
@@ -759,6 +967,11 @@ export default function ItemPriceCommandCenter({ token }) {
                   <th className="sticky top-0 z-20 px-3 py-3 text-left" style={thStyle}>
                     Articulo
                   </th>
+                  {basket.hasShoppingListContext ? (
+                    <th className="sticky top-0 z-20 px-3 py-3 text-right" style={thStyle}>
+                      En lista
+                    </th>
+                  ) : null}
                   <th className="sticky top-0 z-20 px-3 py-3 text-right" style={thStyle}>
                     Base
                   </th>
@@ -791,13 +1004,13 @@ export default function ItemPriceCommandCenter({ token }) {
               <tbody>
                 {loading && rows.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="px-4 py-8 text-center" style={{ color: "var(--muted)" }}>
+                    <td colSpan={basket.hasShoppingListContext ? 12 : 11} className="px-4 py-8 text-center" style={{ color: "var(--muted)" }}>
                       Cargando senales de precios...
                     </td>
                   </tr>
                 ) : filteredRows.length === 0 ? (
                   <tr>
-                    <td colSpan={11} className="px-4 py-8 text-center" style={{ color: "var(--muted)" }}>
+                    <td colSpan={basket.hasShoppingListContext ? 12 : 11} className="px-4 py-8 text-center" style={{ color: "var(--muted)" }}>
                       No hay articulos para los filtros actuales.
                     </td>
                   </tr>
@@ -808,6 +1021,9 @@ export default function ItemPriceCommandCenter({ token }) {
                     const active = String(activeItemId) === id;
                     const delta = safeNumber(row.latest_delta_amount);
                     const discount = safeNumber(row.latest_discount_amount);
+                    const shoppingLine = basket.hasShoppingListContext
+                      ? selectedShoppingListLinesById.get(id)
+                      : null;
                     const deltaTone =
                       delta > 0 ? "var(--danger)" : delta < 0 ? "var(--success)" : "var(--muted)";
 
@@ -861,6 +1077,21 @@ export default function ItemPriceCommandCenter({ token }) {
                             </div>
                           </div>
                         </td>
+                        {basket.hasShoppingListContext ? (
+                          <td className="px-3 py-3 text-right tabular-nums" style={{ color: "var(--text)", borderBottom: "1px solid color-mix(in srgb, var(--border-rgba) 56%, transparent)" }}>
+                            {shoppingLine ? (
+                              <>
+                                <div>{formatMoney(shoppingLine.paid_amount)}</div>
+                                <div className="text-[11px]" style={{ color: "var(--muted)" }}>
+                                  Qty {formatQty(shoppingLine.quantity)} - Base{" "}
+                                  {formatMoney(shoppingLine.base_amount)}
+                                </div>
+                              </>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+                        ) : null}
                         <td className="px-3 py-3 text-right tabular-nums" style={{ color: "var(--text)", borderBottom: "1px solid color-mix(in srgb, var(--border-rgba) 56%, transparent)" }}>
                           {formatMoney(row.latest_unit_price)}
                         </td>
@@ -919,10 +1150,16 @@ export default function ItemPriceCommandCenter({ token }) {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h4 className="text-base font-extrabold" style={{ color: "var(--text)" }}>
-                  Cesta seleccionada
+                  {basket.hasShoppingListContext
+                    ? "Comparativo de lista"
+                    : "Cesta seleccionada"}
                 </h4>
                 <p className="text-xs" style={{ color: "var(--muted)" }}>
-                  Ultima cantidad comprada por articulo
+                  {basket.hasShoppingListContext
+                    ? `${formatDate(selectedShoppingList?.date)} - ${
+                        selectedShoppingList?.description || "Lista de compra"
+                      }`
+                    : "Ultima cantidad comprada por articulo"}
                 </p>
               </div>
               <SignalBadge row={{ signal: basket.delta > 0 ? "subiendo" : "estable" }} />
@@ -930,27 +1167,86 @@ export default function ItemPriceCommandCenter({ token }) {
 
             <div className="mt-4 space-y-3">
               <div className="flex items-center justify-between gap-3">
-                <span style={{ color: "var(--muted)" }}>Base ultima vez</span>
+                <span style={{ color: "var(--muted)" }}>
+                  {basket.hasShoppingListContext ? "Base lista" : "Base ultima vez"}
+                </span>
                 <strong className="tabular-nums" style={{ color: "var(--text)" }}>
-                  {formatMoney(basket.totalBaseLatest)}
+                  {formatMoney(
+                    basket.hasShoppingListContext
+                      ? basket.selectedBaseTotal
+                      : basket.totalBaseLatest
+                  )}
                 </strong>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span style={{ color: "var(--muted)" }}>Pagado ultima vez</span>
+                <span style={{ color: "var(--muted)" }}>
+                  {basket.hasShoppingListContext ? "Pagado lista" : "Pagado ultima vez"}
+                </span>
                 <strong className="tabular-nums" style={{ color: "var(--text)" }}>
-                  {formatMoney(basket.totalPaidLatest)}
+                  {formatMoney(
+                    basket.hasShoppingListContext
+                      ? basket.selectedPaidTotal
+                      : basket.totalPaidLatest
+                  )}
                 </strong>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <span style={{ color: "var(--muted)" }}>Descuento aplicado</span>
+                <span style={{ color: "var(--muted)" }}>
+                  {basket.hasShoppingListContext ? "Descuento lista" : "Descuento aplicado"}
+                </span>
                 <strong className="tabular-nums" style={{ color: "var(--success)" }}>
                   {formatMoney(basket.totalDiscount)} (
                   {basket.discountPct == null ? "-" : formatPercent(-basket.discountPct)}
                   )
                 </strong>
               </div>
+              {basket.hasShoppingListContext ? (
+                <>
+                  <div
+                    className="border-t pt-3"
+                    style={{ borderColor: "var(--border-rgba)" }}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span style={{ color: "var(--muted)" }}>A precio ultimo base</span>
+                      <strong className="tabular-nums" style={{ color: "var(--text)" }}>
+                        {formatMoney(basket.totalBaseLatest)}
+                      </strong>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-3 text-xs">
+                      <span style={{ color: "var(--muted)" }}>A precio ultimo pagado</span>
+                      <strong className="tabular-nums" style={{ color: "var(--text)" }}>
+                        {formatMoney(basket.totalPaidLatest)}
+                      </strong>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span style={{ color: "var(--muted)" }}>Ultimo base vs lista</span>
+                    <strong
+                      className="tabular-nums"
+                      style={{
+                        color: basket.delta > 0 ? "var(--danger)" : "var(--success)",
+                      }}
+                    >
+                      {formatMoney(basket.delta)} ({formatPercent(basket.deltaPct)})
+                    </strong>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <span style={{ color: "var(--muted)" }}>Ultimo pagado vs lista</span>
+                    <strong
+                      className="tabular-nums"
+                      style={{
+                        color: basket.paidDelta > 0 ? "var(--danger)" : "var(--success)",
+                      }}
+                    >
+                      {formatMoney(basket.paidDelta)} ({formatPercent(basket.paidDeltaPct)})
+                    </strong>
+                  </div>
+                </>
+              ) : null}
               <div className="flex items-center justify-between gap-3">
-                <span style={{ color: "var(--muted)" }}>Con precio anterior</span>
+                <span style={{ color: "var(--muted)" }}>
+                  {basket.hasShoppingListContext ? "A precio anterior" : "Con precio anterior"}
+                </span>
                 <strong className="tabular-nums" style={{ color: "var(--text)" }}>
                   {formatMoney(basket.previousComparable)}
                 </strong>
@@ -959,25 +1255,49 @@ export default function ItemPriceCommandCenter({ token }) {
                 className="flex items-center justify-between gap-3 border-t pt-3"
                 style={{ borderColor: "var(--border-rgba)" }}
               >
-                <span style={{ color: "var(--muted)" }}>Presion base</span>
+                <span style={{ color: "var(--muted)" }}>
+                  {basket.hasShoppingListContext
+                    ? "Lista base vs anterior"
+                    : "Presion base"}
+                </span>
                 <strong
                   className="tabular-nums"
                   style={{
-                    color: basket.delta > 0 ? "var(--danger)" : "var(--success)",
+                    color: (basket.hasShoppingListContext
+                      ? basket.previousDelta
+                      : basket.delta) > 0 ? "var(--danger)" : "var(--success)",
                   }}
                 >
-                  {formatMoney(basket.delta)} ({formatPercent(basket.deltaPct)})
+                  {basket.hasShoppingListContext
+                    ? `${formatMoney(basket.previousDelta)} (${formatPercent(
+                        basket.previousDeltaPct
+                      )})`
+                    : `${formatMoney(basket.delta)} (${formatPercent(
+                        basket.deltaPct
+                      )})`}
                 </strong>
               </div>
               <div className="flex items-center justify-between gap-3 text-xs">
-                <span style={{ color: "var(--muted)" }}>Diferencia pagada</span>
+                <span style={{ color: "var(--muted)" }}>
+                  {basket.hasShoppingListContext
+                    ? "Lista pagada vs anterior"
+                    : "Diferencia pagada"}
+                </span>
                 <strong
                   className="tabular-nums"
                   style={{
-                    color: basket.paidDelta > 0 ? "var(--danger)" : "var(--success)",
+                    color: (basket.hasShoppingListContext
+                      ? basket.previousPaidDelta
+                      : basket.paidDelta) > 0 ? "var(--danger)" : "var(--success)",
                   }}
                 >
-                  {formatMoney(basket.paidDelta)} ({formatPercent(basket.paidDeltaPct)})
+                  {basket.hasShoppingListContext
+                    ? `${formatMoney(basket.previousPaidDelta)} (${formatPercent(
+                        basket.previousPaidDeltaPct
+                      )})`
+                    : `${formatMoney(basket.paidDelta)} (${formatPercent(
+                        basket.paidDeltaPct
+                      )})`}
                 </strong>
               </div>
             </div>
