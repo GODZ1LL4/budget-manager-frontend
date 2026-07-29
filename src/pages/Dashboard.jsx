@@ -87,6 +87,8 @@ function Dashboard({ token, setView }) {
     axios
       .get(`${api}/categories`, {
         headers: { Authorization: `Bearer ${token}` },
+        ffFastFallback: false,
+        timeout: 0,
       })
       .then((res) => setCategories(res.data.data))
       .catch(() => console.error("Error al cargar categorías"));
@@ -101,6 +103,8 @@ function Dashboard({ token, setView }) {
     axios
       .get(`${api}/accounts/balances`, {
         headers: { Authorization: `Bearer ${token}` },
+        ffFastFallback: false,
+        timeout: 0,
       })
       .then((res) => setAccounts(Array.isArray(res.data.data) ? res.data.data : []))
       .catch((err) => {
