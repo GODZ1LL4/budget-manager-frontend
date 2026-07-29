@@ -28,6 +28,7 @@ const MAX_SELECTED = 24;
 const TYPE_CONFIG = {
   expense: {
     storageKey: "report:expense-command-center:params",
+    selectionStorageKey: "report:expense-command-center:selected-ids",
     eyebrow: "Expense command center",
     title: "Centro de comando de gastos",
     subtitle:
@@ -55,6 +56,7 @@ const TYPE_CONFIG = {
   },
   income: {
     storageKey: "report:income-command-center:params",
+    selectionStorageKey: "report:income-command-center:selected-ids",
     eyebrow: "Income command center",
     title: "Centro de comando de ingresos",
     subtitle:
@@ -101,9 +103,50 @@ function clampDraftNumber(value, min, max, fallback) {
   return Math.max(min, Math.min(max, number));
 }
 
+function normalizeSelectedIds(value) {
+  return Array.isArray(value)
+    ? value.filter(Boolean).map((id) => String(id))
+    : [];
+}
+
+function readStoredSelectedIds(config, parsedParams) {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const rawSelection = localStorage.getItem(config.selectionStorageKey);
+    if (rawSelection != null) {
+      return normalizeSelectedIds(JSON.parse(rawSelection));
+    }
+  } catch {
+    // ignore malformed selection storage
+  }
+
+  return Array.isArray(parsedParams?.selectedIds)
+    ? normalizeSelectedIds(parsedParams.selectedIds)
+    : null;
+}
+
+function writeStoredSelectedIds(config, selectedIds) {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.setItem(
+      config.selectionStorageKey,
+      JSON.stringify(normalizeSelectedIds(selectedIds))
+    );
+  } catch {
+    // ignore storage write errors
+  }
+}
+
 function getInitialParams(type) {
   const config = TYPE_CONFIG[type] || TYPE_CONFIG.expense;
-  const defaults = { months: "12", minDeltaPct: "10", sortMode: "attention" };
+  const defaults = {
+    months: "12",
+    minDeltaPct: "10",
+    sortMode: "attention",
+    selectedIds: null,
+  };
 
   if (typeof window === "undefined") return defaults;
 
@@ -116,6 +159,7 @@ function getInitialParams(type) {
       months: String(clampDraftNumber(parsed?.months, 2, 60, 12)),
       minDeltaPct: String(clampDraftNumber(parsed?.minDeltaPct, 0, 1000, 10)),
       sortMode: parsed?.sortMode || "attention",
+      selectedIds: readStoredSelectedIds(config, parsed),
     };
   } catch {
     return defaults;
@@ -355,7 +399,9 @@ export default function TransactionCommandCenter({ token, type = "expense" }) {
   const reportType = type === "income" ? "income" : "expense";
   const config = TYPE_CONFIG[reportType];
   const initialParamsRef = useRef(getInitialParams(reportType));
-  const autoSelectedRef = useRef(false);
+  const autoSelectedRef = useRef(
+    Array.isArray(initialParamsRef.current.selectedIds)
+  );
   const requestParamsRef = useRef({
     months: initialParamsRef.current.months,
     minDeltaPct: initialParamsRef.current.minDeltaPct,
@@ -365,6 +411,7 @@ export default function TransactionCommandCenter({ token, type = "expense" }) {
   const [summary, setSummary] = useState(null);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [hasLoadedRows, setHasLoadedRows] = useState(false);
   const [error, setError] = useState("");
 
   const [months, setMonths] = useState(initialParamsRef.current.months);
@@ -374,16 +421,34 @@ export default function TransactionCommandCenter({ token, type = "expense" }) {
   const [sortMode, setSortMode] = useState(initialParamsRef.current.sortMode);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [selectedIds, setSelectedIds] = useState([]);
+  const [selectedIds, setSelectedIds] = useState(
+    initialParamsRef.current.selectedIds || []
+  );
   const [activeId, setActiveId] = useState("");
+
+  const commitSelectedIds = useCallback(
+    (valueOrUpdater) => {
+      setSelectedIds((prev) => {
+        const next =
+          typeof valueOrUpdater === "function"
+            ? valueOrUpdater(prev)
+            : valueOrUpdater;
+        const normalized = normalizeSelectedIds(next);
+        writeStoredSelectedIds(config, normalized);
+        return normalized;
+      });
+    },
+    [config]
+  );
 
   useEffect(() => {
     requestParamsRef.current = { months, minDeltaPct };
+    writeStoredSelectedIds(config, selectedIds);
     localStorage.setItem(
       config.storageKey,
-      JSON.stringify({ months, minDeltaPct, sortMode })
+      JSON.stringify({ months, minDeltaPct, sortMode, selectedIds })
     );
-  }, [config.storageKey, minDeltaPct, months, sortMode]);
+  }, [config, minDeltaPct, months, selectedIds, sortMode]);
 
   const runRequest = useCallback(
     async (requestParams) => {
@@ -393,6 +458,7 @@ export default function TransactionCommandCenter({ token, type = "expense" }) {
       const effectiveMinDeltaPct = requestParams?.minDeltaPct ?? "10";
 
       setLoading(true);
+      setHasLoadedRows(false);
       setError("");
 
       try {
@@ -417,11 +483,13 @@ export default function TransactionCommandCenter({ token, type = "expense" }) {
         setRows(Array.isArray(res.data?.data) ? res.data.data : []);
         setSummary(res.data?.summary || null);
         setMeta(res.data?.meta || null);
+        setHasLoadedRows(true);
       } catch (err) {
         console.error(`Error cargando command center ${reportType}:`, err);
         setRows([]);
         setSummary(null);
         setMeta(null);
+        setHasLoadedRows(false);
         setError(config.toastText);
         toast.error(config.toastText);
       } finally {
@@ -440,25 +508,25 @@ export default function TransactionCommandCenter({ token, type = "expense" }) {
   }, [runRequest]);
 
   useEffect(() => {
+    if (!hasLoadedRows) return;
+
     if (!rows.length) {
-      setSelectedIds([]);
       setActiveId("");
       return;
     }
 
-    const available = new Set(rows.map((row) => String(row.category_key)));
-
     setSelectedIds((prev) => {
-      const kept = prev.filter((id) => available.has(String(id)));
-      if (kept.length || autoSelectedRef.current) return kept;
+      if (prev.length || autoSelectedRef.current) return prev;
 
       autoSelectedRef.current = true;
-      return rows
+      const next = rows
         .filter((row) => safeNumber(row.current_month_amount) > 0)
         .slice(0, 5)
         .map((row) => String(row.category_key));
+      writeStoredSelectedIds(config, next);
+      return next;
     });
-  }, [rows]);
+  }, [config, hasLoadedRows, rows]);
 
   const rowsById = useMemo(() => {
     const map = new Map();
@@ -609,7 +677,7 @@ export default function TransactionCommandCenter({ token, type = "expense" }) {
       return;
     }
 
-    setSelectedIds((prev) => {
+    commitSelectedIds((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
       return [...prev, id];
     });
@@ -620,10 +688,10 @@ export default function TransactionCommandCenter({ token, type = "expense" }) {
     if (filteredRows.length > MAX_SELECTED) {
       toast.info(`Se seleccionaron los primeros ${MAX_SELECTED} resultados.`);
     }
-    setSelectedIds(next);
+    commitSelectedIds(next);
   };
 
-  const clearSelection = () => setSelectedIds([]);
+  const clearSelection = () => commitSelectedIds([]);
 
   const panelStyle = {
     background:

@@ -339,7 +339,13 @@ function Dashboard({ token, setView }) {
             badge: "Pro",
             panelHint:
               "Vigila fuentes de ingreso, caidas, recurrencia y variacion mensual.",
-            render: () => <TransactionCommandCenter token={token} type="income" />,
+            render: () => (
+              <TransactionCommandCenter
+                key="income-command-center"
+                token={token}
+                type="income"
+              />
+            ),
           },
           {
             id: "income-dist-category",
@@ -434,7 +440,13 @@ function Dashboard({ token, setView }) {
             badge: "Pro",
             panelHint:
               "Monitorea categorias de gasto, presupuesto, ritmo y variacion mensual.",
-            render: () => <TransactionCommandCenter token={token} type="expense" />,
+            render: () => (
+              <TransactionCommandCenter
+                key="expense-command-center"
+                token={token}
+                type="expense"
+              />
+            ),
           },
           {
             id: "stability",
