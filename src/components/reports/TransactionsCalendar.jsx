@@ -13,6 +13,29 @@ function dateToDateKey(date) {
   )}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
+function normalizeDateKey(value) {
+  if (!value) return "";
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? "" : dateToDateKey(value);
+  }
+
+  const stringValue = String(value);
+  const isoDateMatch = stringValue.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoDateMatch) return isoDateMatch[1];
+
+  const parsed = new Date(stringValue);
+  return Number.isNaN(parsed.getTime()) ? "" : dateToDateKey(parsed);
+}
+
+function normalizeCalendarTransaction(tx) {
+  const dateKey = normalizeDateKey(tx?.date);
+  return {
+    ...tx,
+    date: dateKey,
+  };
+}
+
 function formatDateLabel(dateKey) {
   const [year, month, day] = String(dateKey || "").split("-");
   if (!year || !month || !day) return dateKey;
@@ -70,23 +93,32 @@ function TransactionsCalendar({ token, isOpen = true, mobileCompact = false }) {
   const api = import.meta.env.VITE_API_URL;
 
   const calRef = useRef(null);
+  const requestRef = useRef(null);
+
+  const calendarTransactions = useMemo(
+    () =>
+      (transactions || [])
+        .map(normalizeCalendarTransaction)
+        .filter((tx) => tx.date),
+    [transactions]
+  );
 
   const transactionsByDate = useMemo(() => {
     const grouped = {};
 
-    for (const tx of transactions) {
+    for (const tx of calendarTransactions) {
       if (!tx.date) continue;
       if (!grouped[tx.date]) grouped[tx.date] = [];
       grouped[tx.date].push(tx);
     }
 
     return grouped;
-  }, [transactions]);
+  }, [calendarTransactions]);
 
   const totalsByDate = useMemo(() => {
     const totals = {};
 
-    for (const tx of transactions) {
+    for (const tx of calendarTransactions) {
       if (tx.isProjected || !tx.date) continue;
 
       if (!totals[tx.date]) totals[tx.date] = { income: 0, expense: 0 };
@@ -97,11 +129,11 @@ function TransactionsCalendar({ token, isOpen = true, mobileCompact = false }) {
     }
 
     return totals;
-  }, [transactions]);
+  }, [calendarTransactions]);
 
   const events = useMemo(
     () =>
-      transactions.map((tx, index) => {
+      calendarTransactions.map((tx, index) => {
         const amount = Number(tx.amount || 0);
         const sign =
           tx.type === "income" ? "+" : tx.type === "expense" ? "-" : "";
@@ -117,6 +149,8 @@ function TransactionsCalendar({ token, isOpen = true, mobileCompact = false }) {
             tx.description || "Sin descripcion"
           }${suffix}`,
           date: tx.date,
+          start: tx.date,
+          allDay: true,
           color,
           textColor: "var(--text)",
           classNames: tx.isProjected ? ["ff-projected"] : [],
@@ -125,7 +159,7 @@ function TransactionsCalendar({ token, isOpen = true, mobileCompact = false }) {
           },
         };
       }),
-    [formatCurrency, transactions]
+    [calendarTransactions, formatCurrency]
   );
   const calendarEvents = mobileCompact ? [] : events;
 
@@ -180,36 +214,61 @@ function TransactionsCalendar({ token, isOpen = true, mobileCompact = false }) {
     });
   }, [formatCurrency, totalsByDate]);
 
-  useEffect(() => {
+  const loadCalendarData = useCallback(async () => {
     if (!token) return;
+
+    if (requestRef.current) requestRef.current.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
 
     const authConfig = {
       headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
     };
 
-    Promise.all([
-      axios.get(`${api}/transactions/for-calendar`, authConfig),
-      axios.get(`${api}/categories`, authConfig).catch(() => ({
-        data: { data: [] },
-      })),
-    ])
-      .then(([transactionsRes, categoriesRes]) => {
-        const categories = categoriesRes.data.data || [];
-        const namesById = {};
-
-        categories.forEach((category) => {
-          if (category?.id) {
-            namesById[String(category.id)] = category.name;
+    try {
+      const [transactionsRes, categoriesRes] = await Promise.all([
+        axios.get(`${api}/transactions/for-calendar`, authConfig),
+        axios.get(`${api}/categories`, authConfig).catch((err) => {
+          if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") {
+            throw err;
           }
-        });
 
-        setCategoryNameById(namesById);
-        setTransactions(transactionsRes.data.data || []);
-      })
-      .catch((err) => {
-        console.error("Error al cargar calendario:", err);
+          return { data: { data: [] } };
+        }),
+      ]);
+
+      const categories = categoriesRes.data.data || [];
+      const namesById = {};
+
+      categories.forEach((category) => {
+        if (category?.id) {
+          namesById[String(category.id)] = category.name;
+        }
       });
-  }, [token, api]);
+
+      setCategoryNameById(namesById);
+      setTransactions(transactionsRes.data.data || []);
+    } catch (err) {
+      if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") return;
+
+      console.error("Error al cargar calendario:", err);
+    } finally {
+      if (requestRef.current === controller) {
+        requestRef.current = null;
+      }
+    }
+  }, [api, token]);
+
+  useEffect(() => {
+    if (!token || !isOpen) return;
+
+    loadCalendarData();
+
+    return () => {
+      if (requestRef.current) requestRef.current.abort();
+    };
+  }, [isOpen, loadCalendarData, token]);
 
   useEffect(() => {
     applyTooltips();
