@@ -14,7 +14,6 @@ function UnusualExpensesTable({ token }) {
     const border = "var(--border-rgba)";
     const panel = "var(--panel)";
     const panel2 = "var(--panel-2)";
-    const bg1 = "var(--bg-1)";
     const bg2 = "var(--bg-2)";
     const bg3 = "var(--bg-3)";
 
@@ -144,6 +143,8 @@ function UnusualExpensesTable({ token }) {
             <tbody>
               {data.map((tx, idx) => {
                 const z = safeNum(tx.z_score);
+                const delta = safeNum(tx.delta);
+                const minDelta = safeNum(tx.min_delta);
                 const zColor = z >= 3 ? ui.zHigh : z >= 2.5 ? ui.zMid : ui.zLow;
 
                 const baseBg = idx % 2 === 0 ? ui.rowEvenBg : ui.rowOddBg;
@@ -186,11 +187,20 @@ function UnusualExpensesTable({ token }) {
                       style={{ color: zColor }}
                       title={
                         Number.isFinite(z)
-                          ? z >= 3
-                            ? "Muy atípico (≥ 3)"
-                            : z >= 2.5
-                            ? "Atípico (≥ 2.5)"
-                            : "Leve"
+                          ? [
+                              z >= 3
+                                ? "Muy atípico (≥ 3)"
+                                : z >= 2.5
+                                ? "Atípico (≥ 2.5)"
+                                : "Leve",
+                              `Promedio histórico: ${formatCurrency(tx.mean)}`,
+                              `Diferencia: ${formatCurrency(delta)}`,
+                              minDelta
+                                ? `Diferencia mínima: ${formatCurrency(minDelta)}`
+                                : null,
+                            ]
+                              .filter(Boolean)
+                              .join("\n")
                           : ""
                       }
                     >
@@ -207,7 +217,8 @@ function UnusualExpensesTable({ token }) {
       <p className="text-[11px]" style={{ color: ui.muted }}>
         Nota: el <span style={{ color: ui.text, fontWeight: 700 }}>z-score</span>{" "}
         mide cuán lejos está el gasto de su media histórica por categoría.
-        Mientras más alto, más “raro”.
+        Para evitar falsos positivos, también debe superar el promedio por al
+        menos RD$25 o 5%, lo que sea mayor.
       </p>
     </div>
   );
