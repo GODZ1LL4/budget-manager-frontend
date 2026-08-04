@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 
 const MONTH_LABELS = {
@@ -65,8 +65,15 @@ function p90ScaleMax(values) {
 }
 
 function CategoryMonthlyHeatmap({ token, type = "expense" }) {
+  const defaultYear = useMemo(() => new Date().getFullYear(), []);
+  const [year, setYear] = useState(defaultYear);
+  const [yearDraft, setYearDraft] = useState(String(defaultYear));
+  const [refreshKey, setRefreshKey] = useState(0);
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const abortRef = useRef(null);
   const api = import.meta.env.VITE_API_URL;
   const reportType = type === "income" ? "income" : "expense";
 
@@ -78,6 +85,8 @@ function CategoryMonthlyHeatmap({ token, type = "expense" }) {
       low: `Menos ${noun}`,
       high: `Mas ${noun}`,
       error: `Error cargando heatmap de ${noun} por categoria y mes:`,
+      invalidYear: "Digita un año válido entre 2000 y 2100.",
+      retry: "No se pudo cargar el heatmap. Presiona Refrescar para reintentar.",
     };
   }, [reportType]);
 
@@ -120,22 +129,68 @@ function CategoryMonthlyHeatmap({ token, type = "expense" }) {
     };
   }, [reportType]);
 
+  const fetchHeatmap = useCallback(
+    async (selectedYear) => {
+      if (!token) return;
+
+      if (abortRef.current) abortRef.current.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+
+      try {
+        setLoading(true);
+        setErrorMsg("");
+
+        const res = await axios.get(`${api}/analytics/category-month-heatmap`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { type: reportType, year: selectedYear },
+          signal: controller.signal,
+        });
+
+        setRows(res.data?.data || []);
+        setMeta(res.data?.meta || null);
+      } catch (err) {
+        if (err?.name === "CanceledError" || err?.code === "ERR_CANCELED") return;
+
+        console.error(copy.error, err);
+        setRows([]);
+        setMeta(null);
+        setErrorMsg(copy.retry);
+      } finally {
+        if (abortRef.current === controller) {
+          setLoading(false);
+          abortRef.current = null;
+        }
+      }
+    },
+    [api, copy.error, copy.retry, reportType, token]
+  );
+
   useEffect(() => {
     if (!token) return;
 
-    axios
-      .get(`${api}/analytics/category-month-heatmap`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { type: reportType },
-      })
-      .then((res) => {
-        setRows(res.data?.data || []);
-        setMeta(res.data?.meta || null);
-      })
-      .catch((err) =>
-        console.error(copy.error, err)
-      );
-  }, [token, api, reportType, copy.error]);
+    fetchHeatmap(year);
+
+    return () => {
+      if (abortRef.current) abortRef.current.abort();
+    };
+  }, [fetchHeatmap, token, year, refreshKey]);
+
+  const handleRefresh = useCallback(() => {
+    const nextYear = Number(yearDraft);
+
+    if (!Number.isInteger(nextYear) || nextYear < 2000 || nextYear > 2100) {
+      setErrorMsg(copy.invalidYear);
+      return;
+    }
+
+    setYear(nextYear);
+    setRefreshKey((key) => key + 1);
+  }, [copy.invalidYear, yearDraft]);
+
+  const onFilterKeyDown = (e) => {
+    if (e.key === "Enter") handleRefresh();
+  };
 
   const { categories, months, matrix, scaleMax, monthTotals } = useMemo(() => {
     const catMap = new Map();
@@ -203,9 +258,66 @@ function CategoryMonthlyHeatmap({ token, type = "expense" }) {
         </h3>
       </div> */}
 
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col">
+            <label
+              className="text-[11px] uppercase tracking-[0.18em]"
+              style={{ color: ui.muted }}
+            >
+              Año
+            </label>
+            <input
+              type="number"
+              value={yearDraft}
+              onChange={(e) => setYearDraft(e.target.value)}
+              onKeyDown={onFilterKeyDown}
+              min="2000"
+              max="2100"
+              className="ff-input text-sm px-3 py-2 rounded-lg w-28"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={loading || !token}
+            className="px-4 py-2 rounded-lg text-sm border transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            style={{
+              borderColor: ui.border,
+              background: "color-mix(in srgb, var(--panel) 70%, transparent)",
+              color: ui.text,
+            }}
+            title="Aplicar año y recargar datos"
+          >
+            {loading ? "Cargando..." : "Refrescar"}
+          </button>
+        </div>
+
+        <span className="text-sm" style={{ color: ui.muted }}>
+          Año aplicado:{" "}
+          <strong style={{ color: ui.text, fontWeight: 700 }}>
+            {meta?.year || year}
+          </strong>
+        </span>
+      </div>
+
+      {errorMsg ? (
+        <div
+          className="text-xs px-3 py-2 rounded-lg border"
+          style={{
+            borderColor: "color-mix(in srgb, var(--danger) 35%, transparent)",
+            background: "color-mix(in srgb, var(--danger) 12%, transparent)",
+            color: ui.text,
+          }}
+        >
+          {errorMsg}
+        </div>
+      ) : null}
+
       {categories.length === 0 || months.length === 0 ? (
         <p className="text-sm italic" style={{ color: ui.muted }}>
-          {copy.empty}
+          {loading ? "Cargando datos..." : copy.empty}
         </p>
       ) : (
         <>
