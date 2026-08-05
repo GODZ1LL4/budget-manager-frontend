@@ -272,7 +272,8 @@ function BudgetVsActualChart({ token }) {
 
   return (
     <div className="rounded-2xl p-6 space-y-4" style={ui.card}>
-      <div>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
         <h3 style={{ color: "var(--heading)", fontWeight: 800, fontSize: 18 }}>
           Presupuesto vs Gasto Real
         </h3>
@@ -281,20 +282,20 @@ function BudgetVsActualChart({ token }) {
         </p>
       </div>
 
-      <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-[112px_180px_auto] lg:w-auto">
+        <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-[120px_180px_auto] lg:w-auto">
         <label>
           <span className="text-xs font-semibold uppercase text-[var(--muted)]">
             Ano
           </span>
           <input
-            type="number"
-            inputMode="numeric"
-            value={yearDraft}
-            onChange={(event) => setYearDraft(event.target.value)}
-            onKeyDown={onFilterKeyDown}
-            min="2000"
-            max="2100"
-            className="ff-input mt-1 w-full rounded-lg px-3 py-2 text-sm"
+              type="text"
+              inputMode="numeric"
+              value={yearDraft}
+              onChange={(event) => setYearDraft(event.target.value)}
+              onKeyDown={onFilterKeyDown}
+              min="2000"
+              max="2100"
+              className="ff-input mt-1 h-10 w-full rounded-lg px-3 py-0 text-sm"
           />
         </label>
 
@@ -309,7 +310,7 @@ function BudgetVsActualChart({ token }) {
             placeholder="Selecciona mes"
             searchable={false}
             clearable={false}
-            className="mt-1 w-full"
+              className="mt-1 w-full [&_.ff-input]:h-10 [&_.ff-input]:py-0"
             getOptionLabel={(option) => option.label}
             getOptionValue={(option) => option.value}
             disabled={loading}
@@ -331,6 +332,7 @@ function BudgetVsActualChart({ token }) {
           <HiRefresh className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
           Refrescar
         </button>
+      </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
