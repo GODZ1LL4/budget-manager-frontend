@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
+import { HiRefresh } from "react-icons/hi";
 import {
   BarChart,
   Bar,
@@ -10,6 +11,23 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import FFSelect from "../FFSelect";
+import { currentMonthKey, withUserTimeZone } from "../../lib/dates/localDate";
+
+const MONTH_OPTIONS = [
+  { value: "1", label: "01 - Enero" },
+  { value: "2", label: "02 - Febrero" },
+  { value: "3", label: "03 - Marzo" },
+  { value: "4", label: "04 - Abril" },
+  { value: "5", label: "05 - Mayo" },
+  { value: "6", label: "06 - Junio" },
+  { value: "7", label: "07 - Julio" },
+  { value: "8", label: "08 - Agosto" },
+  { value: "9", label: "09 - Septiembre" },
+  { value: "10", label: "10 - Octubre" },
+  { value: "11", label: "11 - Noviembre" },
+  { value: "12", label: "12 - Diciembre" },
+];
 
 const safeNum = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0);
 
@@ -24,6 +42,14 @@ const signedMoney = (value) => {
   const amount = safeNum(value);
   const sign = amount > 0 ? "+" : amount < 0 ? "-" : "";
   return `${sign}${money(Math.abs(amount))}`;
+};
+
+const getDefaultPeriod = () => {
+  const monthKey = currentMonthKey();
+  return {
+    year: Number(monthKey.slice(0, 4)),
+    month: Number(monthKey.slice(5, 7)),
+  };
 };
 
 function SummaryCard({ label, value, tone = "neutral", helper }) {
@@ -102,21 +128,82 @@ function CustomTooltip({ active, payload }) {
 }
 
 function BudgetVsActualChart({ token }) {
+  const defaultPeriod = useMemo(() => getDefaultPeriod(), []);
   const [data, setData] = useState([]);
+  const [yearDraft, setYearDraft] = useState(String(defaultPeriod.year));
+  const [monthDraft, setMonthDraft] = useState(String(defaultPeriod.month));
+  const [appliedPeriod, setAppliedPeriod] = useState(defaultPeriod);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const api = import.meta.env.VITE_API_URL;
+
+  const loadReport = useCallback(
+    async ({ year, month }) => {
+      if (!token) return;
+
+      setLoading(true);
+      setErrorMsg("");
+
+      try {
+        const res = await axios.get(
+          `${api}/analytics/budget-vs-actual`,
+          withUserTimeZone({
+            headers: { Authorization: `Bearer ${token}` },
+            params: { year, month },
+          })
+        );
+
+        setData(res.data.data || []);
+      } catch (err) {
+        console.error("Error al cargar presupuesto vs real:", err);
+        setData([]);
+        setErrorMsg("No se pudo cargar el reporte para el periodo seleccionado.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [api, token]
+  );
 
   useEffect(() => {
     if (!token) return;
 
-    axios
-      .get(`${api}/analytics/budget-vs-actual`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => setData(res.data.data || []))
-      .catch((err) => {
-        console.error("Error al cargar presupuesto vs real:", err);
-      });
-  }, [token, api]);
+    loadReport(appliedPeriod);
+  }, [appliedPeriod, loadReport, token]);
+
+  const selectedPeriodLabel = useMemo(() => {
+    const monthOption = MONTH_OPTIONS.find(
+      (option) => String(option.value) === String(appliedPeriod.month)
+    );
+    const monthLabel =
+      monthOption?.label?.split(" - ")[1] ||
+      String(appliedPeriod.month).padStart(2, "0");
+
+    return `${monthLabel} ${appliedPeriod.year}`;
+  }, [appliedPeriod]);
+
+  const handleRefresh = useCallback(() => {
+    const nextYear = Number(String(yearDraft).trim());
+    const nextMonth = Number(monthDraft);
+
+    if (
+      !Number.isInteger(nextYear) ||
+      nextYear < 2000 ||
+      nextYear > 2100 ||
+      !Number.isInteger(nextMonth) ||
+      nextMonth < 1 ||
+      nextMonth > 12
+    ) {
+      setErrorMsg("Selecciona un ano y un mes validos.");
+      return;
+    }
+
+    setAppliedPeriod({ year: nextYear, month: nextMonth });
+  }, [monthDraft, yearDraft]);
+
+  const onFilterKeyDown = (event) => {
+    if (event.key === "Enter") handleRefresh();
+  };
 
   // ====== Tokenized UI (solo vars) ======
   const ui = useMemo(() => {
@@ -194,6 +281,81 @@ function BudgetVsActualChart({ token }) {
         </p>
       </div>
 
+      <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-[112px_180px_auto] lg:w-auto">
+        <label>
+          <span className="text-xs font-semibold uppercase text-[var(--muted)]">
+            Ano
+          </span>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={yearDraft}
+            onChange={(event) => setYearDraft(event.target.value)}
+            onKeyDown={onFilterKeyDown}
+            min="2000"
+            max="2100"
+            className="ff-input mt-1 w-full rounded-lg px-3 py-2 text-sm"
+          />
+        </label>
+
+        <label>
+          <span className="text-xs font-semibold uppercase text-[var(--muted)]">
+            Mes
+          </span>
+          <FFSelect
+            value={monthDraft}
+            onChange={(value) => setMonthDraft(String(value))}
+            options={MONTH_OPTIONS}
+            placeholder="Selecciona mes"
+            searchable={false}
+            clearable={false}
+            className="mt-1 w-full"
+            getOptionLabel={(option) => option.label}
+            getOptionValue={(option) => option.value}
+            disabled={loading}
+          />
+        </label>
+
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={loading || !token}
+          className="inline-flex h-10 items-center justify-center gap-2 self-end rounded-lg border px-4 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60"
+          style={{
+            borderColor: "var(--border-rgba)",
+            background: "color-mix(in srgb, var(--primary) 16%, var(--panel))",
+            color: "var(--text)",
+          }}
+          title="Refrescar reporte"
+        >
+          <HiRefresh className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+          Refrescar
+        </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span style={{ color: "var(--muted)" }}>Periodo:</span>
+        <strong style={{ color: "var(--text)" }}>{selectedPeriodLabel}</strong>
+        {loading ? (
+          <span className="text-xs" style={{ color: "var(--muted)" }}>
+            Actualizando...
+          </span>
+        ) : null}
+      </div>
+
+      {errorMsg ? (
+        <div
+          className="rounded-lg border px-3 py-2 text-sm"
+          style={{
+            borderColor: "color-mix(in srgb, var(--danger) 42%, var(--border-rgba))",
+            background: "color-mix(in srgb, var(--danger) 10%, var(--panel))",
+            color: "var(--text)",
+          }}
+        >
+          {errorMsg}
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <SummaryCard
           label="Total presupuesto"
@@ -218,7 +380,7 @@ function BudgetVsActualChart({ token }) {
 
       {chartData.length === 0 ? (
         <p style={{ color: "var(--muted)", fontSize: 14, fontStyle: "italic" }}>
-          No hay datos disponibles.
+          {loading ? "Cargando reporte..." : "No hay datos disponibles."}
         </p>
       ) : (
         <div className="w-full h-[300px]">
