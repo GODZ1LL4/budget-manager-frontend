@@ -267,15 +267,22 @@ function Dashboard({ token, setView }) {
             id: "balances",
             title: "Balance disponible por cuenta y saldo total",
             keywords: "saldo cuentas banco",
-            short: "Saldos por cuenta",
+            short: "Balance de Cuentas",
             panelHint: "Resumen de balances por cuenta.",
             render: () => <AccountBalancesChart token={token} />,
+          },
+          {
+            id: "goals",
+            title: "Avance de metas de ahorro y reservas",
+            keywords: "metas ahorro goals",
+            short: "Ahorro y Reservas",
+            render: () => <GoalsProgressChart token={token} />,
           },
           {
             id: "account-flow-trace",
             title: "Trazabilidad de dinero entre cuentas",
             keywords: "cuentas trazabilidad transferencias ingresos gastos flujo",
-            short: "Flujo entre cuentas",
+            short: "Flujo entre Cuentas",
             panelHint:
               "Sigue ingresos, gastos y transferencias internas por cuenta.",
             render: () => <AccountFlowTraceReport token={token} />,
@@ -285,7 +292,7 @@ function Dashboard({ token, setView }) {
             title: "Generador flexible de reportes",
             keywords:
               "power bi reporte generador parametros agrupacion barra pastel linea tabla",
-            short: "Generador BI",
+            short: "Generador de Reportes",
             panelHint:
               "Arma reportes con filtros, agrupaciones, metricas y visualizaciones.",
             render: () => (
@@ -300,7 +307,7 @@ function Dashboard({ token, setView }) {
             id: "calendar",
             title: "Calendario de transacciones recientes por día",
             keywords: "calendario transacciones",
-            short: "Calendario de transacciones",
+            short: "Calendario de Transacciones",
             panelHint: "Actividad reciente organizada por fecha.",
             render: () => <TransactionsCalendar token={token} />,
           },
@@ -308,7 +315,7 @@ function Dashboard({ token, setView }) {
             id: "burn-rate",
             title: "Ritmo de gasto acumulado del mes",
             keywords: "ritmo gasto burn rate",
-            short: "Velocidad gasto",
+            short: "Ritmo de Gasto",
             panelHint: "Qué tan rápido estás gastando este mes.",
             render: () => <BurnRateChart token={token} />,
           },
@@ -316,7 +323,7 @@ function Dashboard({ token, setView }) {
             id: "burn-rate-advanced",
             title: "Burn rate avanzado contra patrón esperado",
             keywords: "burn rate avanzado",
-            short: "Gasto vs esperado",
+            short: "Ritmo de Gasto Avanzado",
             badge: "Pro",
             panelHint: "Detalle avanzado del ritmo de gasto.",
             render: () => <AdvancedBurnRateChart token={token} />,
@@ -331,15 +338,22 @@ function Dashboard({ token, setView }) {
             id: "income-expense-month",
             title: "Comparativo mensual de ingresos, gastos y balance",
             keywords: "ingresos gastos mensual",
-            short: "Ingreso/gasto mes",
+            short: "Balance Anual",
             panelHint: "Comparación mensual de ingresos y gastos.",
             render: () => <MonthlyIncomeVsExpenseChart token={token} />,
+          },
+          {
+            id: "annual-line",
+            title: "Tendencia anual de ingresos, gastos y ahorro",
+            keywords: "ingresos gastos anual linea",
+            short: "Balance Mensual",
+            render: () => <MonthlyIncomeVsExpenseLineChart token={token} />,
           },
           {
             id: "income-command",
             title: "Centro de comando para fuentes de ingreso",
             keywords: "ingresos command centro comando fuentes caidas estabilidad",
-            short: "Radar ingresos",
+            short: "Radar de Ingresos",
             badge: "Pro",
             panelHint:
               "Vigila fuentes de ingreso, caidas, recurrencia y variacion mensual.",
@@ -355,7 +369,7 @@ function Dashboard({ token, setView }) {
             id: "income-dist-category",
             title: "Distribución mensual de ingresos por categoría",
             keywords: "ingresos distribucion categoria fuentes",
-            short: "Fuentes ingreso",
+            short: "Ingresos por Categoria Mensual",
             panelHint: "De donde vienen los ingresos del periodo.",
             render: () => {
               if (!data) return loading("Cargando data del dashboard...");
@@ -372,7 +386,7 @@ function Dashboard({ token, setView }) {
             id: "income-heatmap",
             title: "Mapa anual de ingresos por categoria y mes",
             keywords: "ingresos heatmap categoria mes anual",
-            short: "Mapa ingresos",
+            short: "Heatmap de Ingresos",
             panelHint: "Concentracion mensual de ingresos por categoria.",
             render: () => <CategoryMonthlyHeatmap token={token} type="income" />,
           },
@@ -380,7 +394,7 @@ function Dashboard({ token, setView }) {
             id: "rec-inc",
             title: "Ingresos recurrentes detectados sin marcar",
             keywords: "ingresos recurrente recurrencias patrones fuentes",
-            short: "Ingresos recurrentes",
+            short: "Recurrencia de Ingresos",
             panelHint:
               "Detecta fuentes de ingreso que se repiten sin estar marcadas como recurrentes.",
             render: () => <RecurringIncomePatternsTable token={token} />,
@@ -389,16 +403,10 @@ function Dashboard({ token, setView }) {
             id: "proj-inc",
             title: "Proyección de ingresos por categoría y estabilidad",
             keywords: "proyeccion ingresos",
-            short: "Ingreso proyectado",
+            short: "Proyeccion de Ingresos",
             render: () => <ProjectedIncomeByCategoryChart token={token} />,
           },
-          {
-            id: "annual-line",
-            title: "Tendencia anual de ingresos, gastos y ahorro",
-            keywords: "ingresos gastos anual linea",
-            short: "Flujo anual",
-            render: () => <MonthlyIncomeVsExpenseLineChart token={token} />,
-          },
+          
         ],
       },
       {
@@ -409,7 +417,7 @@ function Dashboard({ token, setView }) {
             id: "dist-category",
             title: "Distribución mensual del gasto por categoría",
             keywords: "distribucion categoria",
-            short: "Gasto por rubro",
+            short: "Gasto por Categoria Mensual",
             panelHint: "¿En qué categorías se va el dinero?",
             render: () => {
               if (!data) return loading("Cargando data del dashboard…");
@@ -426,21 +434,21 @@ function Dashboard({ token, setView }) {
             id: "weekday",
             title: "Días de la semana con mayor gasto",
             keywords: "weekday semana",
-            short: "Días caros",
+            short: "Promedio de Gasto Diario",
             render: () => <ExpenseByWeekdayChart token={token} />,
           },
           {
             id: "daily-expense-line",
             title: "Evolución diaria del gasto del mes",
             keywords: "gasto diario mes linea",
-            short: "Gasto día a día",
+            short: "Gasto Diario",
             render: () => <DailyExpenseLineChart token={token} />,
           },
           {
             id: "expense-command",
             title: "Centro de comando para categorías de gasto",
             keywords: "gastos command centro comando presupuesto ritmo alerta categoria",
-            short: "Radar gastos",
+            short: "Radar de Gastos",
             badge: "Pro",
             panelHint:
               "Monitorea categorias de gasto, presupuesto, ritmo y variacion mensual.",
@@ -452,21 +460,8 @@ function Dashboard({ token, setView }) {
               />
             ),
           },
-          {
-            id: "stability",
-            title:
-              "Gasto fijo, variable y ocasional por estabilidad",
-            keywords: "estabilidad fijo variable ocasional",
-            short: "Fijo/variable",
-            render: () => <ExpenseByStabilityChart token={token} />,
-          },
-          {
-            id: "ants",
-            title: "Gastos hormiga repetitivos y acumulados",
-            keywords: "hormiga pequenos",
-            short: "Hormiga acumulado",
-            render: () => <AntExpensesReport token={token} />,
-          },
+          
+          
         ],
       },
       {
@@ -477,27 +472,36 @@ function Dashboard({ token, setView }) {
             id: "bva",
             title: "Presupuesto vs gasto real por categoría",
             keywords: "budget actual categoria",
-            short: "Presupuesto mensual",
+            short: "Presupuesto Mensual",
             render: () => <BudgetVsActualChart token={token} />,
+          },
+          {
+            id: "year-summary",
+            title: "Resumen anual de presupuesto, gasto y desvío",
+            keywords: "resumen anual",
+            short: "Presupuesto Anual",
+            render: () => <BudgetVsActualSummaryChart token={token} />,
           },
           {
             id: "budget-category-line",
             title: "Gasto vs presupuesto por categoria anual",
             keywords: "linea presupuesto gasto categoria anual neto",
-            short: "Presupuesto anual",
+            short: "Presupuesto por Categoria Anual",
             panelHint:
               "Comparativo anual por categoria con presupuesto, gasto y neto mensual.",
             render: () => (
               <BudgetCategoryLineReport token={token} categories={categories} />
             ),
           },
+          
           {
             id: "over",
             title: "Categorías con exceso sobre presupuesto",
             keywords: "exceso overbudget",
-            short: "Excesos por rubro",
+            short: "Sobre Presupuesto",
             render: () => <OverBudgetChart token={token} />,
           },
+          
           {
             id: "coverage",
             title: "Cobertura de presupuestos sobre tus gastos",
@@ -513,15 +517,15 @@ function Dashboard({ token, setView }) {
             badge: "Pro",
             render: () => <BudgetCoverageRobustChart token={token} />,
           },
-          {
-            id: "proj-vs-actual",
-            title: "Proyección vs gasto real por categoría",
-            keywords: "proyeccion realidad",
-            short: "Proyección vs real",
-            render: () => (
-              <ProjectedVsActualExpenseByCategoryChart token={token} />
-            ),
-          },
+          // {
+          //   id: "proj-vs-actual",
+          //   title: "Proyección vs gasto real por categoría",
+          //   keywords: "proyeccion realidad",
+          //   short: "Proyección vs real",
+          //   render: () => (
+          //     <ProjectedVsActualExpenseByCategoryChart token={token} />
+          //   ),
+          // },
         ],
       },
       {
@@ -532,32 +536,19 @@ function Dashboard({ token, setView }) {
             id: "unusual",
             title: "Movimientos atípicos que rompen tu patrón",
             keywords: "atipicos unusual",
-            short: "Alertas atípicas",
+            short: "Alertas Atípicas",
             render: () => <UnusualExpensesTable token={token} />,
           },
           {
-            id: "variation-year",
-            title: "Categorías con mayores variaciones anuales",
-            keywords: "variacion anual",
-            short: "Cambios anuales",
-            render: () => (
-              <CategoryVariationChart token={token} categories={categories} />
-            ),
+            id: "ants",
+            title: "Gastos hormiga repetitivos y acumulados",
+            keywords: "hormiga pequenos",
+            short: "Gastos Hormiga",
+            render: () => <AntExpensesReport token={token} />,
           },
-          {
-            id: "year-summary",
-            title: "Resumen anual de presupuesto, gasto y desvío",
-            keywords: "resumen anual",
-            short: "Cierre anual",
-            render: () => <BudgetVsActualSummaryChart token={token} />,
-          },
-          {
-            id: "top-variable",
-            title: "Categorías variables con mayor peso de gasto",
-            keywords: "resumen anual",
-            short: "Variables críticas",
-            render: () => <TopVariableCategoriesChart token={token} />,
-          },
+          
+          
+         
         ],
       },
       {
@@ -568,30 +559,55 @@ function Dashboard({ token, setView }) {
             id: "heatmap",
             title: "Mapa anual de gasto por categoría y mes",
             keywords: "heatmap",
-            short: "Mapa gasto anual",
+            short: "Heatmap de Gastos",
             render: () => <CategoryMonthlyHeatmap token={token} />,
+          },
+          {
+            id: "variation-year",
+            title: "Categorías con mayores variaciones anuales",
+            keywords: "variacion anual",
+            short: "Gastos por Categoria Anual",
+            render: () => (
+              <CategoryVariationChart token={token} categories={categories} />
+            ),
+          },
+           {
+            id: "top-variable",
+            title: "Categorías variables con mayor peso de gasto",
+            keywords: "resumen anual",
+            short: "Gastos por Tipo-Categoria",
+            render: () => <TopVariableCategoriesChart token={token} />,
           },
           {
             id: "cmp-cat",
             title: "Comparativo mensual de categorías de gasto",
             keywords: "comparativo categoria",
-            short: "Categorías por mes",
+            short: "Comparativa de Categorias Mensual",
             render: () => <CategoryMonthlyComparisonTable token={token} />,
           },
           {
             id: "cmp-item",
             title: "Comparativo mensual por artículo comprado",
             keywords: "comparativo articulo item",
-            short: "Artículos por mes",
+            short: "Comparativa de Articulos Mensual",
             render: () => <ItemMonthlyComparisonTable token={token} />,
           },
           {
             id: "history-item",
             title: "Historial de compras por artículo específico",
             keywords: "historico compras",
-            short: "Compras por artículo",
+            short: "Historico de Artículos",
             render: () => <ItemPurchaseHistoryReport token={token} />,
           },
+          {
+            id: "stability",
+            title:
+              "Gasto fijo, variable y ocasional por estabilidad",
+            keywords: "estabilidad fijo variable ocasional",
+            short: "Gastos por Tipo (Total)",
+            render: () => <ExpenseByStabilityChart token={token} />,
+          },
+          
         ],
       },
       {
@@ -602,14 +618,14 @@ function Dashboard({ token, setView }) {
             id: "item-price",
             title: "Tendencia histórica de precios por artículo",
             keywords: "precio tendencia",
-            short: "Precios históricos",
+            short: "Precios Históricos",
             render: () => <ItemPriceTrendChart token={token} />,
           },
           {
             id: "item-price-command",
             title: "Centro de comando de inflación por artículos",
             keywords: "precio articulos bolsa racha inflacion comparativo lista",
-            short: "Subidas de precio",
+            short: "Radar de Articulos",
             badge: "Pro",
             panelHint:
               "Detecta articulos con subidas consecutivas y compara una cesta contra el precio anterior.",
@@ -619,21 +635,21 @@ function Dashboard({ token, setView }) {
             id: "item-trend",
             title: "Consumo mensual por artículo comprado",
             keywords: "consumo tendencia",
-            short: "Consumo por artículo",
+            short: "Consumo por Artículo",
             render: () => <ItemTrendChart token={token} />,
           },
           {
             id: "item-patterns",
             title: "Patrones recurrentes de compra por artículo",
             keywords: "patrones item",
-            short: "Compras recurrentes",
+            short: "Compras Recurrentes",
             render: () => <RecurringItemPatternsTable token={token} />,
           },
           {
             id: "top-items",
             title: "Artículos con mayor gasto por categoría",
             keywords: "top items",
-            short: "Artículos top",
+            short: "Compra de Artículos por Categoria",
             render: () => (
               <TopItemsByCategoryChart token={token} categories={categories} />
             ),
@@ -642,7 +658,7 @@ function Dashboard({ token, setView }) {
             id: "items-annual",
             title: "Resumen anual de consumo y gasto por artículos",
             keywords: "resumen anual items",
-            short: "Año por artículos",
+            short: "Resumen de Compra",
             render: () => <ItemsAnnualSummaryTable token={token} />,
           },
         ],
@@ -655,14 +671,14 @@ function Dashboard({ token, setView }) {
             id: "rec-exp",
             title: "Gastos recurrentes detectados sin marcar",
             keywords: "recurrente no marcado",
-            short: "Gastos recurrentes",
+            short: "Gastos Recurrentes",
             render: () => <RecurringExpensePatternsTable token={token} />,
           },
           {
             id: "intervals",
             title: "Intervalos promedio entre gastos por categoría",
             keywords: "intervalo",
-            short: "Frecuencia de gasto",
+            short: "Frecuencia de Gasto",
             render: () => <ExpenseIntervalsByCategoryTable token={token} />,
           },
         ],
@@ -675,15 +691,15 @@ function Dashboard({ token, setView }) {
             id: "forecast",
             title: "Forecast de flujo futuro por período",
             keywords: "forecast flujo",
-            short: "Flujo futuro",
+            short: "Prediccion de Gastos",
             badge: "Pro",
             render: () => <ExpenseForecastChart token={token} />,
           },
           {
             id: "forecast-items",
-            title: "Forecast de gastos futuros por artículos",
-            keywords: "forecast items",
-            short: "Gasto futuro ítems",
+            title: "Compras sugeridas por artículos",
+            keywords: "forecast items compras sugeridas",
+            short: "Prediccion de Compras",
             badge: "Pro",
             render: () => <ItemExpenseForecast token={token} />,
           },
@@ -691,16 +707,10 @@ function Dashboard({ token, setView }) {
             id: "proj-exp",
             title: "Proyección de gasto por categoría y estabilidad",
             keywords: "proyeccion gastos",
-            short: "Gasto proyectado",
+            short: "Gastos Proyectados del Mes",
             render: () => <ProjectedExpenseByCategoryChart token={token} />,
           },
-          {
-            id: "goals",
-            title: "Avance de metas de ahorro y reservas",
-            keywords: "metas ahorro goals",
-            short: "Ahorro y reservas",
-            render: () => <GoalsProgressChart token={token} />,
-          },
+          
         ],
       },
     ];

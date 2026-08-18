@@ -23,6 +23,12 @@ const formatMoney = (v) =>
 /** Utils tokenizados */
 const safeNum = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
+const formatSignedMoney = (v) => {
+  const amount = safeNum(v);
+  const sign = amount > 0 ? "+" : amount < 0 ? "-" : "";
+  return `${sign}${formatMoney(Math.abs(amount))}`;
+};
+
 function BudgetVsActualSummaryChart({ token }) {
   const api = import.meta.env.VITE_API_URL;
 
@@ -167,7 +173,7 @@ function BudgetVsActualSummaryChart({ token }) {
       0
     );
     const spent = (monthly || []).reduce((acc, r) => acc + safeNum(r.spent), 0);
-    return { budgeted, spent, diff: spent - budgeted };
+    return { budgeted, spent, diff: spent - budgeted, neto: budgeted - spent };
   }, [monthly]);
 
   const totalsCategories = useMemo(() => {
@@ -179,7 +185,7 @@ function BudgetVsActualSummaryChart({ token }) {
       (acc, r) => acc + safeNum(r.spent),
       0
     );
-    return { budgeted, spent, diff: spent - budgeted };
+    return { budgeted, spent, diff: spent - budgeted, neto: budgeted - spent };
   }, [categories]);
 
   const monthTick = (m) => (typeof m === "string" ? m.slice(5, 7) : m);
@@ -435,6 +441,18 @@ function BudgetVsActualSummaryChart({ token }) {
                     {formatMoney(totalsMonthly.spent)}
                   </span>
                 </div>
+                <div style={{ color: ui.muted }}>
+                  Neto:{" "}
+                  <span
+                    style={{
+                      color:
+                        totalsMonthly.neto >= 0 ? ui.success : ui.danger,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {formatSignedMoney(totalsMonthly.neto)}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -525,6 +543,18 @@ function BudgetVsActualSummaryChart({ token }) {
                   Gasto:{" "}
                   <span style={{ color: ui.danger, fontWeight: 800 }}>
                     {formatMoney(totalsCategories.spent)}
+                  </span>
+                </div>
+                <div style={{ color: ui.muted }}>
+                  Neto:{" "}
+                  <span
+                    style={{
+                      color:
+                        totalsCategories.neto >= 0 ? ui.success : ui.danger,
+                      fontWeight: 800,
+                    }}
+                  >
+                    {formatSignedMoney(totalsCategories.neto)}
                   </span>
                 </div>
               </div>

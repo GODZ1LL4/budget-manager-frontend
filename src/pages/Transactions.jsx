@@ -32,6 +32,14 @@ function getCurrentMonthRange() {
   return currentMonthRange();
 }
 
+function parseDiscountPercent(value) {
+  const normalized = String(value ?? "").trim().replace(",", ".");
+  if (!normalized) return 0;
+  const number = Number(normalized);
+  if (!Number.isFinite(number)) return 0;
+  return Math.max(0, Math.min(100, number));
+}
+
 function filterTransactionsLocally(data, filters) {
   return (data || []).filter((tx) => {
     const descriptionMatch = filters.description?.trim()
@@ -92,7 +100,7 @@ function Transactions({ token, subscriptionMode }) {
   const [items, setItems] = useState([]);
   const [isShoppingList, setIsShoppingList] = useState(false);
   const [articleLines, setArticleLines] = useState([{ item_id: "", quantity: 1 }]);
-  const [discount, setDiscount] = useState(0);
+  const [discount, setDiscount] = useState("");
   const [recurrence, setRecurrence] = useState("");
   const [recurrenceEndDate, setRecurrenceEndDate] = useState("");
   const [showImportTransactionsModal, setShowImportTransactionsModal] = useState(false);
@@ -127,6 +135,7 @@ function Transactions({ token, subscriptionMode }) {
     mobileMenuRef,
     Boolean(mobileMenuId)
   );
+  const discountPercent = parseDiscountPercent(discount);
 
   const txTypeOptions = useMemo(() => [
     { value: "expense", label: t("transactions.expense") },
@@ -233,7 +242,7 @@ function Transactions({ token, subscriptionMode }) {
     setRecurrence("");
     setRecurrenceEndDate("");
     setIsShoppingList(false);
-    setDiscount(0);
+    setDiscount("");
   };
 
   const openDetail = async (tx) => {
@@ -286,7 +295,7 @@ function Transactions({ token, subscriptionMode }) {
           recurrence: recurrence || null,
           recurrence_end_date: recurrenceEndDate || null,
           items: isShoppingList ? articleLines : [],
-          discount: isShoppingList ? discount : 0,
+          discount: isShoppingList ? discountPercent : 0,
         },
         subscriptionMode,
       });
@@ -530,15 +539,15 @@ function Transactions({ token, subscriptionMode }) {
         setRecurrenceEndDate("");
         return sum + subtotal + taxAmount;
       }, 0);
-      if (discount > 0) total = total * (1 - discount / 100);
+      if (discountPercent > 0) total = total * (1 - discountPercent / 100);
       setAmount(total.toFixed(2));
     }
-  }, [articleLines, isShoppingList, items, discount]);
+  }, [articleLines, isShoppingList, items, discountPercent]);
 
   useEffect(() => {
     if (shoppingListBlockedOnMobile && isShoppingList) {
       setIsShoppingList(false);
-      setDiscount(0);
+      setDiscount("");
     }
   }, [shoppingListBlockedOnMobile, isShoppingList]);
 
@@ -628,7 +637,7 @@ function Transactions({ token, subscriptionMode }) {
         {isShoppingList && (
           <div className="flex flex-col space-y-1">
             <label className="ff-label">{t("transactions.discount")}</label>
-            <input type="number" value={discount} min="0" max="100" step="0.01" onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)} className="ff-input" placeholder="5" />
+            <input type="number" value={discount} min="0" max="100" step="0.01" onChange={(e) => setDiscount(e.target.value)} className="ff-input" placeholder="5" />
           </div>
         )}
 
@@ -1081,7 +1090,7 @@ function Transactions({ token, subscriptionMode }) {
         items={items}
         api={api}
         token={token}
-        meta={{ account_id: accountId, category_id: categoryId, date, description, discount }}
+        meta={{ account_id: accountId, category_id: categoryId, date, description, discount: discountPercent }}
         onImported={async () => {
           await fetchTransactions();
           resetCreateForm();
@@ -1150,7 +1159,7 @@ function Transactions({ token, subscriptionMode }) {
         api={api}
         token={token}
         items={items}
-        meta={{ account_id: accountId, category_id: categoryId, date, description, discount }}
+        meta={{ account_id: accountId, category_id: categoryId, date, description, discount: discountPercent }}
         onCreated={async () => {
           await fetchTransactions();
           resetCreateForm();

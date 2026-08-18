@@ -6,6 +6,8 @@ import {
   withUserTimeZone,
 } from "../../lib/dates/localDate";
 
+const STORAGE_KEY = "report:item-expense-forecast:params";
+
 /* ================= Utils ================= */
 
 function lastDayOfMonthISO(dateISO) {
@@ -39,6 +41,81 @@ function formatDateShort(iso) {
   const [y, m, d] = String(iso).split("-");
   if (!y || !m || !d) return iso;
   return `${d}/${m}/${y}`;
+}
+
+function formatQuantity(value, isDiscrete = false) {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n)) return "0";
+  return isDiscrete ? String(Math.round(n)) : n.toFixed(2);
+}
+
+function getShoppingStatus(row) {
+  switch (row?.shopping_status) {
+    case "overdue":
+      return { label: "Vencido", tone: "danger" };
+    case "today":
+      return { label: "Hoy", tone: "warning" };
+    case "due_soon":
+      return { label: "Pronto", tone: "primary" };
+    case "scheduled":
+      return { label: "Programado", tone: "success" };
+    default:
+      return { label: "Posible", tone: "default" };
+  }
+}
+
+function getPatternLabel(row) {
+  return row?.type === "recurring" ? "Recurrente" : "Posible";
+}
+
+const STATUS_FILTER_OPTIONS = [
+  { value: "all", label: "Todos" },
+  { value: "not_overdue", label: "Sin vencidos" },
+  { value: "overdue", label: "Vencidos" },
+  { value: "due_now", label: "Vencidos / hoy" },
+  { value: "due_soon", label: "Hoy / pronto" },
+  { value: "scheduled", label: "Programados" },
+];
+
+function sanitizeParams(raw) {
+  const minIntervalDays = clampDraftNumber(raw?.minIntervalDays, 1, 365, 3);
+  const statusFilter = STATUS_FILTER_OPTIONS.some(
+    (option) => option.value === raw?.statusFilter
+  )
+    ? raw.statusFilter
+    : "all";
+
+  return {
+    months: clampDraftNumber(raw?.months, 1, 36, 6),
+    minOccurrences: clampDraftNumber(raw?.minOccurrences, 2, 50, 3),
+    limit: clampDraftNumber(raw?.limit, 1, 200, 50),
+    statusFilter,
+    includeNoise:
+      typeof raw?.includeNoise === "boolean" ? raw.includeNoise : true,
+    includeStale:
+      typeof raw?.includeStale === "boolean" ? raw.includeStale : false,
+    minIntervalDays,
+    maxIntervalDays: clampDraftNumber(
+      raw?.maxIntervalDays,
+      minIntervalDays,
+      3650,
+      Math.max(180, minIntervalDays)
+    ),
+    maxCoefVariation: clampDraftNumber(raw?.maxCoefVariation, 0.05, 2, 1),
+    dueSoonDays: clampDraftNumber(raw?.dueSoonDays, 0, 60, 7),
+  };
+}
+
+function getInitialParams() {
+  if (typeof window === "undefined") return sanitizeParams({});
+
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return sanitizeParams({});
+    return sanitizeParams(JSON.parse(saved));
+  } catch {
+    return sanitizeParams({});
+  }
 }
 
 /* ================= Token helpers ================= */
@@ -157,6 +234,7 @@ function InfoTip({ children, widthClass = "w-56" }) {
 
 export default function ItemExpenseForecast({ token }) {
   const api = import.meta.env.VITE_API_URL;
+  const initialParams = useMemo(() => getInitialParams(), []);
 
   const todayISO = useMemo(() => todayDateKey(), []);
   const defaultDateTo = useMemo(() => lastDayOfMonthISO(todayISO), [todayISO]);
@@ -164,15 +242,28 @@ export default function ItemExpenseForecast({ token }) {
   const [dateFrom, setDateFrom] = useState(todayISO);
   const [dateTo, setDateTo] = useState(defaultDateTo);
 
-  const [months, setMonths] = useState("6");
-  const [minOccurrences, setMinOccurrences] = useState("3");
-  const [limit, setLimit] = useState("15");
+  const [months, setMonths] = useState(String(initialParams.months));
+  const [minOccurrences, setMinOccurrences] = useState(
+    String(initialParams.minOccurrences)
+  );
+  const [limit, setLimit] = useState(String(initialParams.limit));
+  const [statusFilter, setStatusFilter] = useState(initialParams.statusFilter);
 
-  const [includeNoise, setIncludeNoise] = useState(true);
+  const [includeNoise, setIncludeNoise] = useState(initialParams.includeNoise);
 
-  const [minIntervalDays, setMinIntervalDays] = useState("3");
-  const [maxIntervalDays, setMaxIntervalDays] = useState("70");
-  const [maxCoefVariation, setMaxCoefVariation] = useState("0.6");
+  const [minIntervalDays, setMinIntervalDays] = useState(
+    String(initialParams.minIntervalDays)
+  );
+  const [maxIntervalDays, setMaxIntervalDays] = useState(
+    String(initialParams.maxIntervalDays)
+  );
+  const [maxCoefVariation, setMaxCoefVariation] = useState(
+    String(initialParams.maxCoefVariation)
+  );
+  const [dueSoonDays, setDueSoonDays] = useState(
+    String(initialParams.dueSoonDays)
+  );
+  const [includeStale, setIncludeStale] = useState(initialParams.includeStale);
 
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -188,6 +279,43 @@ export default function ItemExpenseForecast({ token }) {
     setDateTo(lastDayOfMonthISO(dateFrom));
   }, [dateFrom]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const paramsToSave = sanitizeParams({
+      months,
+      minOccurrences,
+      limit,
+      statusFilter,
+      includeNoise,
+      includeStale,
+      minIntervalDays,
+      maxIntervalDays,
+      maxCoefVariation,
+      dueSoonDays,
+    });
+
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(paramsToSave));
+    } catch (e) {
+      console.error(
+        "No se pudieron guardar los parámetros de item expense forecast:",
+        e
+      );
+    }
+  }, [
+    months,
+    minOccurrences,
+    limit,
+    statusFilter,
+    includeNoise,
+    includeStale,
+    minIntervalDays,
+    maxIntervalDays,
+    maxCoefVariation,
+    dueSoonDays,
+  ]);
+
   const loadData = async () => {
     if (!token) return;
 
@@ -199,15 +327,16 @@ export default function ItemExpenseForecast({ token }) {
       const params = {
         months: clampDraftNumber(months, 1, 36, 6),
         minOccurrences: clampDraftNumber(minOccurrences, 2, 50, 3),
-        limit: clampDraftNumber(limit, 1, 50, 15),
+        limit: clampDraftNumber(limit, 1, 200, 50),
         minIntervalDays: minInterval,
         maxIntervalDays: clampDraftNumber(
           maxIntervalDays,
           minInterval,
           3650,
-          Math.max(70, minInterval)
+          Math.max(180, minInterval)
         ),
-        maxCoefVariation: clampDraftNumber(maxCoefVariation, 0.05, 2, 0.6),
+        maxCoefVariation: clampDraftNumber(maxCoefVariation, 0.05, 2, 1),
+        dueSoonDays: clampDraftNumber(dueSoonDays, 0, 60, 7),
       };
 
       const res = await axios.get(
@@ -220,7 +349,10 @@ export default function ItemExpenseForecast({ token }) {
             months: params.months,
             min_occurrences: params.minOccurrences,
             limit: params.limit,
+            status_filter: statusFilter,
             include_noise: includeNoise,
+            include_stale: includeStale,
+            due_soon_days: params.dueSoonDays,
             min_interval_days: params.minIntervalDays,
             max_interval_days: params.maxIntervalDays,
             max_coef_variation: params.maxCoefVariation,
@@ -251,7 +383,14 @@ export default function ItemExpenseForecast({ token }) {
 
   // Derived
   const totalExpense = Number(summary?.total_expense || 0);
-  const qtyExpected = Number(summary?.quantity_expected || 0);
+  const itemsSuggested = Number(summary?.items_suggested || rows?.length || 0);
+  const totalMatching = Number(meta?.filtered_candidates || itemsSuggested);
+  const itemsSuggestedLabel =
+    totalMatching > itemsSuggested
+      ? `${itemsSuggested}/${totalMatching}`
+      : String(itemsSuggested);
+  const dueNow = Number(summary?.due_now || 0);
+  const dueSoon = Number(summary?.due_soon || 0);
 
   const historyLabel =
     meta?.history_from && meta?.history_to
@@ -277,12 +416,12 @@ export default function ItemExpenseForecast({ token }) {
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3 min-w-0">
         <div className="flex-1 min-w-0">
           <h3 className="text-xl sm:text-2xl font-bold text-[var(--text)] tracking-tight">
-            Proyección de gasto por artículos
+            Compras sugeridas por artículos
           </h3>
 
           <p className="text-sm text-[color-mix(in srgb,var(--text)_86%,transparent)] mt-1 max-w-4xl">
-            Forecast basado en patrones recurrentes de compra por ítem + eventos (noise).
-            Ordenado por gasto proyectado.
+            Identifica artículos que probablemente debes comprar según tu cadencia histórica.
+            Ordenado por urgencia y confianza.
           </p>
 
           <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -307,7 +446,7 @@ export default function ItemExpenseForecast({ token }) {
           disabled={loading}
           className="ff-btn ff-btn-primary self-start lg:self-auto disabled:opacity-60"
         >
-          {loading ? "Proyectando..." : "Proyectar"}
+          {loading ? "Buscando..." : "Actualizar lista"}
         </button>
       </div>
 
@@ -325,17 +464,29 @@ export default function ItemExpenseForecast({ token }) {
       ) : null}
 
       {/* KPIs (sin card de rango) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
         <StatCard
-          label="Gasto proyectado"
-          value={formatMoney(totalExpense)}
-          tone="danger"
+          label="Artículos sugeridos"
+          value={itemsSuggestedLabel}
+          tone="primary"
           size="sm"
         />
         <StatCard
-          label="Cantidad esperada"
-          value={String(qtyExpected.toFixed(2))}
+          label="Vencidos / hoy"
+          value={String(dueNow)}
+          tone={dueNow > 0 ? "danger" : "success"}
+          size="sm"
+        />
+        <StatCard
+          label="Próximos"
+          value={String(dueSoon)}
           tone="warning"
+          size="sm"
+        />
+        <StatCard
+          label="Total estimado"
+          value={formatMoney(totalExpense)}
+          tone="danger"
           size="sm"
         />
       </div>
@@ -349,7 +500,7 @@ export default function ItemExpenseForecast({ token }) {
         }}
       >
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 items-end">
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-4">
             <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
               Rango
             </label>
@@ -400,22 +551,39 @@ export default function ItemExpenseForecast({ token }) {
             />
           </div>
 
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-2">
             <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
-              Top
+              Ver
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="ff-input w-full"
+            >
+              {STATUS_FILTER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="lg:col-span-2">
+            <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
+              Mostrar
             </label>
             <input
               type="text"
               inputMode="numeric"
               min={1}
-              max={50}
+              max={200}
               value={limit}
               onChange={(e) => setLimit(e.target.value)}
               className="ff-input w-full"
             />
           </div>
 
-          <div className="lg:col-span-2 flex flex-col gap-2">
+          <div className="lg:col-span-12 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <label className="flex items-center gap-2 text-sm text-[var(--text)]">
               <input
                 type="checkbox"
@@ -423,7 +591,17 @@ export default function ItemExpenseForecast({ token }) {
                 onChange={(e) => setIncludeNoise(e.target.checked)}
                 className="accent-[var(--primary)]"
               />
-              Incluir eventos (noise)
+              Incluir posibles irregulares
+            </label>
+
+            <label className="flex items-center gap-2 text-sm text-[var(--text)]">
+              <input
+                type="checkbox"
+                checked={includeStale}
+                onChange={(e) => setIncludeStale(e.target.checked)}
+                className="accent-[var(--primary)]"
+              />
+              Incluir muy viejos
             </label>
           </div>
         </div>
@@ -433,7 +611,7 @@ export default function ItemExpenseForecast({ token }) {
             Ajustes avanzados
           </summary>
 
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
             <div>
               <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
                 Min intervalo (días)
@@ -477,6 +655,21 @@ export default function ItemExpenseForecast({ token }) {
                 className="ff-input w-full"
               />
             </div>
+
+            <div>
+              <label className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] mb-1 block">
+                Pronto (dias)
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                min={0}
+                max={60}
+                value={dueSoonDays}
+                onChange={(e) => setDueSoonDays(e.target.value)}
+                className="ff-input w-full"
+              />
+            </div>
           </div>
         </details>
       </div>
@@ -506,7 +699,7 @@ export default function ItemExpenseForecast({ token }) {
           }}
         >
           <div className="text-sm text-[var(--text)] font-extrabold">
-            Detalle de patrones por artículo
+            Lista sugerida por artículo
           </div>
           <div className="text-xs text-[color-mix(in srgb,var(--text)_86%,transparent)] whitespace-nowrap">
             {rangeLabel}
@@ -521,9 +714,9 @@ export default function ItemExpenseForecast({ token }) {
 
                 <th className="text-right w-[14%]">
                   <div className="inline-flex items-center gap-1 justify-end">
-                    PROY.{" "}
+                    EST.{" "}
                     <InfoTip widthClass="w-56">
-                      Monto total estimado proyectado para el período seleccionado.
+                      Total estimado para las compras sugeridas en el período.
                     </InfoTip>
                   </div>
                 </th>
@@ -532,7 +725,7 @@ export default function ItemExpenseForecast({ token }) {
                   <div className="inline-flex items-center gap-1 justify-end">
                     CANT.{" "}
                     <InfoTip widthClass="w-64">
-                      Cantidad esperada. Si el ítem es unitario se redondea; si es por
+                      Cantidad recomendada. Si el ítem es unitario se redondea; si es por
                       peso/volumen se mantiene decimal.
                     </InfoTip>
                   </div>
@@ -540,29 +733,29 @@ export default function ItemExpenseForecast({ token }) {
 
                 <th className="text-right w-[8%]">
                   <div className="inline-flex items-center gap-1 justify-end">
-                    INT.{" "}
+                    FECHA{" "}
                     <InfoTip widthClass="w-52">
-                      Intervalo mediano (en días) entre compras del ítem.
+                      Fecha sugerida para comprar según la cadencia histórica.
                     </InfoTip>
                   </div>
                 </th>
 
                 <th className="text-right w-[12%]">
                   <div className="inline-flex items-center gap-1 justify-end">
-                    MONTO{" "}
+                    CONF.{" "}
                     <InfoTip widthClass="w-52">
-                      Valor típico (mediano) por evento diario del ítem.
+                      Confianza del patrón calculada con ocurrencias, regularidad y recencia.
                     </InfoTip>
                   </div>
                 </th>
 
-                <th className="text-center w-[10%]">TIPO</th>
+                <th className="text-center w-[10%]">ESTADO</th>
 
                 <th className="text-right w-[12%]">
                   <div className="inline-flex items-center gap-1 justify-end">
-                    ÚLTIMA{" "}
+                    CAD.{" "}
                     <InfoTip widthClass="w-52">
-                      Última fecha detectada en el historial.
+                      Cadencia mediana y última compra detectada.
                     </InfoTip>
                   </div>
                 </th>
@@ -577,11 +770,12 @@ export default function ItemExpenseForecast({ token }) {
               }}
             >
               {(rows || []).map((r, idx) => {
-                const isEvent = r.type === "event";
-                const qty = Number(r.expected_quantity || 0);
-                const qtyLabel = r.is_discrete
-                  ? String(Math.round(qty))
-                  : qty.toFixed(2);
+                const status = getShoppingStatus(r);
+                const qtyLabel = formatQuantity(
+                  r.recommended_quantity ?? r.expected_quantity,
+                  r.is_discrete
+                );
+                const confidence = Number(r.confidence_score || 0);
 
                 return (
                   <tr
@@ -591,6 +785,9 @@ export default function ItemExpenseForecast({ token }) {
                     <td className="px-2 py-2 text-[var(--text)] align-top">
                       <div className="text-[13px] font-semibold leading-snug whitespace-normal break-words">
                         {r.item_name}
+                      </div>
+                      <div className="mt-1 text-[11px] leading-snug text-[color-mix(in srgb,var(--text)_65%,transparent)]">
+                        {r.category_name || "Sin categoría"} · {getPatternLabel(r)}
                       </div>
                     </td>
 
@@ -611,23 +808,26 @@ export default function ItemExpenseForecast({ token }) {
                     </td>
 
                     <td className="px-2 py-2 text-right text-[var(--text)] tabular-nums align-top">
-                      {r.median_interval_days != null
-                        ? `${r.median_interval_days}d`
-                        : "—"}
+                      {formatDateShort(r.suggested_purchase_date || r.due_date)}
                     </td>
 
                     <td className="px-2 py-2 text-right text-[var(--text)] tabular-nums align-top">
-                      {formatMoney(r.median_amount || 0)}
+                      {confidence ? `${confidence.toFixed(0)}%` : "—"}
                     </td>
 
                     <td className="px-2 py-2 text-center align-top">
-                      <Badge tone={isEvent ? "warning" : "primary"}>
-                        {isEvent ? "Evento" : "Recurrente"}
-                      </Badge>
+                      <Badge tone={status.tone}>{status.label}</Badge>
                     </td>
 
-                    <td className="px-2 py-2 text-right tabular-nums align-top whitespace-nowrap text-[color-mix(in srgb,var(--text)_86%,transparent)]">
-                      {formatDateShort(r.last_date)}
+                    <td className="px-2 py-2 text-right tabular-nums align-top text-[color-mix(in srgb,var(--text)_86%,transparent)]">
+                      <div className="whitespace-nowrap">
+                        {r.median_interval_days != null
+                          ? `${r.median_interval_days}d`
+                          : "—"}
+                      </div>
+                      <div className="mt-0.5 text-[11px] whitespace-nowrap text-[color-mix(in srgb,var(--text)_60%,transparent)]">
+                        Última {formatDateShort(r.last_date)}
+                      </div>
                     </td>
                   </tr>
                 );
