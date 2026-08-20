@@ -959,10 +959,10 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
             >
               <div className="mb-4">
                 <h4 className="text-base font-bold text-[var(--text)]">
-                  Categorias: escenario vs real
+                  Gasto por Categoria "Escenario vs Real"
                 </h4>
                 <p className="text-sm text-[var(--muted)]">
-                  Comparativo horizontal de gastos por categoria en {monthLabel}.
+                  Comparativo de gastos por categoria en {monthLabel}.
                 </p>
               </div>
 
@@ -1027,7 +1027,7 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
             >
               <div className="mb-4">
                 <h4 className="text-base font-bold text-[var(--text)]">
-                  Burn rate del escenario
+                  Burn Rate
                 </h4>
                 <p className="text-sm text-[var(--muted)]">
                   Gasto acumulado diario del escenario contra el gasto real.

@@ -716,8 +716,8 @@ function Dashboard({ token, setView }) {
             title: "Escenario vs transacciones reales",
             keywords:
               "escenario realidad calendario comparativo categoria burn rate real proyeccion",
-            short: "Escenario vs Real",
-            badge: "Nuevo",
+            short: "Escenario vs Ejecutado",
+            badge: "PRO",
             panelHint:
               "Compara un escenario guardado contra tus transacciones reales con calendario, categorias y burn rate.",
             render: () => (
