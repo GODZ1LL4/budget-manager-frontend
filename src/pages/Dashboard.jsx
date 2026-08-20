@@ -52,6 +52,7 @@ import AntExpensesReport from "../components/reports/AntExpensesReport";
 import ItemPurchaseHistoryReport from "../components/reports/ItemPurchaseHistoryReport";
 import TopVariableCategoriesChart from "../components/reports/TopVariableCategoriesChart";
 import DailyExpenseLineChart from "../components/reports/DailyExpenseLineChart";
+import ScenarioVsActualProjectionReport from "../components/reports/ScenarioVsActualProjectionReport";
 
 function Dashboard({ token, setView }) {
 
@@ -710,11 +711,27 @@ function Dashboard({ token, setView }) {
             short: "Gastos Proyectados del Mes",
             render: () => <ProjectedExpenseByCategoryChart token={token} />,
           },
+          {
+            id: "scenario-vs-actual",
+            title: "Escenario vs transacciones reales",
+            keywords:
+              "escenario realidad calendario comparativo categoria burn rate real proyeccion",
+            short: "Escenario vs Real",
+            badge: "Nuevo",
+            panelHint:
+              "Compara un escenario guardado contra tus transacciones reales con calendario, categorias y burn rate.",
+            render: () => (
+              <ScenarioVsActualProjectionReport
+                token={token}
+                onOpenScenarios={() => setView?.("scenarios")}
+              />
+            ),
+          },
           
         ],
       },
     ];
-  }, [token, data, categories, accounts]);
+  }, [token, data, categories, accounts, setView]);
 
   const accountBalances = useMemo(() => {
     const rawAccounts =
