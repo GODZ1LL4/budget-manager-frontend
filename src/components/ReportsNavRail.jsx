@@ -68,7 +68,6 @@ function ReportsNavRail({
   sections,
   storageKey = "reports_active_section",
   defaultSectionId,
-  preloadNext = false,
   railStorageKey = "reports_rail_collapsed",
   groupStorageKey = "reports_group_open_map",
   searchInputRef,
@@ -122,12 +121,6 @@ function ReportsNavRail({
   useEffect(() => {
     if (!active && flat[0]) setActiveId(flat[0].id);
   }, [active, flat]);
-
-  const next = useMemo(() => {
-    if (!preloadNext || !active) return null;
-    const idx = flat.findIndex((x) => x.id === active.id);
-    return idx >= 0 ? flat[idx + 1] : null;
-  }, [preloadNext, flat, active]);
 
   useEffect(() => {
     if (!query.trim()) return;
@@ -264,19 +257,32 @@ function ReportsNavRail({
                       <button
                         key={it.id}
                         onClick={() => setActiveId(it.id)}
-                        className="w-full px-2 py-2 rounded-lg transition"
+                        aria-current={isActive ? "page" : undefined}
+                        className="relative w-full overflow-hidden px-2 py-2 rounded-lg transition"
                         style={{
                           background: isActive
-                            ? "color-mix(in srgb, var(--panel) 60%, transparent)"
+                            ? "linear-gradient(135deg, color-mix(in srgb, var(--primary) 24%, var(--panel)), color-mix(in srgb, var(--panel) 72%, transparent))"
                             : "transparent",
                           border: isActive
-                            ? "1px solid color-mix(in srgb, var(--text) 14%, transparent)"
+                            ? "1px solid color-mix(in srgb, var(--primary) 62%, var(--border-rgba))"
                             : "1px solid transparent",
-                          color: "var(--text)",
+                          boxShadow: isActive
+                            ? "inset 0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent), 0 10px 24px color-mix(in srgb, var(--primary) 12%, transparent)"
+                            : "none",
+                          color: isActive
+                            ? "color-mix(in srgb, var(--primary) 80%, var(--text))"
+                            : "var(--text)",
                         }}
                         title={it.title}
                       >
-                        <span className="text-xs font-bold">
+                        {isActive ? (
+                          <span
+                            aria-hidden="true"
+                            className="absolute inset-y-2 left-0 w-1 rounded-r-full"
+                            style={{ background: "var(--primary)" }}
+                          />
+                        ) : null}
+                        <span className="relative text-xs font-bold">
                           {(it.short || it.title).slice(0, 2)}
                         </span>
                       </button>
@@ -287,21 +293,45 @@ function ReportsNavRail({
                     <button
                       key={it.id}
                       onClick={() => setActiveId(it.id)}
-                      className="w-full text-left px-3 py-2 rounded-lg transition"
+                      aria-current={isActive ? "page" : undefined}
+                      className="relative w-full overflow-hidden text-left px-3 py-2 rounded-lg transition"
                       style={{
-                        color: "var(--text)",
+                        color: isActive
+                          ? "color-mix(in srgb, var(--primary) 78%, var(--text))"
+                          : "var(--text)",
                         background: isActive
-                          ? "color-mix(in srgb, var(--panel) 60%, transparent)"
+                          ? "linear-gradient(135deg, color-mix(in srgb, var(--primary) 20%, var(--panel)), color-mix(in srgb, var(--panel) 78%, transparent))"
                           : "transparent",
                         border: isActive
-                          ? "1px solid color-mix(in srgb, var(--text) 14%, transparent)"
+                          ? "1px solid color-mix(in srgb, var(--primary) 58%, var(--border-rgba))"
                           : "1px solid transparent",
+                        boxShadow: isActive
+                          ? "inset 0 0 0 1px color-mix(in srgb, var(--primary) 16%, transparent), 0 10px 24px color-mix(in srgb, var(--primary) 10%, transparent)"
+                          : "none",
                       }}
                     >
-                      <div className="flex items-center justify-between gap-2">
+                      {isActive ? (
+                        <span
+                          aria-hidden="true"
+                          className="absolute inset-y-2 left-0 w-1 rounded-r-full"
+                          style={{ background: "var(--primary)" }}
+                        />
+                      ) : null}
+                      <div className="relative flex items-center justify-between gap-2 pl-1">
                         <span className="text-sm font-semibold truncate">
                           {it.short || it.title}
                         </span>
+                        {isActive ? (
+                          <span
+                            aria-hidden="true"
+                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{
+                              background: "var(--primary)",
+                              boxShadow:
+                                "0 0 0 4px color-mix(in srgb, var(--primary) 16%, transparent)",
+                            }}
+                          />
+                        ) : null}
                         {it.badge ? (
                           <span
                             className="text-[10px] px-2 py-0.5 rounded-full shrink-0"
@@ -319,7 +349,7 @@ function ReportsNavRail({
 
                       {it.subtitle ? (
                         <div
-                          className="text-[11px] mt-1"
+                          className="relative text-[11px] mt-1 pl-1"
                           style={{ color: "var(--muted)" }}
                         >
                           {it.subtitle}
