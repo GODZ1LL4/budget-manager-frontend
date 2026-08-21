@@ -53,6 +53,7 @@ import ItemPurchaseHistoryReport from "../components/reports/ItemPurchaseHistory
 import TopVariableCategoriesChart from "../components/reports/TopVariableCategoriesChart";
 import DailyExpenseLineChart from "../components/reports/DailyExpenseLineChart";
 import ScenarioVsActualProjectionReport from "../components/reports/ScenarioVsActualProjectionReport";
+import GoalSavingsProjectionReport from "../components/reports/GoalSavingsProjectionReport";
 
 function Dashboard({ token, setView }) {
 
@@ -187,8 +188,7 @@ function Dashboard({ token, setView }) {
           }
         } catch (err) {
           toast.error(
-            `❌ Error al ejecutar job diario: ${
-              err.response?.data?.error || err.message
+            `❌ Error al ejecutar job diario: ${err.response?.data?.error || err.message
             }`
           );
         }
@@ -407,7 +407,7 @@ function Dashboard({ token, setView }) {
             short: "Proyeccion de Ingresos",
             render: () => <ProjectedIncomeByCategoryChart token={token} />,
           },
-          
+
         ],
       },
       {
@@ -461,8 +461,8 @@ function Dashboard({ token, setView }) {
               />
             ),
           },
-          
-          
+
+
         ],
       },
       {
@@ -494,7 +494,7 @@ function Dashboard({ token, setView }) {
               <BudgetCategoryLineReport token={token} categories={categories} />
             ),
           },
-          
+
           {
             id: "over",
             title: "Categorías con exceso sobre presupuesto",
@@ -502,7 +502,7 @@ function Dashboard({ token, setView }) {
             short: "Sobre Presupuesto",
             render: () => <OverBudgetChart token={token} />,
           },
-          
+
           {
             id: "coverage",
             title: "Cobertura de presupuestos sobre tus gastos",
@@ -547,9 +547,9 @@ function Dashboard({ token, setView }) {
             short: "Gastos Hormiga",
             render: () => <AntExpensesReport token={token} />,
           },
-          
-          
-         
+
+
+
         ],
       },
       {
@@ -572,7 +572,7 @@ function Dashboard({ token, setView }) {
               <CategoryVariationChart token={token} categories={categories} />
             ),
           },
-           {
+          {
             id: "top-variable",
             title: "Categorías variables con mayor peso de gasto",
             keywords: "resumen anual",
@@ -608,7 +608,7 @@ function Dashboard({ token, setView }) {
             short: "Gastos por Tipo (Total)",
             render: () => <ExpenseByStabilityChart token={token} />,
           },
-          
+
         ],
       },
       {
@@ -689,27 +689,15 @@ function Dashboard({ token, setView }) {
         groupTitle: "🔮 Proyecciones",
         items: [
           {
-            id: "forecast",
-            title: "Forecast de flujo futuro por período",
-            keywords: "forecast flujo",
-            short: "Prediccion de Gastos",
+            id: "goal-savings-projection",
+            title: "Proyeccion de cumplimiento de metas de ahorro",
+            keywords:
+              "metas ahorro objetivo cumplimiento fecha limite proyeccion ritmo",
+            short: "Cumplimiento de Metas",
             badge: "Pro",
-            render: () => <ExpenseForecastChart token={token} />,
-          },
-          {
-            id: "forecast-items",
-            title: "Compras sugeridas por artículos",
-            keywords: "forecast items compras sugeridas",
-            short: "Prediccion de Compras",
-            badge: "Pro",
-            render: () => <ItemExpenseForecast token={token} />,
-          },
-          {
-            id: "proj-exp",
-            title: "Proyección de gasto por categoría y estabilidad",
-            keywords: "proyeccion gastos",
-            short: "Gastos Proyectados del Mes",
-            render: () => <ProjectedExpenseByCategoryChart token={token} />,
+            panelHint:
+              "Estima fechas de cumplimiento, viabilidad de plazo y ritmo requerido por meta.",
+            render: () => <GoalSavingsProjectionReport token={token} />,
           },
           {
             id: "scenario-vs-actual",
@@ -727,7 +715,34 @@ function Dashboard({ token, setView }) {
               />
             ),
           },
-          
+          {
+            id: "proj-exp",
+            title: "Proyección de gasto por categoría y estabilidad",
+            keywords: "proyeccion gastos",
+            short: "Gastos Proyectados del Mes",
+            render: () => <ProjectedExpenseByCategoryChart token={token} />,
+          },
+          {
+            id: "forecast-items",
+            title: "Compras sugeridas por artículos",
+            keywords: "forecast items compras sugeridas",
+            short: "Prediccion de Compras",
+            badge: "Pro",
+            render: () => <ItemExpenseForecast token={token} />,
+          },
+
+          {
+            id: "forecast",
+            title: "Forecast de flujo futuro por período",
+            keywords: "forecast flujo",
+            short: "Prediccion de Gastos",
+            badge: "Pro",
+            render: () => <ExpenseForecastChart token={token} />,
+          },
+
+
+
+
         ],
       },
     ];
@@ -738,10 +753,10 @@ function Dashboard({ token, setView }) {
       accounts.length > 0
         ? accounts
         : data?.accountBalances ||
-          data?.accountsWithBalances ||
-          data?.accounts ||
-          data?.balancesByAccount ||
-          [];
+        data?.accountsWithBalances ||
+        data?.accounts ||
+        data?.balancesByAccount ||
+        [];
 
     if (!Array.isArray(rawAccounts)) return [];
 
@@ -870,10 +885,10 @@ function Dashboard({ token, setView }) {
 
   return (
     <div className="space-y-8">
-      
+
 
       <section className="space-y-4">
-                <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <h2 className="ff-h1 ff-heading-accent mt-3">Dashboard Financiero</h2>
             <h3
@@ -1155,7 +1170,7 @@ function Dashboard({ token, setView }) {
                       data.mostIncreasedCategoryAbs.category_id
                     ] ||
                       (data.mostIncreasedCategoryAbs.category_id ===
-                      "__uncategorized__"
+                        "__uncategorized__"
                         ? "Sin categoría"
                         : `Categoría ${data.mostIncreasedCategoryAbs.category_id}`)}
                   </span>
@@ -1200,7 +1215,7 @@ function Dashboard({ token, setView }) {
                       data.mostDecreasedCategoryAbs.category_id
                     ] ||
                       (data.mostDecreasedCategoryAbs.category_id ===
-                      "__uncategorized__"
+                        "__uncategorized__"
                         ? "Sin categoría"
                         : `Categoría ${data.mostDecreasedCategoryAbs.category_id}`)}
                   </span>
@@ -1270,18 +1285,18 @@ function HeroStat({ label, value, tone = "gray", isCurrency = false }) {
 
   const displayValue = isCurrency
     ? new Intl.NumberFormat("es-DO", {
-        style: "currency",
-        currency: "DOP",
-        minimumFractionDigits: 2,
-      }).format(safeValue)
+      style: "currency",
+      currency: "DOP",
+      minimumFractionDigits: 2,
+    }).format(safeValue)
     : safeValue.toFixed(2);
 
   const accentToken =
     tone === "green"
       ? "var(--success)"
       : tone === "red"
-      ? "var(--danger)"
-      : "var(--primary)";
+        ? "var(--danger)"
+        : "var(--primary)";
 
   return (
     <div
@@ -1328,25 +1343,25 @@ function MetricCard({
 
   const displayValue = isCurrency
     ? new Intl.NumberFormat("es-DO", {
-        style: "currency",
-        currency: "DOP",
-        minimumFractionDigits: 2,
-      }).format(safeValue)
+      style: "currency",
+      currency: "DOP",
+      minimumFractionDigits: 2,
+    }).format(safeValue)
     : `${safeValue.toFixed(2)}${suffix}`;
 
   const accentToken =
     color === "green"
       ? "var(--success)"
       : color === "red"
-      ? "var(--danger)"
-      : "var(--muted)";
+        ? "var(--danger)"
+        : "var(--muted)";
 
   const valueColor =
     color === "green"
       ? "color-mix(in srgb, var(--success) 70%, var(--text))"
       : color === "red"
-      ? "color-mix(in srgb, var(--danger) 70%, var(--text))"
-      : "var(--text)";
+        ? "color-mix(in srgb, var(--danger) 70%, var(--text))"
+        : "var(--text)";
 
   return (
     <div
@@ -1488,8 +1503,8 @@ function RotatingAccountBalanceCard({
             {isLoading
               ? "Cargando cuentas..."
               : error
-              ? "No se pudieron cargar"
-              : "Sin cuentas disponibles"}
+                ? "No se pudieron cargar"
+                : "Sin cuentas disponibles"}
           </h3>
           <p className="mt-2 text-sm" style={{ color: "var(--muted)" }}>
             {isLoading
