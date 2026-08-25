@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { Capacitor } from "@capacitor/core";
 
 import { HiMenu } from "react-icons/hi";
@@ -42,6 +42,34 @@ function Navbar({ onLogout, setView, subscriptionMode }) {
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return undefined;
+
+    const updateNavbarHeight = () => {
+      document.documentElement.style.setProperty(
+        "--app-navbar-height",
+        `${nav.offsetHeight}px`
+      );
+    };
+
+    updateNavbarHeight();
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(updateNavbarHeight)
+        : null;
+
+    resizeObserver?.observe(nav);
+    window.addEventListener("resize", updateNavbarHeight);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateNavbarHeight);
+      document.documentElement.style.removeProperty("--app-navbar-height");
+    };
   }, []);
 
   const rawSections = [

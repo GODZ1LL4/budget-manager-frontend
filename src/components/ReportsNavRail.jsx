@@ -130,6 +130,9 @@ function ReportsNavRail({
   }, [query]);
 
   const railWidth = railCollapsed ? "84px" : "280px";
+  const railStickyOffset = "calc(var(--app-navbar-height, 0px) + 1rem)";
+  const railStickyHeight =
+    "calc(100dvh - var(--app-navbar-height, 0px) - 2rem)";
 
   return (
     <div
@@ -137,9 +140,10 @@ function ReportsNavRail({
       style={{ gridTemplateColumns: `${railWidth} minmax(0, 1fr)` }}
     >
       <aside
-        className="rounded-[28px] p-3 sticky top-4"
+        className="rounded-[28px] p-3 sticky"
         style={{
-          height: "calc(100vh - 2rem)",
+          top: railStickyOffset,
+          height: railStickyHeight,
           background: "color-mix(in srgb, var(--panel) 85%, transparent)",
           border: "var(--border-w) solid var(--border-rgba)",
           boxShadow: "var(--glow-shadow)",

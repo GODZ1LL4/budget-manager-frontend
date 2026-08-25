@@ -5,6 +5,7 @@
   --app-safe-right: env(safe-area-inset-right, 0px);
   --app-safe-bottom: env(safe-area-inset-bottom, 0px);
   --app-safe-left: env(safe-area-inset-left, 0px);
+  --app-navbar-height: 0px;
 }
 
 html, body, #root {
