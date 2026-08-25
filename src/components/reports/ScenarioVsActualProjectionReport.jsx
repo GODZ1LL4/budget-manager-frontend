@@ -936,7 +936,7 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
                 events={calendarEvents}
                 height="auto"
                 locale="es"
-                dayMaxEvents={4}
+                dayMaxEvents={3}
                 moreLinkText="mas"
                 dateClick={({ dateStr }) => setSelectedDate(dateStr)}
                 eventClick={(info) => {
