@@ -58,10 +58,29 @@ function p90ScaleMax(values) {
   const arr = (values || []).filter((v) => Number(v) > 0).map(Number);
   if (arr.length === 0) return 0;
   arr.sort((a, b) => a - b);
-  const idx = Math.floor(arr.length * 0.9) - 1; // p90
+  const idx = Math.ceil(arr.length * 0.9) - 1; // p90
   const p90 = arr[Math.max(0, idx)];
   const max = arr[arr.length - 1];
   return p90 || max || 0;
+}
+
+function clamp01(value) {
+  const num = Number(value) || 0;
+  return Math.max(0, Math.min(1, num));
+}
+
+function scaleAmount(amount, scaleMax) {
+  const max = Number(scaleMax) || 0;
+  if (max <= 0) return 0;
+  return clamp01((Number(amount) || 0) / max);
+}
+
+function blendHeatIntensities(monthIntensity, categoryIntensity) {
+  return clamp01(monthIntensity * 0.65 + categoryIntensity * 0.35);
+}
+
+function formatHeatScore(value) {
+  return `${Math.round(clamp01(value) * 100)}%`;
 }
 
 function CategoryMonthlyHeatmap({ token, type = "expense" }) {
@@ -192,18 +211,23 @@ function CategoryMonthlyHeatmap({ token, type = "expense" }) {
     if (e.key === "Enter") handleRefresh();
   };
 
-  const { categories, months, matrix, scaleMax, monthTotals } = useMemo(() => {
+  const {
+    categories,
+    months,
+    matrix,
+    annualScaleMax,
+    monthScaleMax,
+    categoryScaleMax,
+    monthTotals,
+  } = useMemo(() => {
     const catMap = new Map();
     const monthSet = new Set();
-    const allAmounts = [];
 
     (rows || []).forEach((r) => {
       if (!catMap.has(r.category_id)) {
         catMap.set(r.category_id, r.category_name);
       }
       monthSet.add(r.month);
-      const amt = Number(r.amount) || 0;
-      if (amt > 0) allAmounts.push(amt);
     });
 
     const categories = Array.from(catMap.entries())
@@ -228,20 +252,48 @@ function CategoryMonthlyHeatmap({ token, type = "expense" }) {
         (matrix[r.category_id][r.month] || 0) + (Number(r.amount) || 0);
     });
 
-    const scaleMax = p90ScaleMax(allAmounts);
-
+    const allAmounts = [];
+    const monthValues = {};
+    const categoryValues = {};
     const monthTotals = {};
     months.forEach((m) => {
       monthTotals[m] = 0;
+      monthValues[m] = [];
     });
 
     categories.forEach((cat) => {
+      categoryValues[cat.id] = [];
       months.forEach((m) => {
-        monthTotals[m] += Number(matrix[cat.id]?.[m] || 0);
+        const amount = Number(matrix[cat.id]?.[m] || 0);
+        monthTotals[m] += amount;
+
+        if (amount > 0) {
+          allAmounts.push(amount);
+          monthValues[m].push(amount);
+          categoryValues[cat.id].push(amount);
+        }
       });
     });
 
-    return { categories, months, matrix, scaleMax, monthTotals };
+    const monthScaleMax = {};
+    months.forEach((m) => {
+      monthScaleMax[m] = p90ScaleMax(monthValues[m]);
+    });
+
+    const categoryScaleMax = {};
+    categories.forEach((cat) => {
+      categoryScaleMax[cat.id] = p90ScaleMax(categoryValues[cat.id]);
+    });
+
+    return {
+      categories,
+      months,
+      matrix,
+      annualScaleMax: p90ScaleMax(allAmounts),
+      monthScaleMax,
+      categoryScaleMax,
+      monthTotals,
+    };
   }, [rows]);
 
   const gridCols = useMemo(
@@ -367,9 +419,15 @@ function CategoryMonthlyHeatmap({ token, type = "expense" }) {
 
                     {months.map((m) => {
                       const amount = Number(matrix[cat.id]?.[m] || 0);
-
-                      const intensity =
-                        scaleMax > 0 ? Math.min(amount / scaleMax, 1) : 0;
+                      const monthIntensity = scaleAmount(amount, monthScaleMax[m]);
+                      const categoryIntensity = scaleAmount(
+                        amount,
+                        categoryScaleMax[cat.id]
+                      );
+                      const intensity = blendHeatIntensities(
+                        monthIntensity,
+                        categoryIntensity
+                      );
 
                       const bg =
                         amount > 0 ? ui.heatFill(intensity) : "transparent";
@@ -390,10 +448,14 @@ function CategoryMonthlyHeatmap({ token, type = "expense" }) {
                           }}
                           title={
                             amount > 0
-                              ? `${cat.name} · ${monthLabel(m)}\n${formatCurrency(
+                              ? `${cat.name} - ${monthLabel(m)}\n${formatCurrency(
                                   amount
+                                )}\nMes: ${formatHeatScore(
+                                  monthIntensity
+                                )} - Categoria: ${formatHeatScore(
+                                  categoryIntensity
                                 )}`
-                              : `${cat.name} · ${monthLabel(m)}\n${copy.noValue}`
+                              : `${cat.name} - ${monthLabel(m)}\n${copy.noValue}`
                           }
                         >
                           {/* capa color heatmap */}
@@ -467,8 +529,8 @@ function CategoryMonthlyHeatmap({ token, type = "expense" }) {
                     }}
                     title={
                       amount > 0
-                        ? `TOTAL · ${monthLabel(m)}\n${formatCurrency(amount)}`
-                        : `TOTAL · ${monthLabel(m)}\n${copy.noValue}`
+                        ? `TOTAL - ${monthLabel(m)}\n${formatCurrency(amount)}`
+                        : `TOTAL - ${monthLabel(m)}\n${copy.noValue}`
                     }
                   >
                     <span
@@ -503,9 +565,9 @@ function CategoryMonthlyHeatmap({ token, type = "expense" }) {
           {meta?.year ? (
             <div className="text-[11px]" style={{ color: ui.muted }}>
               Año: <span style={{ color: ui.text, fontWeight: 600 }}>{meta.year}</span> ·
-              Escala (p90):{" "}
+              Color: mes + categoria - P90 anual:{" "}
               <span style={{ color: ui.text, fontWeight: 600 }}>
-                {formatCurrency(scaleMax)}
+                {formatCurrency(annualScaleMax)}
               </span>
             </div>
           ) : null}

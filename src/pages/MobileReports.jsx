@@ -545,6 +545,7 @@ function CategoryRows({
   formatCurrency,
   emptyText,
   shareLabel = "del gasto",
+  tone = "primary",
 }) {
   if (!rows?.length) {
     return <p className="text-sm italic text-[var(--muted)]">{emptyText}</p>;
@@ -564,7 +565,7 @@ function CategoryRows({
               {formatCurrency(row.amount)}
             </span>
           </div>
-          <ProgressLine value={numberValue(row.amount)} max={maxAmount} />
+          <ProgressLine value={numberValue(row.amount)} max={maxAmount} tone={tone} />
           {row.share_pct != null ? (
             <p className="text-[11px] text-[var(--muted)]">
               {formatPercent(row.share_pct)} {shareLabel}
@@ -1514,6 +1515,7 @@ function MobileReports({ token, subscriptionMode, setView }) {
                   formatCurrency={formatCurrency}
                   emptyText="No hay categorias de gasto este año."
                   shareLabel="del gasto anual"
+                  tone="danger"
                 />
               </Surface>
 
@@ -1526,6 +1528,7 @@ function MobileReports({ token, subscriptionMode, setView }) {
                   formatCurrency={formatCurrency}
                   emptyText="No hay categorias de ingreso este año."
                   shareLabel="del ingreso anual"
+                  tone="success"
                 />
               </Surface>
 

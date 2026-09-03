@@ -432,6 +432,17 @@ export function buildMobileDashboardData({
     (acc, budget) => acc + (budget.limit > 0 ? budget.limit : 0),
     0
   );
+  const totalBudgetSpent = sortedBudgets.reduce(
+    (acc, budget) => acc + (budget.limit > 0 ? Math.max(budget.spent, 0) : 0),
+    0
+  );
+
+  budgetAlerts.summary = {
+    totalBudgeted: totalBudgetLimit,
+    totalSpent: totalBudgetSpent,
+    available: totalBudgetLimit - totalBudgetSpent,
+  };
+
   const daysInMonth = Number(lastDayOfMonthDateKey(today).slice(8, 10)) || dayOfMonth;
   const projectedExpense = dailyPulse.dailyAverage * daysInMonth;
 

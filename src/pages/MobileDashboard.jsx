@@ -321,6 +321,11 @@ function MobileDashboard({ token, subscriptionMode, setView }) {
       budgets: [],
       goals: [],
     });
+  const budgetSummary = data.budgetAlerts.summary || {
+    totalBudgeted: data.budgetAlerts.monthProjection?.totalLimit || 0,
+    totalSpent: 0,
+    available: 0,
+  };
 
   return (
     <div className="space-y-4">
@@ -591,6 +596,26 @@ function MobileDashboard({ token, subscriptionMode, setView }) {
           <button type="button" onClick={() => setView("budgets")} className="text-xs font-semibold text-[var(--primary)]">
             Presupuestos
           </button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <MetricCard
+            infoId="presupuesto-total-mes"
+            label="Presupuestado"
+            value={formatCurrency(budgetSummary.totalBudgeted)}
+            helper="Suma de los limites de todos los presupuestos cargados para el mes actual."
+            activeInfo={activeInfo}
+            onInfoToggle={toggleInfo}
+          />
+          <MetricCard
+            infoId="presupuesto-disponible"
+            label="Disponible"
+            value={formatCurrency(budgetSummary.available)}
+            tone={budgetSummary.available >= 0 ? "var(--success)" : "var(--danger)"}
+            helper="Total presupuestado menos el gasto registrado en categorias con presupuesto."
+            activeInfo={activeInfo}
+            onInfoToggle={toggleInfo}
+          />
         </div>
 
         <div className="mt-4 space-y-3">
