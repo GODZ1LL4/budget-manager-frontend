@@ -98,6 +98,14 @@ function formatCurrencyDOP(value) {
   }).format(num);
 }
 
+function formatSignedCurrencyDOP(value) {
+  const num = Number(value) || 0;
+  const formatted = formatCurrencyDOP(Math.abs(num));
+  if (num > 0) return `+${formatted}`;
+  if (num < 0) return `-${formatted}`;
+  return formatted;
+}
+
 function formatPercent(value) {
   if (value == null || !Number.isFinite(Number(value))) return "—";
   return `${Number(value).toFixed(2)}%`;
@@ -109,6 +117,13 @@ function AdvancedBurnRateTooltip({ active, payload, label }) {
   const filtered = payload.filter(
     (item) => item.dataKey === "Expected" || item.dataKey === "Real"
   );
+  const row = payload[0]?.payload || {};
+  const hasExpectedNet = row.ExpectedNet != null;
+  const hasRealNet = row.RealNet != null;
+  const netDelta =
+    hasExpectedNet && hasRealNet
+      ? (Number(row.RealNet) || 0) - (Number(row.ExpectedNet) || 0)
+      : null;
 
   if (!filtered.length) return null;
 
@@ -128,24 +143,109 @@ function AdvancedBurnRateTooltip({ active, payload, label }) {
     >
       <p style={{ marginBottom: 6, fontWeight: 800 }}>Día {label}</p>
 
-      {filtered.map((entry) => (
-        <div
-          key={entry.dataKey}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 12,
-            marginTop: 4,
-          }}
-        >
-          <span style={{ color: "var(--muted)", fontWeight: 700 }}>
-            {entry.dataKey === "Expected" ? "Esperado" : "Real"}
-          </span>
-          <span style={{ fontWeight: 800 }}>
-            {formatCurrencyDOP(entry.value)}
-          </span>
-        </div>
-      ))}
+      {filtered.map((entry) => {
+        const entryColor = entry.color || entry.stroke || "var(--text)";
+        return (
+          <div
+            key={entry.dataKey}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              marginTop: 4,
+            }}
+          >
+            <span style={{ color: entryColor, fontWeight: 700 }}>
+              {entry.dataKey === "Expected" ? "Esperado" : "Real"}
+            </span>
+            <span style={{ color: entryColor, fontWeight: 800 }}>
+              {formatCurrencyDOP(entry.value)}
+            </span>
+          </div>
+        );
+      })}
+
+      <div
+        style={{
+          borderTop: "1px solid var(--border-rgba)",
+          marginTop: 8,
+          paddingTop: 8,
+        }}
+      >
+        {hasExpectedNet ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+            }}
+          >
+            <span style={{ color: "var(--muted)", fontWeight: 700 }}>
+              Neto esperado
+            </span>
+            <span
+              style={{
+                color:
+                  (Number(row.ExpectedNet) || 0) >= 0
+                    ? "var(--success)"
+                    : "var(--danger)",
+                fontWeight: 800,
+              }}
+            >
+              {formatSignedCurrencyDOP(row.ExpectedNet)}
+            </span>
+          </div>
+        ) : null}
+
+        {hasRealNet ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              marginTop: 4,
+            }}
+          >
+            <span style={{ color: "var(--muted)", fontWeight: 700 }}>
+              Neto real
+            </span>
+            <span
+              style={{
+                color:
+                  (Number(row.RealNet) || 0) >= 0
+                    ? "var(--success)"
+                    : "var(--danger)",
+                fontWeight: 800,
+              }}
+            >
+              {formatSignedCurrencyDOP(row.RealNet)}
+            </span>
+          </div>
+        ) : null}
+
+        {netDelta != null ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              marginTop: 4,
+            }}
+          >
+            <span style={{ color: "var(--muted)", fontWeight: 700 }}>
+              Diferencia neta
+            </span>
+            <span
+              style={{
+                color: netDelta >= 0 ? "var(--success)" : "var(--danger)",
+                fontWeight: 900,
+              }}
+            >
+              {formatSignedCurrencyDOP(netDelta)}
+            </span>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -330,6 +430,9 @@ export default function AdvancedBurnRateChart({ token }) {
       Expected: d.expected_cumulative,
       Real: d.actual_cumulative,
       RealArea: d.actual_cumulative,
+      ExpectedNet: d.expected_net_cumulative,
+      RealNet: d.actual_net_cumulative,
+      Income: d.income_cumulative,
       isToday: d.day === data?.day_of_month,
     }));
   }, [data]);

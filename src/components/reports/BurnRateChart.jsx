@@ -21,6 +21,14 @@ function formatCurrencyDOP(value) {
   }).format(num);
 }
 
+function formatSignedCurrencyDOP(value) {
+  const num = Number(value) || 0;
+  const formatted = formatCurrencyDOP(Math.abs(num));
+  if (num > 0) return `+${formatted}`;
+  if (num < 0) return `-${formatted}`;
+  return formatted;
+}
+
 function BurnRateTooltip({ active, payload, label }) {
   if (!active || !payload || !payload.length) return null;
 
@@ -28,6 +36,14 @@ function BurnRateTooltip({ active, payload, label }) {
   const filtered = payload.filter(
     (item) => item.dataKey === "Ideal" || item.dataKey === "Real"
   );
+  const row = payload[0]?.payload || {};
+  const hasIdealNet = row.IdealNet != null;
+  const hasRealNet = row.RealNet != null;
+  const netDelta =
+    hasIdealNet && hasRealNet
+      ? (Number(row.RealNet) || 0) - (Number(row.IdealNet) || 0)
+      : null;
+
   if (!filtered.length) return null;
 
   return (
@@ -46,24 +62,117 @@ function BurnRateTooltip({ active, payload, label }) {
         Día {label}
       </div>
 
-      {filtered.map((entry) => (
-        <div
-          key={entry.dataKey}
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 12,
-            fontSize: 13,
-            lineHeight: "18px",
-            marginTop: 4,
-          }}
-        >
-          <span style={{ color: "var(--muted)", fontWeight: 700 }}>
-            {entry.dataKey === "Ideal" ? "Ideal" : "Real"}
-          </span>
-          <span style={{ fontWeight: 800 }}>{formatCurrencyDOP(entry.value)}</span>
-        </div>
-      ))}
+      {filtered.map((entry) => {
+        const entryColor = entry.color || entry.stroke || "var(--text)";
+        return (
+          <div
+            key={entry.dataKey}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              fontSize: 13,
+              lineHeight: "18px",
+              marginTop: 4,
+            }}
+          >
+            <span style={{ color: entryColor, fontWeight: 700 }}>
+              {entry.dataKey === "Ideal" ? "Ideal" : "Real"}
+            </span>
+            <span style={{ color: entryColor, fontWeight: 800 }}>
+              {formatCurrencyDOP(entry.value)}
+            </span>
+          </div>
+        );
+      })}
+
+      <div
+        style={{
+          borderTop: "1px solid var(--border-rgba)",
+          marginTop: 8,
+          paddingTop: 8,
+        }}
+      >
+        {hasIdealNet ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              fontSize: 13,
+              lineHeight: "18px",
+            }}
+          >
+            <span style={{ color: "var(--muted)", fontWeight: 700 }}>
+              Neto ideal
+            </span>
+            <span
+              style={{
+                color:
+                  (Number(row.IdealNet) || 0) >= 0
+                    ? "var(--success)"
+                    : "var(--danger)",
+                fontWeight: 800,
+              }}
+            >
+              {formatSignedCurrencyDOP(row.IdealNet)}
+            </span>
+          </div>
+        ) : null}
+
+        {hasRealNet ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              fontSize: 13,
+              lineHeight: "18px",
+              marginTop: 4,
+            }}
+          >
+            <span style={{ color: "var(--muted)", fontWeight: 700 }}>
+              Neto real
+            </span>
+            <span
+              style={{
+                color:
+                  (Number(row.RealNet) || 0) >= 0
+                    ? "var(--success)"
+                    : "var(--danger)",
+                fontWeight: 800,
+              }}
+            >
+              {formatSignedCurrencyDOP(row.RealNet)}
+            </span>
+          </div>
+        ) : null}
+
+        {netDelta != null ? (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              fontSize: 13,
+              lineHeight: "18px",
+              marginTop: 4,
+            }}
+          >
+            <span style={{ color: "var(--muted)", fontWeight: 700 }}>
+              Diferencia neta
+            </span>
+            <span
+              style={{
+                color: netDelta >= 0 ? "var(--success)" : "var(--danger)",
+                fontWeight: 900,
+              }}
+            >
+              {formatSignedCurrencyDOP(netDelta)}
+            </span>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -160,6 +269,9 @@ export default function BurnRateChart({ token }) {
     Ideal: d.ideal_cumulative,
     Real: d.actual_cumulative,
     RealArea: d.actual_cumulative,
+    IdealNet: d.ideal_net_cumulative,
+    RealNet: d.actual_net_cumulative,
+    Income: d.income_cumulative,
     isToday: d.day === day_of_month,
   }));
 

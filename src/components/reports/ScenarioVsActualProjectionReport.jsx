@@ -182,11 +182,16 @@ function buildTotals(rows) {
   );
 }
 
-function addExpenseByDate(rows) {
+function addTotalsByDate(rows) {
   const map = new Map();
   for (const row of rows || []) {
-    if (row.type !== "expense" || !row.date) continue;
-    map.set(row.date, (map.get(row.date) || 0) + safeNumber(row.amount));
+    if (!row.date || (row.type !== "income" && row.type !== "expense")) continue;
+
+    const current = map.get(row.date) || { income: 0, expense: 0 };
+    const amount = safeNumber(row.amount);
+    if (row.type === "income") current.income += amount;
+    if (row.type === "expense") current.expense += amount;
+    map.set(row.date, current);
   }
   return map;
 }
@@ -246,27 +251,42 @@ function buildCategoryRows({ scenarioRows, realRows }) {
 function buildTimelineRows({ scenarioRows, realRows, monthStart }) {
   const monthEnd = lastDayOfMonthDateKey(monthStart);
   const today = todayDateKey();
-  const scenarioByDate = addExpenseByDate(scenarioRows);
-  const realByDate = addExpenseByDate(realRows);
+  const scenarioByDate = addTotalsByDate(scenarioRows);
+  const realByDate = addTotalsByDate(realRows);
   const rows = [];
 
-  let scenarioCumulative = 0;
-  let realCumulative = 0;
+  let scenarioIncomeCumulative = 0;
+  let scenarioExpenseCumulative = 0;
+  let realIncomeCumulative = 0;
+  let realExpenseCumulative = 0;
   let cursor = monthStart;
 
   while (cursor <= monthEnd) {
-    scenarioCumulative += safeNumber(scenarioByDate.get(cursor));
-    realCumulative += safeNumber(realByDate.get(cursor));
+    const scenarioDaily = scenarioByDate.get(cursor) || { income: 0, expense: 0 };
+    const realDaily = realByDate.get(cursor) || { income: 0, expense: 0 };
+
+    scenarioIncomeCumulative += safeNumber(scenarioDaily.income);
+    scenarioExpenseCumulative += safeNumber(scenarioDaily.expense);
+    realIncomeCumulative += safeNumber(realDaily.income);
+    realExpenseCumulative += safeNumber(realDaily.expense);
 
     const isPastMonth = monthEnd < today;
     const shouldShowReal = isPastMonth || cursor <= today || realByDate.has(cursor);
+    const scenarioNet = scenarioIncomeCumulative - scenarioExpenseCumulative;
+    const realNet = realIncomeCumulative - realExpenseCumulative;
 
     rows.push({
       date: cursor,
       day: Number(cursor.slice(8, 10)),
-      scenario: Number(scenarioCumulative.toFixed(2)),
-      real: shouldShowReal ? Number(realCumulative.toFixed(2)) : null,
-      realArea: shouldShowReal ? Number(realCumulative.toFixed(2)) : null,
+      scenario: Number(scenarioExpenseCumulative.toFixed(2)),
+      scenarioIncome: Number(scenarioIncomeCumulative.toFixed(2)),
+      scenarioExpense: Number(scenarioExpenseCumulative.toFixed(2)),
+      scenarioNet: Number(scenarioNet.toFixed(2)),
+      real: shouldShowReal ? Number(realExpenseCumulative.toFixed(2)) : null,
+      realIncome: shouldShowReal ? Number(realIncomeCumulative.toFixed(2)) : null,
+      realExpense: shouldShowReal ? Number(realExpenseCumulative.toFixed(2)) : null,
+      realNet: shouldShowReal ? Number(realNet.toFixed(2)) : null,
+      realArea: shouldShowReal ? Number(realExpenseCumulative.toFixed(2)) : null,
     });
 
     cursor = addDaysToDateKey(cursor, 1);
@@ -384,6 +404,11 @@ function TimelineTooltip({ active, payload, label }) {
   const visiblePayload = payload.filter((item) =>
     ["scenario", "real"].includes(item.dataKey)
   );
+  const row = payload[0]?.payload || {};
+  const hasScenarioNet = row.scenarioNet != null;
+  const hasRealNet = row.realNet != null;
+  const netDelta =
+    hasScenarioNet && hasRealNet ? safeNumber(row.realNet) - safeNumber(row.scenarioNet) : null;
 
   if (!visiblePayload.length) return null;
 
@@ -406,6 +431,56 @@ function TimelineTooltip({ active, payload, label }) {
           </span>
         </p>
       ))}
+      <div
+        className="mt-2 space-y-1 border-t pt-2"
+        style={{ borderColor: "var(--border-rgba)" }}
+      >
+        {hasScenarioNet ? (
+          <p className="text-[var(--muted)]">
+            Neto escenario:{" "}
+            <span
+              className="font-bold"
+              style={{
+                color: safeNumber(row.scenarioNet) >= 0
+                  ? "var(--success)"
+                  : "var(--danger)",
+              }}
+            >
+              {formatSignedCurrency(row.scenarioNet)}
+            </span>
+          </p>
+        ) : null}
+        {hasRealNet ? (
+          <p className="text-[var(--muted)]">
+            Neto real:{" "}
+            <span
+              className="font-bold"
+              style={{
+                color: safeNumber(row.realNet) >= 0
+                  ? "var(--success)"
+                  : "var(--danger)",
+              }}
+            >
+              {formatSignedCurrency(row.realNet)}
+            </span>
+          </p>
+        ) : null}
+        {netDelta != null ? (
+          <p className="text-[var(--muted)]">
+            Diferencia neta:{" "}
+            <span
+              className="font-extrabold"
+              style={{
+                color: safeNumber(netDelta) >= 0
+                  ? "var(--success)"
+                  : "var(--danger)",
+              }}
+            >
+              {formatSignedCurrency(netDelta)}
+            </span>
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }
