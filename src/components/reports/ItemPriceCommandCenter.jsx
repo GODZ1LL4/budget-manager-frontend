@@ -237,16 +237,24 @@ function ChartTooltip({ active, payload, label }) {
     >
       <div className="mb-1 font-bold">{formatDate(label)}</div>
       <div className="space-y-1">
-        {payload.map((entry) => (
-          <div key={entry.dataKey} className="flex items-center gap-2">
-            <span
-              className="h-2.5 w-2.5 rounded-full"
-              style={{ background: entry.color }}
-            />
-            <span style={{ color: "var(--muted)" }}>{entry.name}</span>
-            <strong>{formatMoney(entry.value)}</strong>
-          </div>
-        ))}
+        {payload.map((entry) => {
+          const color = entry.color || entry.stroke || "var(--text)";
+
+          return (
+            <div key={entry.dataKey} className="flex items-center gap-2">
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ background: color }}
+              />
+              <span className="min-w-0 flex-1 truncate" style={{ color }}>
+                {entry.name}
+              </span>
+              <strong className="tabular-nums" style={{ color }}>
+                {formatMoney(entry.value)}
+              </strong>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

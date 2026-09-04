@@ -40,6 +40,68 @@ const normalizeMonth = (m) => {
   return null;
 };
 
+function ItemTrendTooltip({ active, payload, label, metric, formatCurrency }) {
+  if (!active || !payload?.length) return null;
+
+  const point = payload[0]?.payload || {};
+  const total = point.__total == null ? null : Number(point.__total);
+  const missingCount = Number(point.__missingTotalCount || 0);
+  const totalLabel = point.__totalLabel || "Total seleccionado";
+  const formatValue = (value) =>
+    metric === "total" ? formatCurrency(value) : toNum(value);
+
+  return (
+    <div
+      className="rounded-xl border px-3 py-2 text-xs shadow-xl"
+      style={{
+        background: "var(--panel)",
+        borderColor: "var(--border-rgba)",
+        color: "var(--text)",
+      }}
+    >
+      <div className="mb-1 font-bold">{normalizeMonth(label) || label}</div>
+      <div className="max-h-64 space-y-1 overflow-y-auto pr-1">
+        {payload.map((entry) => {
+          const color = entry.color || entry.stroke || "var(--text)";
+
+          return (
+            <div key={entry.dataKey} className="flex items-center gap-2">
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ background: color }}
+              />
+              <span className="min-w-0 flex-1 truncate" style={{ color }}>
+                {entry.name}
+              </span>
+              <strong className="tabular-nums" style={{ color }}>
+                {formatValue(entry.value)}
+              </strong>
+            </div>
+          );
+        })}
+      </div>
+
+      {total != null && Number.isFinite(total) ? (
+        <div
+          className="mt-2 flex items-center justify-between gap-3 border-t pt-2"
+          style={{ borderColor: "var(--border-rgba)" }}
+        >
+          <span style={{ color: "var(--muted)" }}>{totalLabel}</span>
+          <strong className="tabular-nums" style={{ color: "var(--text)" }}>
+            {formatValue(total)}
+          </strong>
+        </div>
+      ) : null}
+
+      {missingCount > 0 ? (
+        <div className="mt-1 text-[11px]" style={{ color: "var(--muted)" }}>
+          {missingCount} articulo(s) sin datos en este mes
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ItemTrendChart({ token }) {
   const api = import.meta.env.VITE_API_URL;
 
@@ -76,11 +138,6 @@ function ItemTrendChart({ token }) {
     });
     return (v) => nf.format(toNum(v));
   }, []);
-
-  const formatTooltipValue = (value) => {
-    if (metric === "total") return formatCurrency(value);
-    return toNum(value);
-  };
 
   // ✅ palette tokenizada (si hay más de 4 series, cae a HSL)
   const getSeriesColor = (index) => {
@@ -173,10 +230,31 @@ function ItemTrendChart({ token }) {
       grouped[key][String(entry.item_id)] = value;
     });
 
-    return Object.values(grouped).sort((a, b) =>
-      String(a.month).localeCompare(String(b.month))
-    );
-  }, [trendData, metric, year]);
+    const totalLabel =
+      metric === "total" ? "Gasto total seleccionado" : "Cantidad total";
+
+    return Object.values(grouped)
+      .map((point) => {
+        let total = 0;
+        let valuedCount = 0;
+
+        selectedIds.forEach((id) => {
+          const value = Number(point[String(id)]);
+          if (!Number.isFinite(value)) return;
+
+          total += value;
+          valuedCount += 1;
+        });
+
+        return {
+          ...point,
+          __total: valuedCount > 0 ? total : null,
+          __totalLabel: totalLabel,
+          __missingTotalCount: Math.max(0, selectedIds.length - valuedCount),
+        };
+      })
+      .sort((a, b) => String(a.month).localeCompare(String(b.month)));
+  }, [trendData, metric, year, selectedIds]);
 
   // selección múltiple
   const handleCheckboxChange = (e) => {
@@ -245,15 +323,6 @@ function ItemTrendChart({ token }) {
     background: "color-mix(in srgb, var(--panel) 55%, transparent)",
     border: `var(--border-w) solid var(--border-rgba)`,
     borderRadius: "var(--radius-md)",
-  };
-
-  const tooltipStyle = {
-    backgroundColor: "var(--panel)",
-    border: `var(--border-w) solid var(--border-rgba)`,
-    color: "var(--text)",
-    borderRadius: "12px",
-    boxShadow: "var(--glow-shadow)",
-    fontSize: "0.85rem",
   };
 
   const gridStroke = "color-mix(in srgb, var(--border-rgba) 55%, transparent)";
@@ -462,11 +531,13 @@ function ItemTrendChart({ token }) {
               />
 
               <Tooltip
-                formatter={(value) => formatTooltipValue(value)}
-                contentStyle={tooltipStyle}
+                content={
+                  <ItemTrendTooltip
+                    metric={metric}
+                    formatCurrency={formatCurrency}
+                  />
+                }
                 cursor={{ fill: "color-mix(in srgb, var(--text) 6%, transparent)" }}
-                itemStyle={{ color: "var(--text)" }}
-                labelStyle={{ color: "var(--text)", fontWeight: 700 }}
               />
 
               <Legend
