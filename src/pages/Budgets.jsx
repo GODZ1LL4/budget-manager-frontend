@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
-import { HiDotsVertical, HiEye, HiMinus, HiPencil, HiPlus } from "react-icons/hi";
+import { HiEye, HiMinus, HiPencil, HiPlus } from "react-icons/hi";
+import { FaEllipsisV } from "react-icons/fa";
 import Modal from "../components/Modal";
 import FFSelect from "../components/FFSelect";
 import { toast } from "react-toastify";
@@ -839,7 +840,7 @@ function Budgets({ token, subscriptionMode }) {
                         color: "var(--text)",
                       }}
                     >
-                      <HiDotsVertical size={18} />
+                      <FaEllipsisV size={16} />
                     </button>
 
                     {mobileMenuId === budget.id && (

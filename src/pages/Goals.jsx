@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { HiDotsVertical } from "react-icons/hi";
+import { FaEllipsisV } from "react-icons/fa";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Modal from "../components/Modal";
@@ -662,7 +662,7 @@ function Goals({ token, subscriptionMode }) {
                       color: "var(--text)",
                     }}
                   >
-                    <HiDotsVertical size={18} />
+                    <FaEllipsisV size={16} />
                   </button>
 
                   {mobileMenuId === goal.id && (

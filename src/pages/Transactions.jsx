@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import { Capacitor } from "@capacitor/core";
-import { HiDotsVertical, HiUpload } from "react-icons/hi";
+import { HiUpload } from "react-icons/hi";
+import { FaEllipsisV } from "react-icons/fa";
 import { toast } from "react-toastify";
 import Modal from "../components/Modal";
 import ImportTransactionsModal from "../components/ImportTransactionsModal";
@@ -827,7 +828,7 @@ function Transactions({ token, subscriptionMode }) {
                           color: "var(--text)",
                         }}
                       >
-                        <HiDotsVertical size={18} />
+                        <FaEllipsisV size={16} />
                       </button>
 
                       {mobileMenuId === tx.id && (

@@ -1,12 +1,157 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { HiRefresh } from "react-icons/hi";
-import { withUserTimeZone } from "../../lib/dates/localDate";
+import { todayDateKey, withUserTimeZone } from "../../lib/dates/localDate";
 
 const safeNumber = (value) => {
   const number = Number(value);
   return Number.isFinite(number) ? number : 0;
 };
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const MAX_DISPLAY_DURATION_DAYS = Math.ceil(365.25 * 100);
+
+function normalizeDateKey(value) {
+  if (!value) return null;
+  const match = String(value).match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : null;
+}
+
+function dateKeyToUtcDate(dateKey) {
+  const normalized = normalizeDateKey(dateKey);
+  if (!normalized) return null;
+
+  const [year, month, day] = normalized.split("-").map(Number);
+  if (!year || !month || !day) return null;
+
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return Number.isFinite(date.getTime()) ? date : null;
+}
+
+function daysBetweenDateKeys(fromDateKey, toDateKey) {
+  const from = dateKeyToUtcDate(fromDateKey);
+  const to = dateKeyToUtcDate(toDateKey);
+
+  if (!from || !to) return null;
+
+  return Math.floor((to.getTime() - from.getTime()) / MS_PER_DAY);
+}
+
+function sumNumeric(rows, pickValue) {
+  return (rows || []).reduce((sum, row) => sum + safeNumber(pickValue(row)), 0);
+}
+
+function buildFallbackReport(goalsData, today, recentDays = 90) {
+  const goals = (Array.isArray(goalsData) ? goalsData : [])
+    .filter((goal) => {
+      const status = goal.status || "active";
+      return status === "active" || status === "paused";
+    })
+    .map((goal) => {
+      const target = safeNumber(goal.target_amount);
+      const reserved = Math.max(0, safeNumber(goal.reserved_amount));
+      const remaining = Math.max(target - reserved, 0);
+      const dueDate = normalizeDateKey(goal.due_date);
+      const daysUntilDue = dueDate ? daysBetweenDateKeys(today, dueDate) : null;
+      const requiredDailyRate =
+        dueDate && daysUntilDue != null && daysUntilDue >= 0 && remaining > 0
+          ? remaining / Math.max(daysUntilDue, 1)
+          : remaining <= 0
+          ? 0
+          : null;
+      const requiredMonthlyRate =
+        requiredDailyRate == null ? null : requiredDailyRate * 30.4375;
+
+      let projectionStatus = "no_pace";
+      if (remaining <= 0) projectionStatus = "achieved";
+      else if (dueDate && daysUntilDue < 0) projectionStatus = "overdue";
+
+      return {
+        id: goal.id,
+        name: goal.name || "Meta",
+        status: goal.status || "active",
+        is_priority: goal.is_priority === true,
+        target_amount: target,
+        reserved_amount: reserved,
+        remaining_amount: remaining,
+        progress_pct: target > 0 ? (reserved / target) * 100 : 0,
+        due_date: dueDate,
+        days_until_due: daysUntilDue,
+        can_meet_deadline:
+          dueDate && remaining <= 0
+            ? true
+            : dueDate && remaining > 0
+            ? false
+            : null,
+        projection_status: projectionStatus,
+        projected_completion_days: null,
+        projected_completion_date: null,
+        projected_amount_at_due: dueDate ? reserved : null,
+        deadline_gap_amount: dueDate ? reserved - target : null,
+        deadline_gap_days: null,
+        required_daily_rate:
+          requiredDailyRate == null ? null : safeNumber(requiredDailyRate),
+        required_monthly_rate:
+          requiredMonthlyRate == null ? null : safeNumber(requiredMonthlyRate),
+        projected_daily_rate: 0,
+        projected_monthly_rate: 0,
+        recent_daily_rate: 0,
+        lifetime_daily_rate: 0,
+        velocity_source: "none",
+        active_days: 1,
+        movement_count: 0,
+        deposits_total: reserved,
+        withdrawals_total: 0,
+        first_movement_date: null,
+        last_movement_date: null,
+        confidence: "none",
+      };
+    })
+    .sort((a, b) => {
+      if (a.is_priority !== b.is_priority) return a.is_priority ? -1 : 1;
+      if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
+      if (a.due_date) return -1;
+      if (b.due_date) return 1;
+      return b.remaining_amount - a.remaining_amount;
+    });
+
+  const goalsWithDeadline = goals.filter((goal) => goal.due_date);
+  const targetTotal = sumNumeric(goals, (goal) => goal.target_amount);
+  const reservedTotal = sumNumeric(goals, (goal) => goal.reserved_amount);
+
+  return {
+    summary: {
+      goals_count: goals.length,
+      target_total: targetTotal,
+      reserved_total: reservedTotal,
+      remaining_total: sumNumeric(goals, (goal) => goal.remaining_amount),
+      progress_pct: targetTotal > 0 ? (reservedTotal / targetTotal) * 100 : 0,
+      projected_daily_rate_total: 0,
+      projected_monthly_rate_total: 0,
+      goals_with_deadline: goalsWithDeadline.length,
+      on_track_deadline: goalsWithDeadline.filter(
+        (goal) => goal.can_meet_deadline === true
+      ).length,
+      at_risk_deadline: goalsWithDeadline.filter(
+        (goal) => goal.can_meet_deadline === false
+      ).length,
+      no_pace_count: goals.filter((goal) => goal.projection_status === "no_pace")
+        .length,
+      nearest_deadline:
+        goalsWithDeadline
+          .filter((goal) => goal.days_until_due == null || goal.days_until_due >= 0)
+          .sort((a, b) => String(a.due_date).localeCompare(String(b.due_date)))[0]
+          ?.due_date || null,
+      soonest_completion: null,
+    },
+    goals,
+    meta: {
+      today,
+      recent_window_days: recentDays,
+      fallback: true,
+    },
+  };
+}
 
 const formatCurrency = (value) =>
   new Intl.NumberFormat("es-DO", {
@@ -33,6 +178,10 @@ function formatDuration(days) {
   if (days == null) return "Sin ritmo";
 
   const safeDays = Math.max(0, Number(days) || 0);
+  if (!Number.isFinite(Number(days)) || safeDays > MAX_DISPLAY_DURATION_DAYS) {
+    return "Mas de 100 años";
+  }
+
   if (safeDays === 0) return "Hoy";
   if (safeDays === 1) return "1 dia";
   if (safeDays < 31) return `${safeDays} dias`;
@@ -43,7 +192,7 @@ function formatDuration(days) {
   }
 
   const years = safeDays / 365.25;
-  return `${years.toFixed(1)} anos`;
+  return `${years.toFixed(1)} años`;
 }
 
 function statusConfig(status) {
@@ -378,6 +527,7 @@ function GoalSavingsProjectionReport({ token }) {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [filter, setFilter] = useState("all");
 
   const loadData = useCallback(async () => {
@@ -385,6 +535,7 @@ function GoalSavingsProjectionReport({ token }) {
 
     setLoading(true);
     setError("");
+    setNotice("");
 
     try {
       const res = await axios.get(
@@ -395,11 +546,37 @@ function GoalSavingsProjectionReport({ token }) {
       );
       setReport(res.data?.data || null);
     } catch (err) {
-      console.error("Error al cargar proyeccion de metas:", err);
-      setError(
-        err.response?.data?.error ||
-          "No se pudo calcular la proyeccion de metas."
-      );
+      console.warn("No se pudo cargar la proyeccion avanzada de metas:", {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      });
+
+      try {
+        const fallbackRes = await axios.get(
+          `${api}/goals`,
+          withUserTimeZone({
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        );
+
+        setReport(
+          buildFallbackReport(
+            fallbackRes.data?.data,
+            todayDateKey(),
+            90
+          )
+        );
+        setNotice(
+          "Mostrando una proyeccion basica porque el calculo avanzado no respondio."
+        );
+      } catch (fallbackErr) {
+        console.error("Error al cargar proyeccion de metas:", fallbackErr);
+        setError(
+          err.response?.data?.error ||
+            "No se pudo calcular la proyeccion de metas."
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -509,6 +686,15 @@ function GoalSavingsProjectionReport({ token }) {
           style={toneStyles("danger")}
         >
           {error}
+        </div>
+      ) : null}
+
+      {notice ? (
+        <div
+          className="rounded-xl border p-3 text-sm"
+          style={toneStyles("warning")}
+        >
+          {notice}
         </div>
       ) : null}
 

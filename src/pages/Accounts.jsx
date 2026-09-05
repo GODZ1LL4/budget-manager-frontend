@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "../components/Modal";
 import FFSelect from "../components/FFSelect";
-import { HiDotsVertical } from "react-icons/hi";
+import { FaEllipsisV } from "react-icons/fa";
 import {
   createAccount,
   createTransfer,
@@ -450,7 +450,7 @@ function Accounts({ token, subscriptionMode }) {
                           color: "var(--text)",
                         }}
                       >
-                        <HiDotsVertical size={18} />
+                        <FaEllipsisV size={16} />
                       </button>
 
                       {mobileMenuId === acc.id && (

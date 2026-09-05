@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import axios from "axios";
-import { HiDotsVertical } from "react-icons/hi";
+import { FaEllipsisV } from "react-icons/fa";
 import Modal from "../components/Modal";
 import FFSelect from "../components/FFSelect";
 import ShoppingPlanModal from "../components/ShoppingPlanModal";
@@ -685,7 +685,7 @@ function Items({ token, subscriptionMode }) {
                       color: "var(--text)",
                     }}
                   >
-                    <HiDotsVertical size={18} />
+                    <FaEllipsisV size={16} />
                   </button>
 
                   {mobileMenuId === item.id && (

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { HiDotsVertical } from "react-icons/hi";
+import { FaEllipsisV } from "react-icons/fa";
 import { toast } from "react-toastify";
 
 import FFSelect from "../components/FFSelect";
@@ -359,7 +359,7 @@ function Categories({ token, subscriptionMode }) {
                     color: "var(--text)",
                   }}
                 >
-                  <HiDotsVertical size={18} />
+                  <FaEllipsisV size={16} />
                 </button>
 
                 {mobileMenuId === cat.id && (
