@@ -202,7 +202,7 @@ function getCategoryKey(row) {
     : `name:${String(row.category_name || "Sin categoria").toLowerCase()}`;
 }
 
-function buildCategoryRows({ scenarioRows, realRows }) {
+function buildCategoryRows({ scenarioRows, realRows, type = "expense" }) {
   const map = new Map();
 
   const ensureRow = (row) => {
@@ -227,12 +227,12 @@ function buildCategoryRows({ scenarioRows, realRows }) {
   };
 
   for (const row of scenarioRows || []) {
-    if (row.type !== "expense") continue;
+    if (row.type !== type) continue;
     ensureRow(row).scenario += safeNumber(row.amount);
   }
 
   for (const row of realRows || []) {
-    if (row.type !== "expense") continue;
+    if (row.type !== type) continue;
     ensureRow(row).real += safeNumber(row.amount);
   }
 
@@ -246,6 +246,30 @@ function buildCategoryRows({ scenarioRows, realRows }) {
     }))
     .filter((row) => row.scenario > 0 || row.real > 0)
     .sort((a, b) => b.sortValue - a.sortValue || a.category.localeCompare(b.category));
+}
+
+function getCategoryChartHeight(rows) {
+  return Math.max(300, Math.min(740, 100 + rows.length * 36));
+}
+
+function getCategoryAxisWidth(rows) {
+  const maxLength = rows.reduce(
+    (max, row) => Math.max(max, String(row.category || "").length),
+    0
+  );
+  return Math.max(130, Math.min(280, maxLength * 7));
+}
+
+function getChartDomainMax(rows, keys) {
+  const maxValue = (rows || []).reduce((max, row) => {
+    const rowMax = keys.reduce(
+      (innerMax, key) => Math.max(innerMax, safeNumber(row?.[key])),
+      0
+    );
+    return Math.max(max, rowMax);
+  }, 0);
+
+  return maxValue > 0 ? Number((maxValue * 1.08).toFixed(2)) : 1;
 }
 
 function buildTimelineRows({ scenarioRows, realRows, monthStart }) {
@@ -361,10 +385,31 @@ function EmptyState({ title, detail, actionLabel, onAction }) {
   );
 }
 
-function CategoryTooltip({ active, payload }) {
+function CategoryTooltip({
+  active,
+  payload,
+  gapLabel = "Diferencia",
+  positiveGapIsGood = true,
+}) {
   if (!active || !payload?.length) return null;
   const row = payload[0]?.payload;
   if (!row) return null;
+  const scenarioColor =
+    payload.find((item) => item.dataKey === "scenario")?.color ||
+    "var(--primary)";
+  const realColor =
+    payload.find((item) => item.dataKey === "real")?.color || "var(--danger)";
+  const scenarioMinusReal = safeNumber(row.scenario) - safeNumber(row.real);
+  const gapColor =
+    scenarioMinusReal > 0
+      ? positiveGapIsGood
+        ? "var(--success)"
+        : "var(--danger)"
+      : scenarioMinusReal < 0
+      ? positiveGapIsGood
+        ? "var(--danger)"
+        : "var(--success)"
+      : "var(--text)";
 
   return (
     <div
@@ -379,21 +424,21 @@ function CategoryTooltip({ active, payload }) {
       <p className="mb-1 font-bold">{row.category}</p>
       <p className="text-[var(--muted)]">
         Escenario:{" "}
-        <span className="font-bold text-[var(--primary)]">
+        <span className="font-bold" style={{ color: scenarioColor }}>
           {formatCurrency(row.scenario)}
         </span>
       </p>
       <p className="text-[var(--muted)]">
         Real:{" "}
-        <span className="font-bold text-[var(--danger)]">
+        <span className="font-bold" style={{ color: realColor }}>
           {formatCurrency(row.real)}
         </span>
       </p>
-      <p
-        className="mt-1 font-extrabold"
-        style={{ color: row.variance > 0 ? "var(--danger)" : "var(--success)" }}
-      >
-        Diferencia: {formatSignedCurrency(row.variance)}
+      <p className="mt-1 text-[var(--muted)]">
+        {gapLabel}:{" "}
+        <span className="font-extrabold" style={{ color: gapColor }}>
+          {formatSignedCurrency(scenarioMinusReal)}
+        </span>
       </p>
     </div>
   );
@@ -407,6 +452,10 @@ function TimelineTooltip({ active, payload, label }) {
   const row = payload[0]?.payload || {};
   const hasScenarioNet = row.scenarioNet != null;
   const hasRealNet = row.realNet != null;
+  const expenseDelta =
+    row.scenario != null && row.real != null
+      ? safeNumber(row.scenario) - safeNumber(row.real)
+      : null;
   const netDelta =
     hasScenarioNet && hasRealNet ? safeNumber(row.realNet) - safeNumber(row.scenarioNet) : null;
 
@@ -431,6 +480,19 @@ function TimelineTooltip({ active, payload, label }) {
           </span>
         </p>
       ))}
+      {expenseDelta != null ? (
+        <p className="mt-1 text-[var(--muted)]">
+          Diferencia:{" "}
+          <span
+            className="font-extrabold"
+            style={{
+              color: expenseDelta >= 0 ? "var(--success)" : "var(--danger)",
+            }}
+          >
+            {formatSignedCurrency(expenseDelta)}
+          </span>
+        </p>
+      ) : null}
       <div
         className="mt-2 space-y-1 border-t pt-2"
         style={{ borderColor: "var(--border-rgba)" }}
@@ -721,6 +783,16 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
       buildCategoryRows({
         scenarioRows: scenarioMonthRows,
         realRows: actualMonthRows,
+        type: "expense",
+      }),
+    [actualMonthRows, scenarioMonthRows]
+  );
+  const incomeCategoryRows = useMemo(
+    () =>
+      buildCategoryRows({
+        scenarioRows: scenarioMonthRows,
+        realRows: actualMonthRows,
+        type: "income",
       }),
     [actualMonthRows, scenarioMonthRows]
   );
@@ -806,17 +878,39 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
   const selectedDayActualTotals = buildTotals(selectedDayActualRows);
 
   const categoryChartHeight = useMemo(
-    () => Math.max(300, Math.min(740, 100 + categoryRows.length * 36)),
-    [categoryRows.length]
+    () => getCategoryChartHeight(categoryRows),
+    [categoryRows]
   );
 
-  const categoryAxisWidth = useMemo(() => {
-    const maxLength = categoryRows.reduce(
-      (max, row) => Math.max(max, String(row.category || "").length),
-      0
-    );
-    return Math.max(130, Math.min(280, maxLength * 7));
-  }, [categoryRows]);
+  const categoryAxisWidth = useMemo(
+    () => getCategoryAxisWidth(categoryRows),
+    [categoryRows]
+  );
+
+  const categoryValueDomain = useMemo(
+    () => [0, getChartDomainMax(categoryRows, ["scenario", "real"])],
+    [categoryRows]
+  );
+
+  const incomeCategoryChartHeight = useMemo(
+    () => getCategoryChartHeight(incomeCategoryRows),
+    [incomeCategoryRows]
+  );
+
+  const incomeCategoryAxisWidth = useMemo(
+    () => getCategoryAxisWidth(incomeCategoryRows),
+    [incomeCategoryRows]
+  );
+
+  const incomeCategoryValueDomain = useMemo(
+    () => [0, getChartDomainMax(incomeCategoryRows, ["scenario", "real"])],
+    [incomeCategoryRows]
+  );
+
+  const timelineValueDomain = useMemo(
+    () => [0, getChartDomainMax(timelineRows, ["scenario", "real"])],
+    [timelineRows]
+  );
 
   const handleDatesSet = useCallback((info) => {
     const nextStart = normalizeDateKey(info.startStr || info.start);
@@ -1024,7 +1118,7 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
             </div>
           </section>
 
-          <section className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
+          <section className="grid grid-cols-1 gap-5 xl:grid-cols-2">
             <div
               className="rounded-lg border p-4"
               style={{
@@ -1060,6 +1154,7 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
                       />
                       <XAxis
                         type="number"
+                        domain={categoryValueDomain}
                         stroke="var(--muted)"
                         tick={{ fill: "var(--text)", fontSize: 12 }}
                         tickFormatter={formatCompact}
@@ -1102,6 +1197,85 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
             >
               <div className="mb-4">
                 <h4 className="text-base font-bold text-[var(--text)]">
+                  Ingreso por Categoria "Escenario vs Real"
+                </h4>
+                <p className="text-sm text-[var(--muted)]">
+                  Comparativo de ingresos por categoria en {monthLabel}.
+                </p>
+              </div>
+
+              {incomeCategoryRows.length === 0 ? (
+                <p className="text-sm italic text-[var(--muted)]">
+                  No hay ingresos por categoria para comparar en este mes.
+                </p>
+              ) : (
+                <div
+                  className="w-full"
+                  style={{ height: incomeCategoryChartHeight }}
+                >
+                  <ResponsiveContainer>
+                    <BarChart
+                      data={incomeCategoryRows}
+                      layout="vertical"
+                      margin={{ top: 8, right: 24, bottom: 8, left: 8 }}
+                      barCategoryGap={8}
+                    >
+                      <CartesianGrid
+                        stroke="color-mix(in srgb, var(--border-rgba) 60%, transparent)"
+                        strokeDasharray="4 4"
+                      />
+                      <XAxis
+                        type="number"
+                        domain={incomeCategoryValueDomain}
+                        stroke="var(--muted)"
+                        tick={{ fill: "var(--text)", fontSize: 12 }}
+                        tickFormatter={formatCompact}
+                      />
+                      <YAxis
+                        dataKey="category"
+                        type="category"
+                        width={incomeCategoryAxisWidth}
+                        stroke="var(--muted)"
+                        tick={{ fill: "var(--text)", fontSize: 12 }}
+                      />
+                      <Tooltip
+                        content={
+                          <CategoryTooltip
+                            gapLabel="Diferencia"
+                            positiveGapIsGood={false}
+                          />
+                        }
+                      />
+                      <Legend
+                        wrapperStyle={{ color: "var(--text)", fontSize: 13 }}
+                      />
+                      <Bar
+                        dataKey="scenario"
+                        name="Escenario"
+                        fill="var(--primary)"
+                        radius={[6, 6, 6, 6]}
+                      />
+                      <Bar
+                        dataKey="real"
+                        name="Real"
+                        fill="var(--success)"
+                        radius={[6, 6, 6, 6]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+
+            <div
+              className="rounded-lg border p-4 xl:col-span-2"
+              style={{
+                borderColor: "var(--border-rgba)",
+                background: "color-mix(in srgb, var(--panel) 66%, transparent)",
+              }}
+            >
+              <div className="mb-4">
+                <h4 className="text-base font-bold text-[var(--text)]">
                   Burn Rate
                 </h4>
                 <p className="text-sm text-[var(--muted)]">
@@ -1125,6 +1299,7 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
                       tick={{ fill: "var(--text)", fontSize: 12 }}
                     />
                     <YAxis
+                      domain={timelineValueDomain}
                       stroke="var(--muted)"
                       tick={{ fill: "var(--text)", fontSize: 12 }}
                       tickFormatter={formatCompact}
