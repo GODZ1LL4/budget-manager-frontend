@@ -8,7 +8,6 @@ import {
   Area,
   Bar,
   BarChart,
-  CartesianGrid,
   ComposedChart,
   Legend,
   Line,
@@ -283,6 +282,11 @@ function getChartTicks(maxValue) {
   );
 }
 
+function getBarPercent(value, maxValue) {
+  const max = Math.max(1, safeNumber(maxValue));
+  return `${Math.min(100, (safeNumber(value) / max) * 100)}%`;
+}
+
 function buildTimelineRows({ scenarioRows, realRows, monthStart }) {
   const monthEnd = lastDayOfMonthDateKey(monthStart);
   const today = todayDateKey();
@@ -554,6 +558,75 @@ function TimelineTooltip({ active, payload, label }) {
           </p>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+function IncomeCategoryBars({ rows, maxValue }) {
+  return (
+    <div className="space-y-3">
+      {rows.map((row) => {
+        const difference = safeNumber(row.scenario) - safeNumber(row.real);
+        const differenceColor =
+          difference > 0
+            ? "var(--warning)"
+            : difference < 0
+            ? "var(--success)"
+            : "var(--muted)";
+
+        return (
+          <div
+            key={row.key}
+            className="rounded-lg border p-3"
+            style={{
+              borderColor: "var(--border-rgba)",
+              background: "color-mix(in srgb, var(--bg-3) 52%, transparent)",
+            }}
+            title={`Escenario: ${formatCurrency(row.scenario)}
+Real: ${formatCurrency(row.real)}
+Diferencia: ${formatSignedCurrency(difference)}`}
+          >
+            <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+              <p className="text-sm font-bold text-[var(--text)]">
+                {row.category}
+              </p>
+              <p className="text-xs font-extrabold" style={{ color: differenceColor }}>
+                Diferencia {formatSignedCurrency(difference)}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <div className="grid grid-cols-[88px_minmax(0,1fr)_auto] items-center gap-2 text-xs">
+                <span className="font-semibold text-[var(--muted)]">
+                  Escenario
+                </span>
+                <div className="h-2 overflow-hidden rounded-full bg-[var(--border-rgba)]">
+                  <div
+                    className="h-full rounded-full bg-[var(--primary)]"
+                    style={{ width: getBarPercent(row.scenario, maxValue) }}
+                  />
+                </div>
+                <span className="font-bold text-[var(--text)]">
+                  {formatCurrency(row.scenario)}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-[88px_minmax(0,1fr)_auto] items-center gap-2 text-xs">
+                <span className="font-semibold text-[var(--muted)]">Real</span>
+                <div className="h-2 overflow-hidden rounded-full bg-[var(--border-rgba)]">
+                  <div
+                    className="h-full rounded-full bg-[var(--success)]"
+                    style={{ width: getBarPercent(row.real, maxValue) }}
+                  />
+                </div>
+                <span className="font-bold text-[var(--text)]">
+                  {formatCurrency(row.real)}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -897,6 +970,10 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
     () => getCategoryAxisWidth(categoryRows),
     [categoryRows]
   );
+  const categoryAxisTicks = useMemo(
+    () => categoryRows.map((row) => row.category),
+    [categoryRows]
+  );
 
   const categoryValueDomain = useMemo(
     () => [0, getChartDomainMax(categoryRows, ["scenario", "real"])],
@@ -907,23 +984,9 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
     [categoryValueDomain]
   );
 
-  const incomeCategoryChartHeight = useMemo(
-    () => getCategoryChartHeight(incomeCategoryRows),
+  const incomeCategoryMaxValue = useMemo(
+    () => getChartDomainMax(incomeCategoryRows, ["scenario", "real"]),
     [incomeCategoryRows]
-  );
-
-  const incomeCategoryAxisWidth = useMemo(
-    () => getCategoryAxisWidth(incomeCategoryRows),
-    [incomeCategoryRows]
-  );
-
-  const incomeCategoryValueDomain = useMemo(
-    () => [0, getChartDomainMax(incomeCategoryRows, ["scenario", "real"])],
-    [incomeCategoryRows]
-  );
-  const incomeCategoryValueTicks = useMemo(
-    () => getChartTicks(incomeCategoryValueDomain[1]),
-    [incomeCategoryValueDomain]
   );
 
   const timelineValueDomain = useMemo(
@@ -1171,15 +1234,12 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
                       margin={{ top: 8, right: 24, bottom: 8, left: 8 }}
                       barCategoryGap={8}
                     >
-                      <CartesianGrid
-                        stroke="color-mix(in srgb, var(--border-rgba) 60%, transparent)"
-                        strokeDasharray="4 4"
-                      />
                       <XAxis
                         type="number"
                         domain={categoryValueDomain}
+                        allowDataOverflow
                         ticks={categoryValueTicks}
-                        tickCount={0}
+                        tickCount={null}
                         stroke="var(--muted)"
                         tick={{ fill: "var(--text)", fontSize: 12 }}
                         tickFormatter={formatCompact}
@@ -1187,6 +1247,9 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
                       <YAxis
                         dataKey="category"
                         type="category"
+                        ticks={categoryAxisTicks}
+                        tickCount={null}
+                        interval={0}
                         width={categoryAxisWidth}
                         stroke="var(--muted)"
                         tick={{ fill: "var(--text)", fontSize: 12 }}
@@ -1234,63 +1297,10 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
                   No hay ingresos por categoria para comparar en este mes.
                 </p>
               ) : (
-                <div
-                  className="w-full"
-                  style={{ height: incomeCategoryChartHeight }}
-                >
-                  <ResponsiveContainer>
-                    <BarChart
-                      data={incomeCategoryRows}
-                      layout="vertical"
-                      margin={{ top: 8, right: 24, bottom: 8, left: 8 }}
-                      barCategoryGap={8}
-                    >
-                      <CartesianGrid
-                        stroke="color-mix(in srgb, var(--border-rgba) 60%, transparent)"
-                        strokeDasharray="4 4"
-                      />
-                      <XAxis
-                        type="number"
-                        domain={incomeCategoryValueDomain}
-                        ticks={incomeCategoryValueTicks}
-                        tickCount={0}
-                        stroke="var(--muted)"
-                        tick={{ fill: "var(--text)", fontSize: 12 }}
-                        tickFormatter={formatCompact}
-                      />
-                      <YAxis
-                        dataKey="category"
-                        type="category"
-                        width={incomeCategoryAxisWidth}
-                        stroke="var(--muted)"
-                        tick={{ fill: "var(--text)", fontSize: 12 }}
-                      />
-                      <Tooltip
-                        content={
-                          <CategoryTooltip
-                            gapLabel="Diferencia"
-                            positiveGapIsGood={false}
-                          />
-                        }
-                      />
-                      <Legend
-                        wrapperStyle={{ color: "var(--text)", fontSize: 13 }}
-                      />
-                      <Bar
-                        dataKey="scenario"
-                        name="Escenario"
-                        fill="var(--primary)"
-                        radius={[6, 6, 6, 6]}
-                      />
-                      <Bar
-                        dataKey="real"
-                        name="Real"
-                        fill="var(--success)"
-                        radius={[6, 6, 6, 6]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                <IncomeCategoryBars
+                  rows={incomeCategoryRows}
+                  maxValue={incomeCategoryMaxValue}
+                />
               )}
             </div>
 
@@ -1316,10 +1326,6 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
                     data={timelineRows}
                     margin={{ top: 8, right: 18, bottom: 8, left: 4 }}
                   >
-                    <CartesianGrid
-                      stroke="color-mix(in srgb, var(--border-rgba) 60%, transparent)"
-                      strokeDasharray="4 4"
-                    />
                     <XAxis
                       dataKey="day"
                       stroke="var(--muted)"
@@ -1327,8 +1333,9 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
                     />
                     <YAxis
                       domain={timelineValueDomain}
+                      allowDataOverflow
                       ticks={timelineValueTicks}
-                      tickCount={0}
+                      tickCount={null}
                       stroke="var(--muted)"
                       tick={{ fill: "var(--text)", fontSize: 12 }}
                       tickFormatter={formatCompact}
