@@ -272,6 +272,17 @@ function getChartDomainMax(rows, keys) {
   return maxValue > 0 ? Number((maxValue * 1.08).toFixed(2)) : 1;
 }
 
+function getChartTicks(maxValue) {
+  const max = Math.max(1, safeNumber(maxValue));
+  return Array.from(
+    new Set(
+      [0, max * 0.25, max * 0.5, max * 0.75, max].map((value) =>
+        Number(value.toFixed(2))
+      )
+    )
+  );
+}
+
 function buildTimelineRows({ scenarioRows, realRows, monthStart }) {
   const monthEnd = lastDayOfMonthDateKey(monthStart);
   const today = todayDateKey();
@@ -891,6 +902,10 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
     () => [0, getChartDomainMax(categoryRows, ["scenario", "real"])],
     [categoryRows]
   );
+  const categoryValueTicks = useMemo(
+    () => getChartTicks(categoryValueDomain[1]),
+    [categoryValueDomain]
+  );
 
   const incomeCategoryChartHeight = useMemo(
     () => getCategoryChartHeight(incomeCategoryRows),
@@ -906,10 +921,18 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
     () => [0, getChartDomainMax(incomeCategoryRows, ["scenario", "real"])],
     [incomeCategoryRows]
   );
+  const incomeCategoryValueTicks = useMemo(
+    () => getChartTicks(incomeCategoryValueDomain[1]),
+    [incomeCategoryValueDomain]
+  );
 
   const timelineValueDomain = useMemo(
     () => [0, getChartDomainMax(timelineRows, ["scenario", "real"])],
     [timelineRows]
+  );
+  const timelineValueTicks = useMemo(
+    () => getChartTicks(timelineValueDomain[1]),
+    [timelineValueDomain]
   );
 
   const handleDatesSet = useCallback((info) => {
@@ -1155,6 +1178,8 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
                       <XAxis
                         type="number"
                         domain={categoryValueDomain}
+                        ticks={categoryValueTicks}
+                        tickCount={0}
                         stroke="var(--muted)"
                         tick={{ fill: "var(--text)", fontSize: 12 }}
                         tickFormatter={formatCompact}
@@ -1227,6 +1252,8 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
                       <XAxis
                         type="number"
                         domain={incomeCategoryValueDomain}
+                        ticks={incomeCategoryValueTicks}
+                        tickCount={0}
                         stroke="var(--muted)"
                         tick={{ fill: "var(--text)", fontSize: 12 }}
                         tickFormatter={formatCompact}
@@ -1300,6 +1327,8 @@ function ScenarioVsActualProjectionReport({ token, onOpenScenarios }) {
                     />
                     <YAxis
                       domain={timelineValueDomain}
+                      ticks={timelineValueTicks}
+                      tickCount={0}
                       stroke="var(--muted)"
                       tick={{ fill: "var(--text)", fontSize: 12 }}
                       tickFormatter={formatCompact}
