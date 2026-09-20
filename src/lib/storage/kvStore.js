@@ -10,6 +10,7 @@ const GLOBAL_KEYS = new Set([
   "subscription_mode_v1",
   "bm_sqlite_schema_initialized_v1",
   "bm_device_id",
+  "bm_mobile_accounts_v1",
 ]);
 
 let sqliteDbPromise = null;

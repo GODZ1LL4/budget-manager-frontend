@@ -3,6 +3,11 @@ import Navbar from "./Navbar";
 function AppLayout({
   children,
   onLogout,
+  currentUser,
+  mobileAccounts = [],
+  onAddMobileAccount,
+  onSwitchMobileAccount,
+  isSwitchingAccount = false,
   setView,
   contentWidth = "default",
   subscriptionMode,
@@ -16,6 +21,11 @@ function AppLayout({
     <div className="app-shell app-shell--safe-bottom bg-gradient-to-br from-[var(--bg-1)] via-[var(--bg-2)] to-[var(--bg-3)] text-[var(--text)]">
       <Navbar
         onLogout={onLogout}
+        currentUser={currentUser}
+        mobileAccounts={mobileAccounts}
+        onAddMobileAccount={onAddMobileAccount}
+        onSwitchMobileAccount={onSwitchMobileAccount}
+        isSwitchingAccount={isSwitchingAccount}
         setView={setView}
         subscriptionMode={subscriptionMode}
       />

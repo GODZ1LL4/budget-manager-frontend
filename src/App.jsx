@@ -9,6 +9,7 @@ import Transactions from "./pages/Transactions";
 import Budgets from "./pages/Budgets";
 import Items from "./pages/Items";
 import Goals from "./pages/Goals";
+import Projects from "./pages/Projects";
 import Dashboard from "./pages/Dashboard";
 import AppLayout from "./components/AppLayout";
 import {
@@ -28,6 +29,11 @@ import useOnlineStatus from "./hooks/useOnlineStatus";
 import { runBootstrapSync } from "./lib/sync/bootstrapSync";
 import { initializeOfflineDatabase } from "./lib/storage/offlineDatabase";
 import { ensureLocalDataOwnedByUser } from "./lib/storage/localSessionIsolation";
+import {
+  getMobileAccounts,
+  removeMobileAccountSession,
+  saveMobileAccountSession,
+} from "./lib/auth/mobileAccounts";
 import { syncExpenseReminder } from "./lib/notifications/localNotifications";
 import {
   clearToastBacklog,
@@ -46,6 +52,7 @@ import { listCategories } from "./lib/repositories/categoriesRepository";
 import { listGoals } from "./lib/repositories/goalsRepository";
 import { listTransactions } from "./lib/repositories/transactionsRepository";
 import { listBudgets } from "./lib/repositories/budgetsRepository";
+import { listProjects } from "./lib/repositories/projectsRepository";
 import {
   getBackendConnectionStatus,
   probeBackend,
@@ -103,6 +110,9 @@ function App() {
     getBackendConnectionStatus()
   );
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+  const [mobileAccounts, setMobileAccounts] = useState([]);
+  const [isAddingMobileAccount, setIsAddingMobileAccount] = useState(false);
+  const [isSwitchingAccount, setIsSwitchingAccount] = useState(false);
   const isOnline = useOnlineStatus();
   const isNativeMobile = Capacitor.getPlatform() !== "web";
   const onlineStatusRef = useRef(null);
@@ -132,6 +142,27 @@ function App() {
 
     return offlineInitPromiseRef.current;
   };
+
+  const refreshMobileAccounts = useCallback(async () => {
+    if (!isNativeMobile) {
+      setMobileAccounts([]);
+      return [];
+    }
+
+    const accounts = await getMobileAccounts().catch(() => []);
+    setMobileAccounts(accounts);
+    return accounts;
+  }, [isNativeMobile]);
+
+  const rememberMobileSession = useCallback(async (authSession) => {
+    if (!isNativeMobile || !authSession?.user?.id) {
+      return [];
+    }
+
+    const accounts = await saveMobileAccountSession(authSession).catch(() => []);
+    setMobileAccounts(accounts);
+    return accounts;
+  }, [isNativeMobile]);
 
   const warmPremiumOfflineCache = useCallback(async (
     accessToken,
@@ -177,6 +208,10 @@ function App() {
         token: accessToken,
         subscriptionMode: modeOverride,
       }),
+      listProjects({
+        token: accessToken,
+        subscriptionMode: modeOverride,
+      }),
     ]);
   }, [isOnline, subscriptionMode]);
 
@@ -188,6 +223,7 @@ function App() {
 
     await ensureOfflineStorageReady();
     await ensureLocalDataOwnedByUser(authSession.user.id);
+    await rememberMobileSession(authSession);
     const nextMode = await syncSubscriptionAccessFromBackend(
       authSession.access_token
     ).catch(() => null);
@@ -197,6 +233,7 @@ function App() {
       SUBSCRIPTION_MODES.LOCAL_ONLY;
     await applySubscriptionMode(effectiveMode);
     await warmPremiumOfflineCache(authSession.access_token, effectiveMode);
+    setIsAddingMobileAccount(false);
     setView("dashboard");
   };
 
@@ -297,6 +334,10 @@ function App() {
   }, [applySubscriptionMode]);
 
   useEffect(() => {
+    refreshMobileAccounts().catch(() => null);
+  }, [refreshMobileAccounts]);
+
+  useEffect(() => {
     if (!isNativeMobile) return;
 
     syncExpenseReminder().catch(() => null);
@@ -370,24 +411,46 @@ function App() {
     const restoreSession = async () => {
       try {
         await ensureOfflineStorageReady();
+        const storedMobileAccounts = await refreshMobileAccounts();
         const authUrlState = readAuthUrlState();
 
-        const { data } = await supabase.auth.getSession().catch(() => ({
+        let { data } = await supabase.auth.getSession().catch(() => ({
           data: { session: null },
         }));
+        let restoredSession = data?.session || null;
 
-        if (!cancelled) {
-          handleAuthUrlState(authUrlState, data?.session || null);
+        if (
+          !restoredSession &&
+          isNativeMobile &&
+          storedMobileAccounts[0]?.session &&
+          !authUrlState.hasAuthParams
+        ) {
+          const { data: restoredData } = await supabase.auth
+            .setSession({
+              access_token: storedMobileAccounts[0].session.access_token,
+              refresh_token: storedMobileAccounts[0].session.refresh_token,
+            })
+            .catch(() => ({ data: { session: null } }));
+
+          restoredSession = restoredData?.session || null;
+          data = { session: restoredSession };
         }
 
-        if (data?.session && !cancelled) {
-          const ownership = await ensureLocalDataOwnedByUser(data.session.user?.id);
+        if (!cancelled) {
+          handleAuthUrlState(authUrlState, restoredSession);
+        }
+
+        if (restoredSession && !cancelled) {
+          const ownership = await ensureLocalDataOwnedByUser(
+            restoredSession.user?.id
+          );
           if (ownership?.switched) {
             toast.info(
               "Se cambio al almacenamiento local de esta cuenta."
             );
           }
-          setSession(data.session);
+          await rememberMobileSession(restoredSession);
+          setSession(restoredSession);
         }
       } finally {
         if (!cancelled) {
@@ -420,6 +483,7 @@ function App() {
               "Se cambio al almacenamiento local de esta cuenta."
             );
           }
+          await rememberMobileSession(session);
           setSession(session);
           setIsAuthReady(true);
         } else {
@@ -449,7 +513,13 @@ function App() {
       cancelled = true;
       authListener.subscription.unsubscribe();
     };
-  }, [applySubscriptionMode, handleAuthUrlState]);
+  }, [
+    applySubscriptionMode,
+    handleAuthUrlState,
+    isNativeMobile,
+    refreshMobileAccounts,
+    rememberMobileSession,
+  ]);
 
   useEffect(() => {
     const restoreSubscriptionMode = async () => {
@@ -714,9 +784,17 @@ function App() {
   ]);
 
   const handleLogout = async () => {
+    const currentUserId = session?.user?.id;
     await supabase.auth.signOut();
+    if (isNativeMobile && currentUserId) {
+      const nextAccounts = await removeMobileAccountSession(currentUserId).catch(
+        () => []
+      );
+      setMobileAccounts(nextAccounts);
+    }
     await clearHomeWidgetSnapshot().catch(() => null);
     setSession(null);
+    setIsAddingMobileAccount(false);
     setIsPasswordRecovery(false);
     setView("categories");
   };
@@ -732,6 +810,62 @@ function App() {
     if (nextSession) {
       setSession(nextSession);
       await finalizeLoginSession(nextSession);
+    }
+  };
+
+  const handleAddMobileAccount = () => {
+    setIsAddingMobileAccount(true);
+    setView("dashboard");
+  };
+
+  const handleCancelAddMobileAccount = () => {
+    setIsAddingMobileAccount(false);
+  };
+
+  const handleSwitchMobileAccount = async (userId) => {
+    if (!isNativeMobile || !userId || isSwitchingAccount) {
+      return;
+    }
+
+    const account = mobileAccounts.find(
+      (item) => String(item.userId) === String(userId)
+    );
+
+    if (!account?.session?.access_token || !account?.session?.refresh_token) {
+      toast.error("Esta cuenta necesita iniciar sesion otra vez.");
+      return;
+    }
+
+    if (String(session?.user?.id) === String(account.userId)) {
+      setIsAddingMobileAccount(false);
+      return;
+    }
+
+    setIsSwitchingAccount(true);
+
+    try {
+      await ensureOfflineStorageReady();
+      await ensureLocalDataOwnedByUser(account.userId);
+
+      const { data, error } = await supabase.auth.setSession({
+        access_token: account.session.access_token,
+        refresh_token: account.session.refresh_token,
+      });
+
+      if (error || !data?.session) {
+        throw error || new Error("No se pudo restaurar la sesion.");
+      }
+
+      await rememberMobileSession(data.session);
+      setSession(data.session);
+      await finalizeLoginSession(data.session);
+      toast.success(`Cambiaste a ${data.session.user?.email || "otra cuenta"}.`);
+    } catch (error) {
+      console.error("No se pudo cambiar de cuenta", error);
+      toast.error("No pudimos cambiar a esa cuenta. Inicia sesion nuevamente.");
+    } finally {
+      setIsSwitchingAccount(false);
+      setIsAddingMobileAccount(false);
     }
   };
 
@@ -825,11 +959,22 @@ function App() {
           onPasswordUpdated={handlePasswordUpdated}
           onCancelPasswordUpdate={handleLogout}
         />
+      ) : isAddingMobileAccount && session ? (
+        <Login
+          onLogin={finalizeLoginSession}
+          onCancelAuth={handleCancelAddMobileAccount}
+          cancelAuthLabel="Volver a mi cuenta actual"
+        />
       ) : !session ? (
         <Login onLogin={finalizeLoginSession} />
       ) : (
         <AppLayout
           onLogout={handleLogout}
+          currentUser={session.user}
+          mobileAccounts={mobileAccounts}
+          onAddMobileAccount={handleAddMobileAccount}
+          onSwitchMobileAccount={handleSwitchMobileAccount}
+          isSwitchingAccount={isSwitchingAccount}
           setView={setView}
           subscriptionMode={subscriptionMode}
           contentWidth={
@@ -871,6 +1016,12 @@ function App() {
           )}
           {view === "goals" && (
             <Goals
+              token={session.access_token}
+              subscriptionMode={subscriptionMode}
+            />
+          )}
+          {view === "projects" && (
+            <Projects
               token={session.access_token}
               subscriptionMode={subscriptionMode}
             />

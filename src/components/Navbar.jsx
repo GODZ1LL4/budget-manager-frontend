@@ -4,7 +4,16 @@ import { Capacitor } from "@capacitor/core";
 import { HiMenu } from "react-icons/hi";
 import { canUsePremiumBackend } from "../lib/subscription/subscriptionAccess";
 
-function Navbar({ onLogout, setView, subscriptionMode }) {
+function Navbar({
+  onLogout,
+  currentUser,
+  mobileAccounts = [],
+  onAddMobileAccount,
+  onSwitchMobileAccount,
+  isSwitchingAccount = false,
+  setView,
+  subscriptionMode,
+}) {
   const [openSection, setOpenSection] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -85,6 +94,7 @@ function Navbar({ onLogout, setView, subscriptionMode }) {
       links: [      
         { name: "Escenarios", view: "scenarios" },
         { name: "Metas de ahorro", view: "goals" },
+        { name: "Proyectos", view: "projects" },
         { name: "Presupuestos", view: "budgets" },
         { name: "Reportes", view: "reports" },
         // { name: "Dashh", view: "moderndashboard" },
@@ -128,6 +138,25 @@ function Navbar({ onLogout, setView, subscriptionMode }) {
 
   const goToView = (view) => {
     setView(view);
+    setOpenSection(null);
+    setMenuOpen(false);
+  };
+
+  const currentUserId = currentUser?.id ? String(currentUser.id) : "";
+  const currentEmail = currentUser?.email || "";
+  const visibleAccounts = mobileAccounts.filter((account) => account?.userId);
+
+  const getAccountInitial = (email) =>
+    String(email || "?").trim().charAt(0).toUpperCase() || "?";
+
+  const handleSwitchAccount = (userId) => {
+    onSwitchMobileAccount?.(userId);
+    setOpenSection(null);
+    setMenuOpen(false);
+  };
+
+  const handleAddAccount = () => {
+    onAddMobileAccount?.();
     setOpenSection(null);
     setMenuOpen(false);
   };
@@ -387,10 +416,80 @@ function Navbar({ onLogout, setView, subscriptionMode }) {
             })}
           </ul>
 
+          {isNativeMobile && (
+            <div className="mt-auto space-y-3 border-t border-[var(--border-rgba)] pt-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--muted)]">
+                  Cuenta actual
+                </p>
+                <div className="mt-2 flex items-center gap-3 rounded-lg border border-[var(--border-rgba)] bg-[color-mix(in_srgb,var(--panel-2)_70%,transparent)] px-3 py-2">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--primary)] text-sm font-extrabold text-[var(--primary-contrast,var(--bg-1))]">
+                    {getAccountInitial(currentEmail)}
+                  </span>
+                  <span className="min-w-0 truncate text-sm font-semibold text-[var(--text)]">
+                    {currentEmail || "Cuenta activa"}
+                  </span>
+                </div>
+              </div>
+
+              {visibleAccounts.length > 1 && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--muted)]">
+                    Cambiar cuenta
+                  </p>
+                  {visibleAccounts.map((account) => {
+                    const isActive =
+                      String(account.userId) === String(currentUserId);
+
+                    return (
+                      <button
+                        key={account.userId}
+                        type="button"
+                        disabled={isActive || isSwitchingAccount}
+                        onClick={() => handleSwitchAccount(account.userId)}
+                        className="
+                          flex w-full items-center gap-3 rounded-lg border
+                          border-[var(--border-rgba)]
+                          bg-[color-mix(in_srgb,var(--panel-2)_54%,transparent)]
+                          px-3 py-2 text-left text-sm
+                          text-[var(--text)]
+                          transition-colors
+                          hover:bg-[color-mix(in_srgb,var(--panel-2)_78%,transparent)]
+                          disabled:cursor-default disabled:opacity-60
+                        "
+                      >
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--border-rgba)] text-xs font-extrabold">
+                          {getAccountInitial(account.email)}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate">
+                          {account.email || "Cuenta guardada"}
+                        </span>
+                        {isActive && (
+                          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--success)]">
+                            Activa
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleAddAccount}
+                disabled={isSwitchingAccount}
+                className="ff-btn ff-btn-outline w-full justify-center text-sm"
+              >
+                Agregar cuenta
+              </button>
+            </div>
+          )}
+
           <button
             onClick={onLogout}
             className="
-              mt-auto rounded-full px-4 py-2
+              mt-3 rounded-full px-4 py-2
               text-sm font-semibold
               bg-[var(--danger)]
               text-[color-mix(in srgb,var(--text)_10%,white)]

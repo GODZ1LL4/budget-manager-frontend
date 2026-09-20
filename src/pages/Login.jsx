@@ -62,6 +62,8 @@ function Login({
   initialMode = MODES.login,
   onPasswordUpdated,
   onCancelPasswordUpdate,
+  onCancelAuth,
+  cancelAuthLabel = "Cancelar",
 }) {
   const [mode, setMode] = useState(initialMode);
   const [email, setEmail] = useState("");
@@ -471,6 +473,17 @@ function Login({
           >
             {submitting ? copy.loading : copy.button}
           </button>
+
+          {!isUpdatePassword && onCancelAuth && (
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={onCancelAuth}
+              className="ff-btn ff-btn-outline w-full"
+            >
+              {cancelAuthLabel}
+            </button>
+          )}
         </form>
 
         <div className="mt-5 space-y-3 text-center text-xs text-[var(--muted)]">

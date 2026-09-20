@@ -3,6 +3,7 @@ import { syncPendingAccounts } from "../repositories/accountsRepository";
 import { syncPendingCategories } from "../repositories/categoriesRepository";
 import { syncPendingGoals } from "../repositories/goalsRepository";
 import { syncPendingItems } from "../repositories/itemsRepository";
+import { syncPendingProjects } from "../repositories/projectsRepository";
 import { syncPendingTransactions } from "../repositories/transactionsRepository";
 
 export async function runBootstrapSync(token, subscriptionMode) {
@@ -15,6 +16,7 @@ export async function runBootstrapSync(token, subscriptionMode) {
     () => syncPendingItems({ token, subscriptionMode }),
     () => syncPendingTransactions({ token, subscriptionMode }),
     () => syncPendingGoals({ token, subscriptionMode }),
+    () => syncPendingProjects({ token, subscriptionMode }),
   ];
 
   let synced = 0;

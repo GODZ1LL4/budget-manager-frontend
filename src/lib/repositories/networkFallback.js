@@ -14,6 +14,7 @@ const FAST_FALLBACK_PREFIXES = [
   "/items",
   "/items-with-price",
   "/me/subscription-access",
+  "/projects",
   "/taxes",
   "/transactions",
 ];

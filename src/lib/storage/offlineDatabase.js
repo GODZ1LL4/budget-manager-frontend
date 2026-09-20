@@ -122,6 +122,60 @@ async function createTables(db) {
       updated_at TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT,
+      name TEXT NOT NULL,
+      description TEXT,
+      status TEXT,
+      priority TEXT,
+      start_date TEXT,
+      due_date TEXT,
+      budget_amount REAL DEFAULT 0,
+      account_id TEXT,
+      category_id TEXT,
+      sync_status TEXT,
+      payload_json TEXT,
+      updated_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS project_tasks (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT,
+      project_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      notes TEXT,
+      status TEXT,
+      due_date TEXT,
+      position REAL DEFAULT 0,
+      sync_status TEXT,
+      payload_json TEXT,
+      updated_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS project_milestones (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT,
+      project_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      target_date TEXT,
+      completed_at TEXT,
+      sync_status TEXT,
+      payload_json TEXT,
+      updated_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS project_transaction_links (
+      id TEXT PRIMARY KEY NOT NULL,
+      user_id TEXT,
+      project_id TEXT NOT NULL,
+      transaction_id TEXT NOT NULL,
+      sync_status TEXT,
+      payload_json TEXT,
+      updated_at TEXT,
+      UNIQUE(project_id, transaction_id)
+    );
+
     CREATE TABLE IF NOT EXISTS pending_ops (
       id TEXT PRIMARY KEY NOT NULL,
       user_id TEXT,
@@ -142,6 +196,14 @@ async function createTables(db) {
     CREATE INDEX IF NOT EXISTS idx_items_user_id ON items (user_id);
     CREATE INDEX IF NOT EXISTS idx_taxes_user_id ON taxes (user_id);
     CREATE INDEX IF NOT EXISTS idx_item_prices_user_id ON item_prices (user_id);
+    CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects (user_id);
+    CREATE INDEX IF NOT EXISTS idx_project_tasks_user_id ON project_tasks (user_id);
+    CREATE INDEX IF NOT EXISTS idx_project_tasks_project_id ON project_tasks (project_id);
+    CREATE INDEX IF NOT EXISTS idx_project_milestones_user_id ON project_milestones (user_id);
+    CREATE INDEX IF NOT EXISTS idx_project_milestones_project_id ON project_milestones (project_id);
+    CREATE INDEX IF NOT EXISTS idx_project_transaction_links_user_id ON project_transaction_links (user_id);
+    CREATE INDEX IF NOT EXISTS idx_project_transaction_links_project_id ON project_transaction_links (project_id);
+    CREATE INDEX IF NOT EXISTS idx_project_transaction_links_transaction_id ON project_transaction_links (transaction_id);
     CREATE INDEX IF NOT EXISTS idx_pending_ops_user_id ON pending_ops (user_id);
   `);
 }
@@ -155,6 +217,10 @@ async function ensureUserColumns(db) {
     "items",
     "taxes",
     "item_prices",
+    "projects",
+    "project_tasks",
+    "project_milestones",
+    "project_transaction_links",
     "pending_ops",
   ];
 
@@ -360,6 +426,10 @@ export async function clearOfflineDomainData() {
     DELETE FROM item_prices WHERE user_id = '${activeUserId || ""}';
     DELETE FROM items WHERE user_id = '${activeUserId || ""}';
     DELETE FROM taxes WHERE user_id = '${activeUserId || ""}';
+    DELETE FROM project_transaction_links WHERE user_id = '${activeUserId || ""}';
+    DELETE FROM project_milestones WHERE user_id = '${activeUserId || ""}';
+    DELETE FROM project_tasks WHERE user_id = '${activeUserId || ""}';
+    DELETE FROM projects WHERE user_id = '${activeUserId || ""}';
     DELETE FROM transactions WHERE user_id = '${activeUserId || ""}';
     DELETE FROM budgets WHERE user_id = '${activeUserId || ""}';
     DELETE FROM categories WHERE user_id = '${activeUserId || ""}';
@@ -386,6 +456,10 @@ export async function claimUnownedOfflineData(userId) {
     UPDATE item_prices SET user_id = '${safeUserId}' WHERE user_id IS NULL;
     UPDATE items SET user_id = '${safeUserId}' WHERE user_id IS NULL;
     UPDATE taxes SET user_id = '${safeUserId}' WHERE user_id IS NULL;
+    UPDATE project_transaction_links SET user_id = '${safeUserId}' WHERE user_id IS NULL;
+    UPDATE project_milestones SET user_id = '${safeUserId}' WHERE user_id IS NULL;
+    UPDATE project_tasks SET user_id = '${safeUserId}' WHERE user_id IS NULL;
+    UPDATE projects SET user_id = '${safeUserId}' WHERE user_id IS NULL;
     UPDATE transactions SET user_id = '${safeUserId}' WHERE user_id IS NULL;
     UPDATE budgets SET user_id = '${safeUserId}' WHERE user_id IS NULL;
     UPDATE categories SET user_id = '${safeUserId}' WHERE user_id IS NULL;

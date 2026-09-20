@@ -19,6 +19,7 @@ import {
   canUsePremiumBackend,
 } from "../subscription/subscriptionAccess";
 import { reconcileGoalReservationsForAccount } from "./goalsRepository";
+import { remapProjectTransactionReference } from "./projectsRepository";
 
 const api = import.meta.env.VITE_API_URL;
 const TRANSACTIONS_CACHE_KEY = "transactions_cache_v2";
@@ -189,6 +190,7 @@ async function replaceLocalTransactionWithRemote(localId, remoteTransaction) {
 
   await setCachedTransactions(next);
   await replaceSqlTransactions(next);
+  await remapProjectTransactionReference(localId, normalizedRemote);
 }
 
 function buildTransactionPayload(transaction) {
