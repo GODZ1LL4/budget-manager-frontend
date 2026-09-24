@@ -1,8 +1,60 @@
 //frontend\src\components\Modal.jsx
 import { Dialog, Transition } from "@headlessui/react";
-import { Fragment } from "react";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
+import { Fragment, useEffect, useRef } from "react";
+
+const mobileBackModalStack = [];
 
 function Modal({ isOpen, onClose, title, children, size = "md" }) {
+  const onCloseRef = useRef(onClose);
+  const modalIdRef = useRef(Symbol("modal"));
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (
+      !isOpen ||
+      !Capacitor.isNativePlatform() ||
+      Capacitor.getPlatform() !== "android"
+    ) {
+      return undefined;
+    }
+
+    let cancelled = false;
+    let backButtonListener = null;
+    const modalId = modalIdRef.current;
+
+    mobileBackModalStack.push(modalId);
+
+    CapacitorApp.addListener("backButton", () => {
+      const topModalId = mobileBackModalStack[mobileBackModalStack.length - 1];
+      if (topModalId === modalId) {
+        onCloseRef.current();
+      }
+    })
+      .then((listener) => {
+        if (cancelled) {
+          listener.remove();
+          return;
+        }
+
+        backButtonListener = listener;
+      })
+      .catch(() => null);
+
+    return () => {
+      cancelled = true;
+      backButtonListener?.remove();
+      const stackIndex = mobileBackModalStack.lastIndexOf(modalId);
+      if (stackIndex >= 0) {
+        mobileBackModalStack.splice(stackIndex, 1);
+      }
+    };
+  }, [isOpen]);
+
   const sizeClass =
     size === "sm"
       ? "max-w-sm"

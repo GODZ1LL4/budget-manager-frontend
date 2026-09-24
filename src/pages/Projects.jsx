@@ -7,7 +7,6 @@ import {
   HiPlay,
   HiPlus,
   HiTrash,
-  HiX,
 } from "react-icons/hi";
 import { toast } from "react-toastify";
 import FFSelect from "../components/FFSelect";
@@ -543,7 +542,7 @@ function Projects({ token, subscriptionMode }) {
   };
 
   const handleStatusAction = async (project, status) => {
-    if (isProjectCompleted(project)) return;
+    if (isProjectCompleted(project) && status !== "active") return;
 
     setLoadingAction(true);
     try {
@@ -1037,7 +1036,16 @@ function Projects({ token, subscriptionMode }) {
                       {t("common.edit")}
                     </button>
                   )}
-                  {project.status === "paused" ? (
+                  {project.status === "completed" ? (
+                    <button
+                      type="button"
+                      onClick={() => handleStatusAction(project, "active")}
+                      className="ff-btn ff-btn-primary ff-btn-sm"
+                    >
+                      <HiPlay size={16} aria-hidden="true" />
+                      {t("projects.reopen")}
+                    </button>
+                  ) : project.status === "paused" ? (
                     <button
                       type="button"
                       onClick={() => handleStatusAction(project, "active")}
@@ -1046,7 +1054,7 @@ function Projects({ token, subscriptionMode }) {
                       <HiPlay size={16} aria-hidden="true" />
                       {t("projects.resume")}
                     </button>
-                  ) : project.status !== "completed" ? (
+                  ) : (
                     <button
                       type="button"
                       onClick={() => handleStatusAction(project, "paused")}
@@ -1055,7 +1063,7 @@ function Projects({ token, subscriptionMode }) {
                       <HiPause size={16} aria-hidden="true" />
                       {t("projects.pause")}
                     </button>
-                  ) : null}
+                  )}
                   {project.status !== "completed" && (
                     <button
                       type="button"
@@ -1099,24 +1107,6 @@ function Projects({ token, subscriptionMode }) {
       >
         {detailProject && (
           <div className="space-y-6">
-            <div
-              className="sticky top-0 z-20 -mx-4 -mt-2 flex justify-end border-b px-4 pb-3 pt-2 sm:hidden"
-              style={{
-                background: "var(--modal-panel)",
-                borderColor: "var(--border-rgba)",
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setDetailProjectId(null)}
-                className="ff-btn ff-btn-outline ff-btn-sm"
-                aria-label={t("common.close")}
-              >
-                <HiX size={16} aria-hidden="true" />
-                {t("common.close")}
-              </button>
-            </div>
-
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
               <SummaryBox
                 label={t("projects.status")}
