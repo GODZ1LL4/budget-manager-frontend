@@ -7,6 +7,7 @@ import {
   HiPlay,
   HiPlus,
   HiTrash,
+  HiX,
 } from "react-icons/hi";
 import { toast } from "react-toastify";
 import FFSelect from "../components/FFSelect";
@@ -74,6 +75,10 @@ function getTaskStats(project) {
 function isProjectOverdue(project) {
   if (!project.due_date || project.status === "completed") return false;
   return String(project.due_date) < getTodayKey();
+}
+
+function isProjectCompleted(project) {
+  return project?.status === "completed";
 }
 
 function getTransactionCategoryName(transaction, categoryMap, fallback) {
@@ -376,6 +381,7 @@ function Projects({ token, subscriptionMode }) {
       ) || null,
     [decoratedProjects, detailProjectId]
   );
+  const detailReadOnly = isProjectCompleted(detailProject);
 
   const transactionMap = useMemo(() => {
     const map = new Map();
@@ -395,6 +401,17 @@ function Projects({ token, subscriptionMode }) {
   const getStatusLabel = (status) =>
     projectStatusOptions.find((option) => option.value === status)?.label ||
     status;
+
+  const getTaskStatusLabel = (status) =>
+    taskStatusOptions.find((option) => option.value === status)?.label ||
+    status;
+
+  const getTaskTone = (status) => {
+    if (status === "done") return "success";
+    if (status === "blocked") return "danger";
+    if (status === "doing") return "warning";
+    return "primary";
+  };
 
   const getPriorityLabel = (priority) =>
     priorityOptions.find((option) => option.value === priority)?.label || priority;
@@ -476,6 +493,8 @@ function Projects({ token, subscriptionMode }) {
   };
 
   const openEdit = (project) => {
+    if (isProjectCompleted(project)) return;
+
     setEditProjectId(project.id);
     setEditForm({
       name: project.name || "",
@@ -500,6 +519,7 @@ function Projects({ token, subscriptionMode }) {
   const handleEdit = async (event) => {
     event.preventDefault();
     if (!editProject) return;
+    if (isProjectCompleted(editProject)) return;
     setLoadingAction(true);
 
     try {
@@ -523,6 +543,8 @@ function Projects({ token, subscriptionMode }) {
   };
 
   const handleStatusAction = async (project, status) => {
+    if (isProjectCompleted(project)) return;
+
     setLoadingAction(true);
     try {
       if (status === "completed") {
@@ -541,6 +563,10 @@ function Projects({ token, subscriptionMode }) {
 
   const confirmDeleteProject = async () => {
     if (!deleteProject) return;
+    if (isProjectCompleted(deleteProject)) {
+      setDeleteProject(null);
+      return;
+    }
     setLoadingAction(true);
 
     try {
@@ -583,6 +609,8 @@ function Projects({ token, subscriptionMode }) {
   };
 
   const handleCreateTask = async (project) => {
+    if (isProjectCompleted(project)) return;
+
     const taskForm = taskFormByProject[project.id] || emptyTaskForm;
     try {
       await createProjectTask({
@@ -607,6 +635,8 @@ function Projects({ token, subscriptionMode }) {
   };
 
   const handleTaskStatus = async (project, task, status) => {
+    if (isProjectCompleted(project)) return;
+
     try {
       await updateProjectTask({
         token,
@@ -622,6 +652,8 @@ function Projects({ token, subscriptionMode }) {
   };
 
   const handleDeleteTask = async (project, task) => {
+    if (isProjectCompleted(project)) return;
+
     try {
       await deleteProjectTask({ token, project, task, subscriptionMode });
       await fetchProjects();
@@ -632,6 +664,8 @@ function Projects({ token, subscriptionMode }) {
   };
 
   const handleCreateMilestone = async (project) => {
+    if (isProjectCompleted(project)) return;
+
     const milestoneForm =
       milestoneFormByProject[project.id] || emptyMilestoneForm;
     try {
@@ -655,6 +689,8 @@ function Projects({ token, subscriptionMode }) {
   };
 
   const handleToggleMilestone = async (project, milestone) => {
+    if (isProjectCompleted(project)) return;
+
     try {
       await updateProjectMilestone({
         token,
@@ -672,6 +708,8 @@ function Projects({ token, subscriptionMode }) {
   };
 
   const handleDeleteMilestone = async (project, milestone) => {
+    if (isProjectCompleted(project)) return;
+
     try {
       await deleteProjectMilestone({
         token,
@@ -687,6 +725,8 @@ function Projects({ token, subscriptionMode }) {
   };
 
   const handleLinkTransaction = async (project) => {
+    if (isProjectCompleted(project)) return;
+
     const transactionId = selectedTransactionByProject[project.id];
     const transaction = transactionMap.get(String(transactionId));
 
@@ -716,6 +756,8 @@ function Projects({ token, subscriptionMode }) {
   };
 
   const handleUnlinkTransaction = async (project, transaction) => {
+    if (isProjectCompleted(project)) return;
+
     try {
       await unlinkProjectTransaction({
         token,
@@ -985,14 +1027,16 @@ function Projects({ token, subscriptionMode }) {
                     <HiClipboardList size={16} aria-hidden="true" />
                     {t("projects.details")}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => openEdit(project)}
-                    className="ff-btn ff-btn-outline ff-btn-sm"
-                  >
-                    <HiPencil size={16} aria-hidden="true" />
-                    {t("common.edit")}
-                  </button>
+                  {!isProjectCompleted(project) && (
+                    <button
+                      type="button"
+                      onClick={() => openEdit(project)}
+                      className="ff-btn ff-btn-outline ff-btn-sm"
+                    >
+                      <HiPencil size={16} aria-hidden="true" />
+                      {t("common.edit")}
+                    </button>
+                  )}
                   {project.status === "paused" ? (
                     <button
                       type="button"
@@ -1022,14 +1066,16 @@ function Projects({ token, subscriptionMode }) {
                       {t("projects.complete")}
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => setDeleteProject(project)}
-                    className="ff-btn ff-btn-danger ff-btn-sm"
-                  >
-                    <HiTrash size={16} aria-hidden="true" />
-                    {t("common.delete")}
-                  </button>
+                  {!isProjectCompleted(project) && (
+                    <button
+                      type="button"
+                      onClick={() => setDeleteProject(project)}
+                      className="ff-btn ff-btn-danger ff-btn-sm"
+                    >
+                      <HiTrash size={16} aria-hidden="true" />
+                      {t("common.delete")}
+                    </button>
+                  )}
                 </div>
               </div>
             </li>
@@ -1053,6 +1099,24 @@ function Projects({ token, subscriptionMode }) {
       >
         {detailProject && (
           <div className="space-y-6">
+            <div
+              className="sticky top-0 z-20 -mx-4 -mt-2 flex justify-end border-b px-4 pb-3 pt-2 sm:hidden"
+              style={{
+                background: "var(--modal-panel)",
+                borderColor: "var(--border-rgba)",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setDetailProjectId(null)}
+                className="ff-btn ff-btn-outline ff-btn-sm"
+                aria-label={t("common.close")}
+              >
+                <HiX size={16} aria-hidden="true" />
+                {t("common.close")}
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
               <SummaryBox
                 label={t("projects.status")}
@@ -1108,27 +1172,29 @@ function Projects({ token, subscriptionMode }) {
                 {t("projects.linkedTransactions")}
               </h3>
 
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto]">
-                <FFSelect
-                  value={selectedTransactionByProject[detailProject.id] || ""}
-                  onChange={(value) =>
-                    setSelectedTransactionByProject((current) => ({
-                      ...current,
-                      [detailProject.id]: value,
-                    }))
-                  }
-                  options={getAvailableTransactionOptions(detailProject)}
-                  placeholder={t("projects.selectTransactionPlaceholder")}
-                />
-                <button
-                  type="button"
-                  onClick={() => handleLinkTransaction(detailProject)}
-                  className="ff-btn ff-btn-primary"
-                >
-                  <HiPlus size={18} aria-hidden="true" />
-                  {t("projects.linkTransaction")}
-                </button>
-              </div>
+              {!detailReadOnly && (
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_auto]">
+                  <FFSelect
+                    value={selectedTransactionByProject[detailProject.id] || ""}
+                    onChange={(value) =>
+                      setSelectedTransactionByProject((current) => ({
+                        ...current,
+                        [detailProject.id]: value,
+                      }))
+                    }
+                    options={getAvailableTransactionOptions(detailProject)}
+                    placeholder={t("projects.selectTransactionPlaceholder")}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleLinkTransaction(detailProject)}
+                    className="ff-btn ff-btn-primary"
+                  >
+                    <HiPlus size={18} aria-hidden="true" />
+                    {t("projects.linkTransaction")}
+                  </button>
+                </div>
+              )}
 
               <ul className="space-y-2">
                 {(detailProject.linked_transactions || []).map((transaction) => (
@@ -1165,15 +1231,17 @@ function Projects({ token, subscriptionMode }) {
                       >
                         {formatCurrency(transaction.amount)}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleUnlinkTransaction(detailProject, transaction)
-                        }
-                        className="ff-btn ff-btn-danger ff-btn-sm"
-                      >
-                        <HiTrash size={16} aria-hidden="true" />
-                      </button>
+                      {!detailReadOnly && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleUnlinkTransaction(detailProject, transaction)
+                          }
+                          className="ff-btn ff-btn-danger ff-btn-sm"
+                        >
+                          <HiTrash size={16} aria-hidden="true" />
+                        </button>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -1191,47 +1259,53 @@ function Projects({ token, subscriptionMode }) {
                 {t("projects.tasks")}
               </h3>
 
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
-                <input
-                  value={
-                    (taskFormByProject[detailProject.id] || emptyTaskForm).title
-                  }
-                  onChange={(event) =>
-                    updateTaskForm(detailProject.id, "title", event.target.value)
-                  }
-                  className="ff-input md:col-span-2"
-                  placeholder={t("projects.taskTitle")}
-                />
-                <input
-                  type="date"
-                  value={
-                    (taskFormByProject[detailProject.id] || emptyTaskForm)
-                      .due_date
-                  }
-                  onChange={(event) =>
-                    updateTaskForm(
-                      detailProject.id,
-                      "due_date",
-                      event.target.value
-                    )
-                  }
-                  className="ff-input"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleCreateTask(detailProject)}
-                  className="ff-btn ff-btn-primary"
-                >
-                  <HiPlus size={18} aria-hidden="true" />
-                  {t("projects.addTask")}
-                </button>
-              </div>
+              {!detailReadOnly && (
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+                  <input
+                    value={
+                      (taskFormByProject[detailProject.id] || emptyTaskForm).title
+                    }
+                    onChange={(event) =>
+                      updateTaskForm(detailProject.id, "title", event.target.value)
+                    }
+                    className="ff-input md:col-span-2"
+                    placeholder={t("projects.taskTitle")}
+                  />
+                  <input
+                    type="date"
+                    value={
+                      (taskFormByProject[detailProject.id] || emptyTaskForm)
+                        .due_date
+                    }
+                    onChange={(event) =>
+                      updateTaskForm(
+                        detailProject.id,
+                        "due_date",
+                        event.target.value
+                      )
+                    }
+                    className="ff-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleCreateTask(detailProject)}
+                    className="ff-btn ff-btn-primary"
+                  >
+                    <HiPlus size={18} aria-hidden="true" />
+                    {t("projects.addTask")}
+                  </button>
+                </div>
+              )}
 
               <ul className="space-y-2">
                 {(detailProject.tasks || []).map((task) => (
                   <li
                     key={task.id}
-                    className="grid grid-cols-1 gap-2 rounded-lg border p-3 md:grid-cols-[1fr_12rem_auto]"
+                    className={`grid grid-cols-1 gap-2 rounded-lg border p-3 ${
+                      detailReadOnly
+                        ? "sm:grid-cols-[1fr_auto]"
+                        : "md:grid-cols-[1fr_12rem_auto]"
+                    }`}
                     style={{
                       borderColor: "var(--border-rgba)",
                       background:
@@ -1249,21 +1323,31 @@ function Projects({ token, subscriptionMode }) {
                         {task.sync_status ? ` - ${t("projects.pendingSync")}` : ""}
                       </p>
                     </div>
-                    <FFSelect
-                      value={task.status}
-                      onChange={(value) =>
-                        handleTaskStatus(detailProject, task, value)
-                      }
-                      options={taskStatusOptions}
-                      clearable={false}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteTask(detailProject, task)}
-                      className="ff-btn ff-btn-danger ff-btn-sm"
-                    >
-                      <HiTrash size={16} aria-hidden="true" />
-                    </button>
+                    {detailReadOnly ? (
+                      <div className="sm:justify-self-end">
+                        <StatusPill tone={getTaskTone(task.status)}>
+                          {getTaskStatusLabel(task.status)}
+                        </StatusPill>
+                      </div>
+                    ) : (
+                      <>
+                        <FFSelect
+                          value={task.status}
+                          onChange={(value) =>
+                            handleTaskStatus(detailProject, task, value)
+                          }
+                          options={taskStatusOptions}
+                          clearable={false}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTask(detailProject, task)}
+                          className="ff-btn ff-btn-danger ff-btn-sm"
+                        >
+                          <HiTrash size={16} aria-hidden="true" />
+                        </button>
+                      </>
+                    )}
                   </li>
                 ))}
                 {(detailProject.tasks || []).length === 0 && (
@@ -1279,46 +1363,48 @@ function Projects({ token, subscriptionMode }) {
                 {t("projects.milestones")}
               </h3>
 
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_12rem_auto]">
-                <input
-                  value={
-                    (milestoneFormByProject[detailProject.id] ||
-                      emptyMilestoneForm).title
-                  }
-                  onChange={(event) =>
-                    updateMilestoneForm(
-                      detailProject.id,
-                      "title",
-                      event.target.value
-                    )
-                  }
-                  className="ff-input"
-                  placeholder={t("projects.milestoneTitle")}
-                />
-                <input
-                  type="date"
-                  value={
-                    (milestoneFormByProject[detailProject.id] ||
-                      emptyMilestoneForm).target_date
-                  }
-                  onChange={(event) =>
-                    updateMilestoneForm(
-                      detailProject.id,
-                      "target_date",
-                      event.target.value
-                    )
-                  }
-                  className="ff-input"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleCreateMilestone(detailProject)}
-                  className="ff-btn ff-btn-primary"
-                >
-                  <HiPlus size={18} aria-hidden="true" />
-                  {t("projects.addMilestone")}
-                </button>
-              </div>
+              {!detailReadOnly && (
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_12rem_auto]">
+                  <input
+                    value={
+                      (milestoneFormByProject[detailProject.id] ||
+                        emptyMilestoneForm).title
+                    }
+                    onChange={(event) =>
+                      updateMilestoneForm(
+                        detailProject.id,
+                        "title",
+                        event.target.value
+                      )
+                    }
+                    className="ff-input"
+                    placeholder={t("projects.milestoneTitle")}
+                  />
+                  <input
+                    type="date"
+                    value={
+                      (milestoneFormByProject[detailProject.id] ||
+                        emptyMilestoneForm).target_date
+                    }
+                    onChange={(event) =>
+                      updateMilestoneForm(
+                        detailProject.id,
+                        "target_date",
+                        event.target.value
+                      )
+                    }
+                    className="ff-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleCreateMilestone(detailProject)}
+                    className="ff-btn ff-btn-primary"
+                  >
+                    <HiPlus size={18} aria-hidden="true" />
+                    {t("projects.addMilestone")}
+                  </button>
+                </div>
+              )}
 
               <ul className="space-y-2">
                 {(detailProject.milestones || []).map((milestone) => (
@@ -1344,33 +1430,45 @@ function Projects({ token, subscriptionMode }) {
                           : ""}
                       </p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleToggleMilestone(detailProject, milestone)
-                        }
-                        className={`ff-btn ff-btn-sm ${
-                          milestone.completed_at
-                            ? "ff-btn-success"
-                            : "ff-btn-outline"
-                        }`}
-                      >
-                        <HiCheck size={16} aria-hidden="true" />
-                        {milestone.completed_at
-                          ? t("projects.milestoneDone")
-                          : t("projects.markDone")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleDeleteMilestone(detailProject, milestone)
-                        }
-                        className="ff-btn ff-btn-danger ff-btn-sm"
-                      >
-                        <HiTrash size={16} aria-hidden="true" />
-                      </button>
-                    </div>
+                    {detailReadOnly ? (
+                      <div>
+                        <StatusPill
+                          tone={milestone.completed_at ? "success" : "primary"}
+                        >
+                          {milestone.completed_at
+                            ? t("projects.milestoneDone")
+                            : t("projects.taskTodo")}
+                        </StatusPill>
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleToggleMilestone(detailProject, milestone)
+                          }
+                          className={`ff-btn ff-btn-sm ${
+                            milestone.completed_at
+                              ? "ff-btn-success"
+                              : "ff-btn-outline"
+                          }`}
+                        >
+                          <HiCheck size={16} aria-hidden="true" />
+                          {milestone.completed_at
+                            ? t("projects.milestoneDone")
+                            : t("projects.markDone")}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleDeleteMilestone(detailProject, milestone)
+                          }
+                          className="ff-btn ff-btn-danger ff-btn-sm"
+                        >
+                          <HiTrash size={16} aria-hidden="true" />
+                        </button>
+                      </div>
+                    )}
                   </li>
                 ))}
                 {(detailProject.milestones || []).length === 0 && (

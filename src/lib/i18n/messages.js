@@ -5,6 +5,7 @@ export const messages = {
   "es-DO": {
     common: {
       cancel: "Cancelar",
+      close: "Cerrar",
       delete: "Eliminar",
       edit: "Editar",
       save: "Guardar",
@@ -571,6 +572,7 @@ export const messages = {
   "en-US": {
     common: {
       cancel: "Cancel",
+      close: "Close",
       delete: "Delete",
       edit: "Edit",
       save: "Save",
